@@ -25,9 +25,11 @@ function installLocalStorage() {
 }
 
 installLocalStorage();
+(globalThis as unknown as { window: typeof globalThis }).window = globalThis;
 
 describe("field sessionStore", async () => {
-  const { useSessionStore } = await import("./store/sessionStore");
+  const { useSessionStore, partializeSession } =
+    await import("./store/sessionStore");
 
   beforeEach(() => {
     useSessionStore.setState({
@@ -56,8 +58,17 @@ describe("field sessionStore", async () => {
       useSessionStore.getState().hasCapability("admin:write"),
       false,
     );
+    assert.deepEqual(partializeSession(useSessionStore.getState()), {
+      accessToken: "a",
+      refreshToken: "r",
+      user: useSessionStore.getState().user,
+    });
     useSessionStore.getState().clearSession();
     assert.equal(useSessionStore.getState().accessToken, null);
     assert.equal(useSessionStore.getState().isAuthenticated(), false);
+    assert.equal(
+      useSessionStore.getState().hasCapability("movements:write"),
+      false,
+    );
   });
 });

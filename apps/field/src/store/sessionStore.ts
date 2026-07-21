@@ -21,6 +21,15 @@ const empty = {
   user: null as MeUser | null,
 };
 
+/** Fields written to persistent storage (exclude actions). */
+export function partializeSession(state: SessionState) {
+  return {
+    accessToken: state.accessToken,
+    refreshToken: state.refreshToken,
+    user: state.user,
+  };
+}
+
 export const useSessionStore = create<SessionState>()(
   persist(
     (set, get) => ({
@@ -35,11 +44,7 @@ export const useSessionStore = create<SessionState>()(
     }),
     {
       name: "weld.field.session",
-      partialize: (state) => ({
-        accessToken: state.accessToken,
-        refreshToken: state.refreshToken,
-        user: state.user,
-      }),
+      partialize: partializeSession,
     },
   ),
 );

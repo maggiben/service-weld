@@ -143,7 +143,7 @@ function runNodeCoverage(pkg) {
     { cwd, encoding: "utf8", env: process.env },
   );
   const out = `${res.stdout || ""}\n${res.stderr || ""}`;
-  if (res.status !== 0 && !out.includes("start of coverage report")) {
+  if (res.status !== 0) {
     return {
       ok: false,
       reason: out.slice(-600) || `tests exited ${res.status}`,
