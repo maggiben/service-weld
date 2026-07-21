@@ -1,7 +1,7 @@
 # Web / field Next.js images (012 core). Build from monorepo root:
 #   docker build -f apps/web/Dockerfile --build-arg APP=web --build-arg PORT=3001 -t weld-web .
 #   docker build -f apps/web/Dockerfile --build-arg APP=field --build-arg PORT=3002 -t weld-field .
-FROM node:20.16-alpine AS deps
+FROM node:24.18-alpine AS deps
 ARG APP=web
 WORKDIR /app
 RUN corepack enable
@@ -21,7 +21,7 @@ RUN pnpm --filter @weld/schemas build \
  && pnpm --filter @weld/api-client build \
  && pnpm --filter @weld/${APP} build
 
-FROM node:20.16-alpine AS runner
+FROM node:24.18-alpine AS runner
 ARG APP=web
 ARG PORT=3001
 WORKDIR /app

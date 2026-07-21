@@ -5,7 +5,7 @@ Specs live in `/specs` (authoritative); architecture decisions in `/specs/DECISI
 
 ## Prerequisites
 
-- Node `20.16.x` (`.nvmrc`), pnpm `10.x` (via `corepack enable`)
+- Node `24.18.x` (`.nvmrc`), pnpm `10.x` (via `corepack enable`)
 - Docker (local Postgres 16)
 
 ## Layout

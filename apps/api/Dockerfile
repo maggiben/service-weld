@@ -1,6 +1,6 @@
 # API image (012 core). Build from monorepo root:
 #   docker build -f apps/api/Dockerfile -t weld-api .
-FROM node:20.16-alpine AS deps
+FROM node:24.18-alpine AS deps
 WORKDIR /app
 RUN corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
@@ -17,7 +17,7 @@ RUN pnpm --filter @weld/schemas build \
  && pnpm --filter @weld/domain build \
  && pnpm --filter @weld/api build
 
-FROM node:20.16-alpine AS runner
+FROM node:24.18-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=build /app/apps/api/dist ./dist

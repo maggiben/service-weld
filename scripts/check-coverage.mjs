@@ -70,37 +70,73 @@ function findTests(dir) {
 }
 
 /**
+ * Strip the leading reporter marker (`# ` on Node 20, `ℹ ` on Node 24+).
+ * Preserve indentation used by the Node 24+ tree layout.
+ */
+function stripCoveragePrefix(line) {
+  return line.replace(/^(?:#|ℹ) ?/, "");
+}
+
+/**
  * Parse Node's text coverage table (tap/spec reporters).
+ * Supports Node 20 flat paths and Node 24+ indented tree paths.
  * Aggregates only production sources under `pkgDir` (excludes tests + deps).
  */
 function parseNodeCoverage(output, pkgDir) {
   const pkgAbs = path.resolve(ROOT, pkgDir);
+  /** @type {{ file: string, lines: number, branches: number, functions: number }[]} */
   const rows = [];
-  for (const line of output.split("\n")) {
-    // "# file | line % | branch % | funcs % | ..."
+  /** @type {string[]} path segments indexed by tree depth (Node 24+) */
+  const tree = [];
+
+  for (const raw of output.split("\n")) {
+    const line = stripCoveragePrefix(raw);
+    // "file | line % | branch % | funcs % | ..." (metrics may be blank for dirs)
     const m = line.match(
-      /^#?\s*(.+?)\s*\|\s*([\d.]+)\s*\|\s*([\d.]+)\s*\|\s*([\d.]+)\s*\|/,
+      /^(\s*)(\S.*?)\s*\|\s*([\d.]*)\s*\|\s*([\d.]*)\s*\|\s*([\d.]*)\s*\|/,
     );
     if (!m) continue;
-    const file = m[1].trim();
-    if (file === "file" || file === "all files") continue;
-    if (/\.(test|spec)\./.test(file)) continue;
-    // Resolve relative paths reported by Node against the package cwd
-    const abs = path.isAbsolute(file) ? file : path.resolve(pkgAbs, file);
+
+    const indent = m[1].length;
+    const label = m[2].trim();
+    if (label === "file" || label === "all files") continue;
+
+    // Node 24+ prints a directory tree: each row is one path segment.
+    // Flat reports (Node 20) have indent 0 and full relative paths.
+    const isTree =
+      indent > 0 || (!label.includes("/") && !label.includes("\\"));
+    let relFile = label;
+    if (isTree) {
+      tree.length = indent;
+      tree[indent] = label;
+      relFile = tree.slice(0, indent + 1).join("/");
+      // Directory rows have empty metric cells — skip until a file leaf.
+      if (!m[3] || !m[4] || !m[5]) continue;
+    } else if (!m[3] || !m[4] || !m[5]) {
+      continue;
+    }
+
+    if (/\.(test|spec)\./.test(relFile)) continue;
+
+    const abs = path.isAbsolute(relFile)
+      ? relFile
+      : path.resolve(pkgAbs, relFile);
     if (!abs.startsWith(pkgAbs + path.sep) && abs !== pkgAbs) continue;
-    // Skip anything outside src/ (configs, etc.)
+
     const rel = path.relative(pkgAbs, abs);
     if (
       rel.startsWith("node_modules") ||
-      rel.includes(`${path.sep}node_modules${path.sep}`)
+      rel.includes(`${path.sep}node_modules${path.sep}`) ||
+      rel.startsWith("..")
     ) {
       continue;
     }
+
     rows.push({
       file: rel,
-      lines: Number(m[2]),
-      branches: Number(m[3]),
-      functions: Number(m[4]),
+      lines: Number(m[3]),
+      branches: Number(m[4]),
+      functions: Number(m[5]),
     });
   }
   if (rows.length === 0) return null;
@@ -139,7 +175,16 @@ function runNodeCoverage(pkg) {
   const rel = tests.map((t) => path.relative(cwd, t));
   const res = spawnSync(
     "node",
-    ["--import", TSX, "--test", "--experimental-test-coverage", ...rel],
+    [
+      "--import",
+      TSX,
+      "--test",
+      "--experimental-test-coverage",
+      // Keep coverage scoped to this package's sources (Node 24+ also reports
+      // transitive workspace deps unless limited).
+      "--test-coverage-include=src/**",
+      ...rel,
+    ],
     { cwd, encoding: "utf8", env: process.env },
   );
   const out = `${res.stdout || ""}\n${res.stderr || ""}`;

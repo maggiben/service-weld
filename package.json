@@ -5,7 +5,7 @@
   "description": "Cylinder Custody, Circulation & Rental Management System (replaces the legacy Excel workbooks).",
   "packageManager": "pnpm@10.8.1",
   "engines": {
-    "node": ">=20.16 <21"
+    "node": ">=24.18 <25"
   },
   "scripts": {
     "build": "turbo run build",

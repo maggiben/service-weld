@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/maggiben/service-weld/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/maggiben/service-weld/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/badge/coverage-%E2%89%A580%25-brightgreen)](./scripts/check-coverage.mjs)
-[![Node](https://img.shields.io/badge/node-20.16-blue)](./.nvmrc)
+[![Node](https://img.shields.io/badge/node-24.18-blue)](./.nvmrc)
 [![pnpm](https://img.shields.io/badge/pnpm-10.8-blue)](./package.json)
 
 This repository reverse-engineers a real, spreadsheet-run business — a regional **industrial & medical gas-cylinder distributor/refiller** in northwest Buenos Aires Province, Argentina — and specifies the software system to replace it.
