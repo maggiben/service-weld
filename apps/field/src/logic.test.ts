@@ -26,9 +26,9 @@ function installLocalStorage() {
 
 installLocalStorage();
 
-const { useSessionStore } = await import("./store/sessionStore");
+describe("field sessionStore", async () => {
+  const { useSessionStore } = await import("./store/sessionStore");
 
-describe("field sessionStore", () => {
   beforeEach(() => {
     useSessionStore.setState({
       accessToken: null,
