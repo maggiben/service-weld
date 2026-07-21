@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  # Authoritative gate: schema + migrations + business-rule invariants on a
+  # real PostgreSQL. Needs no Node deps — just the psql client. (specs 003/010)
+  database:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: weld
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      PGPASSWORD: test
+      DATABASE_URL: postgres://postgres:test@localhost:5432/weld
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install psql client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Load baseline schema (003 AC1)
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f schema.sql
+      - name: Apply additive migrations
+        run: |
+          for f in $(ls db/migrations/*.up.sql | sort); do
+            echo "applying $f"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f"
+          done
+      - name: Re-apply migrations (idempotency check)
+        run: |
+          for f in $(ls db/migrations/*.up.sql | sort); do
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f"
+          done
+      - name: Run business-rule invariant suite (003 AC2 / 010 R1)
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/tests/invariants.sql
+
+  # Best-effort build/typecheck of the workspaces. (specs 004/006)
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.8.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -w run typecheck
+      - run: pnpm -w run build

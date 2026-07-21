@@ -1,0 +1,153 @@
+import type { RoleCode } from "@weld/schemas";
+
+/** Capability strings use `resource:action` (005 impl notes). */
+export const ROLE_CAPABILITIES: Record<RoleCode, readonly string[]> = {
+  CLERK: [
+    "clients:read",
+    "clients:write",
+    "movements:read",
+    "movements:write",
+    "movements:void",
+    "cylinders:read",
+    "cylinders:write",
+    "batteries:read",
+    "batteries:write",
+    "supplier_loans:read",
+    "supplier_loans:write",
+    "transfers:read",
+    "transfers:write",
+    "accessories:read",
+    "accessories:write",
+    "reports:read",
+    "alerts:read",
+    "alerts:write",
+    "search:read",
+    "delivery_notes:read",
+  ],
+  DRIVER: [
+    "clients:read",
+    "movements:read",
+    "movements:write",
+    "cylinders:read",
+    "accessories:read",
+    "accessories:write",
+    "delivery_notes:write",
+  ],
+  PLANT: [
+    "cylinders:read",
+    "cylinders:write",
+    "batteries:read",
+    "batteries:write",
+    "movements:read",
+    "movements:write",
+    "accessories:read",
+    "accessories:write",
+  ],
+  INVENTORY: [
+    "clients:read",
+    "cylinders:read",
+    "cylinders:write",
+    "batteries:read",
+    "movements:read",
+    "supplier_loans:read",
+    "supplier_loans:write",
+    "transfers:read",
+    "transfers:write",
+    "accessories:read",
+    "accessories:write",
+    "reports:read",
+    "alerts:read",
+    "alerts:write",
+  ],
+  BILLING: [
+    "clients:read",
+    "billing:read",
+    "billing:write",
+    "billing:approve",
+    "reports:read",
+    "rates:read",
+    "rates:write",
+    "accessories:read",
+    "medical:read",
+  ],
+  MANAGER: [
+    "clients:read",
+    "clients:write",
+    "movements:read",
+    "movements:write",
+    "movements:void",
+    "cylinders:read",
+    "batteries:read",
+    "supplier_loans:read",
+    "transfers:read",
+    "accessories:read",
+    "billing:read",
+    "reports:read",
+    "rates:read",
+    "alerts:read",
+    "search:read",
+  ],
+  SUBDIST: [
+    "clients:read",
+    "movements:read",
+    "movements:write",
+    "cylinders:read",
+    "transfers:read",
+    "transfers:write",
+  ],
+  ADMIN: [
+    "clients:read",
+    "clients:write",
+    "movements:read",
+    "movements:write",
+    "movements:void",
+    "cylinders:read",
+    "cylinders:write",
+    "batteries:read",
+    "batteries:write",
+    "supplier_loans:read",
+    "supplier_loans:write",
+    "transfers:read",
+    "transfers:write",
+    "accessories:read",
+    "accessories:write",
+    "billing:read",
+    "billing:write",
+    "billing:approve",
+    "reports:read",
+    "rates:read",
+    "rates:write",
+    "alerts:read",
+    "alerts:write",
+    "search:read",
+    "admin:read",
+    "admin:write",
+    "medical:read",
+  ],
+  MEDICAL: [
+    "clients:read",
+    "medical:read",
+    "movements:read",
+    "search:read",
+    "reports:read",
+  ],
+  CLIENT: ["client:portal"],
+};
+
+export function capabilitiesForRoles(roles: RoleCode[]): string[] {
+  const set = new Set<string>();
+  for (const role of roles) {
+    for (const capability of ROLE_CAPABILITIES[role] ?? []) {
+      set.add(capability);
+    }
+  }
+  return [...set].sort();
+}
+
+export function hasCapabilities(
+  granted: readonly string[],
+  required: readonly string[],
+): boolean {
+  const grantedSet = new Set(granted);
+  return required.every((capability) => grantedSet.has(capability));
+}

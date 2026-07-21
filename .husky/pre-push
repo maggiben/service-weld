@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+set -e
+
+echo "▸ Coverage gate (≥80% all services)…"
+pnpm run test:coverage
+
+echo "✓ pre-push coverage gate passed"

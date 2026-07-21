@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+set -e
+
+echo "▸ Checking for secrets…"
+pnpm run check:secrets
+
+echo "▸ Lint staged files (prettier)…"
+node scripts/lint-staged.mjs
+
+echo "▸ Typecheck…"
+pnpm run typecheck
+
+echo "✓ pre-commit checks passed"

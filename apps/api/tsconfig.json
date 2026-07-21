@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "target": "ES2021",
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "isolatedModules": false,
+    "paths": {
+      "@weld/schemas": ["../../packages/schemas/src/index.ts"],
+      "@weld/domain": ["../../packages/domain/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*", "test/**/*"]
+}

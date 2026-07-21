@@ -1,0 +1,24 @@
+{
+  "name": "@weld/api-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "test": "node --import tsx --test src/**/*.test.ts",
+    "test:coverage": "node --import tsx --test --experimental-test-coverage src/**/*.test.ts"
+  },
+  "dependencies": {
+    "@weld/schemas": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.2"
+  }
+}

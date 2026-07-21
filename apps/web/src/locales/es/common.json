@@ -1,0 +1,753 @@
+{
+  "app": {
+    "title": "Gestión de Cilindros",
+    "subtitle": "Custodia, circulación y alquiler"
+  },
+  "nav": {
+    "clients": "Clientes",
+    "cylinders": "Cilindros",
+    "batteries": "Baterías",
+    "movements": "Movimientos",
+    "supplier_loans": "Préstamos proveedor",
+    "transfers": "Transferencias",
+    "reconciliation": "Conciliación",
+    "reports": "Reportes",
+    "accessories": "Accesorios",
+    "alerts": "Alertas",
+    "rates": "Tarifas",
+    "billing": "Facturación"
+  },
+  "shell": {
+    "signed_in_as": "Sesión: {{username}}"
+  },
+  "login": {
+    "title": "Iniciar sesión",
+    "subtitle": "Ingresá tus credenciales para continuar",
+    "username": "Usuario",
+    "password": "Contraseña",
+    "submit": "Entrar"
+  },
+  "clients": {
+    "title": "Clientes",
+    "empty": "No hay clientes todavía",
+    "columns": {
+      "name": "Nombre",
+      "territory": "Territorio",
+      "coverage": "Cobertura",
+      "segment": "Segmento",
+      "status": "Estado",
+      "version": "Versión"
+    },
+    "filters": {
+      "coverage": "Cobertura",
+      "status": "Estado",
+      "territory": "Territorio",
+      "all": "Todas"
+    },
+    "detail": {
+      "back": "Volver a clientes",
+      "empty": "Sin movimientos en esta vista",
+      "tabs": {
+        "outstanding": "En poder",
+        "history": "Historial",
+        "rentals": "Nuestra propiedad",
+        "refills": "Su propiedad"
+      },
+      "filters": {
+        "open_only": "Solo abiertos"
+      },
+      "kpi": {
+        "outstanding": "En poder",
+        "rentals": "Alquileres abiertos",
+        "refills": "Recargas abiertas",
+        "closed_days": "Días cerrados (30d)",
+        "accessories": "Accesorios"
+      },
+      "columns": {
+        "serial": "Serie",
+        "gas": "Gas",
+        "kind": "Tipo",
+        "delivery": "Entrada",
+        "return": "Salida",
+        "accrued_days": "Días acumulados",
+        "rental_days": "Días alquiler",
+        "state": "Estado"
+      }
+    },
+    "form": {
+      "title_create": "Nuevo cliente",
+      "unsaved_confirm": "Hay cambios sin guardar. ¿Cerrar de todos modos?",
+      "name": "Nombre",
+      "cuit": "CUIT",
+      "address_street": "Dirección",
+      "territory": "Territorio",
+      "coverage": "Cobertura",
+      "segment": "Segmento",
+      "segment_none": "Sin segmento",
+      "delivery_instructions": "Instrucciones de entrega",
+      "contacts": "Contactos",
+      "add_contact": "Agregar contacto",
+      "remove_contact": "Quitar contacto",
+      "contact_name": "Nombre",
+      "contact_phone": "Teléfono",
+      "contact_primary": "Principal"
+    }
+  },
+  "cylinders": {
+    "title": "Flota de cilindros",
+    "empty": "No hay cilindros registrados",
+    "columns": {
+      "serial": "Serie",
+      "owner": "Propietario",
+      "holder": "Titular actual",
+      "gas": "Gas",
+      "capacity": "m³",
+      "basis": "Base",
+      "state": "Estado",
+      "condition": "Condición",
+      "territory": "Depósito base",
+      "city": "Ciudad"
+    },
+    "filters": {
+      "serial": "Buscar serie",
+      "state": "Estado",
+      "basis": "Base",
+      "territory": "Ubicación (territorio)",
+      "location": "Ubicación",
+      "depots": "Depósitos / orígenes",
+      "cities": "Ciudades"
+    },
+    "detail": {
+      "back": "Volver a cilindros",
+      "title": "Cilindro {{serial}}",
+      "current_holder": "Titular actual",
+      "in_stock": "En stock",
+      "history_title": "Ledger de circulación",
+      "empty": "Sin movimientos todavía — cilindro nuevo",
+      "columns": {
+        "delivery": "Entrada",
+        "holder": "Cliente",
+        "return": "Salida",
+        "gas": "Gas",
+        "kind": "Tipo",
+        "rental_days": "Días alquiler",
+        "state": "Estado",
+        "note": "Nota"
+      }
+    },
+    "form": {
+      "title_create": "Registrar cilindro",
+      "unsaved_confirm": "Hay cambios sin guardar. ¿Cerrar de todos modos?",
+      "serial": "Número de serie",
+      "owner": "Propietario",
+      "basis": "Base de propiedad",
+      "basis_hint": "Se deriva del propietario (BR-07)",
+      "gas": "Gas",
+      "capacity": "Capacidad (m³)",
+      "territory": "Depósito / origen",
+      "territory_hint": "Depósito base del cilindro. Las ciudades se eligen al filtrar o al crear una localidad.",
+      "condition": "Condición",
+      "create_territory": "+ Crear depósito / origen…",
+      "create_locality": "+ Crear ciudad…",
+      "create_territory_title": "Nuevo depósito / origen",
+      "create_locality_title": "Nueva ciudad",
+      "location_name": "Nombre",
+      "location_name_required": "Ingresá un nombre",
+      "locality_territory_hint": "Opcional: territorio operativo al que pertenece la ciudad"
+    },
+    "loss": {
+      "title": "Reportar pérdida / rotura",
+      "summary": "{{serial}} ({{state}})",
+      "outcome": "Resultado",
+      "occurred_on": "Fecha",
+      "note": "Nota",
+      "confirm": "Confirmar",
+      "supplier_alert": "Se generó alerta de responsabilidad del proveedor (BR-12)."
+    },
+    "replace": {
+      "title": "Reemplazar cilindro",
+      "summary": "Original {{serial}}",
+      "replacement": "Cilindro de reemplazo",
+      "client": "Cliente",
+      "occurred_on": "Fecha",
+      "note": "Nota",
+      "confirm": "Emitir reemplazo"
+    }
+  },
+  "batteries": {
+    "title": "Baterías / manifolds",
+    "columns": {
+      "code": "Código",
+      "owner": "Propietario",
+      "gas": "Gas",
+      "members": "Miembros",
+      "state": "Estado"
+    },
+    "form": {
+      "title": "Nueva batería",
+      "code": "Código",
+      "owner": "Propietario",
+      "gas": "Gas",
+      "members": "IDs de cilindros",
+      "members_hint": "Al menos 2 IDs, separados por coma (BR-13)"
+    }
+  },
+  "movements": {
+    "title": "Movimientos",
+    "empty": "No hay movimientos",
+    "columns": {
+      "delivery": "Entrega",
+      "return": "Devolución",
+      "serial": "Serie",
+      "holder": "Cliente",
+      "property": "Propiedad",
+      "kind": "Tipo",
+      "gas": "Gas",
+      "rental_days": "Días",
+      "state": "Estado",
+      "actions": "Acciones"
+    },
+    "filters": {
+      "open_only": "Solo abiertos",
+      "kind": "Tipo",
+      "state": "Estado"
+    },
+    "form": {
+      "title_deliver": "Nueva entrega / recarga",
+      "title_rental": "Nueva entrega (alquiler)",
+      "title_refill": "Nueva recarga",
+      "kind_subtitle": "Tipo de movimiento: {{kind}}",
+      "unsaved_confirm": "Hay cambios sin guardar. ¿Cerrar de todos modos?",
+      "cylinder": "Cilindro",
+      "holder": "Cliente",
+      "kind": "Tipo de movimiento",
+      "gas": "Gas",
+      "delivery_date": "Fecha de entrega",
+      "refill_date": "Fecha de recarga",
+      "note": "Nota",
+      "hint_rental": "Alquiler: solo cilindros nuestros o de proveedor disponibles en planta (no los que ya tiene otro cliente).",
+      "hint_refill": "Recarga (Su Propiedad): el cliente es el dueño del cilindro; no hace falta elegirlo aparte.",
+      "cylinder_hint_rental": "Solo disponibles para alquilar: stock vacío/lleno, sin posesión de cliente.",
+      "cylinder_hint_refill": "Solo cilindros con propiedad Cliente (no vendidos/perdidos).",
+      "owner_client": "Cliente (dueño)",
+      "owner_client_hint": "Se toma del propietario del cilindro.",
+      "owner_client_placeholder": "Elegí un cilindro para ver el dueño"
+    },
+    "return": {
+      "title": "Registrar devolución",
+      "summary": "{{serial}} → {{holder}} (entrega {{delivery}})",
+      "return_date": "Fecha de devolución",
+      "preview": "Días de alquiler: {{days}} (calculados, no editables)",
+      "invalid_preview": "La fecha de devolución debe ser ≥ entrega",
+      "confirm": "Confirmar devolución"
+    },
+    "swap": {
+      "title": "Registrar canje",
+      "summary": "Devuelve {{serial}} de {{holder}} y entrega otro cilindro en su lugar",
+      "hint": "El cilindro actual vuelve a stock vacío y el de reemplazo queda entregado al mismo cliente.",
+      "list_hint": "Canje: usá el botón Canje arriba, o a la derecha en un movimiento Abierto. En alquileres también podés Devolver; en cilindros del cliente (recarga) solo Canje.",
+      "pick_title": "Elegir movimiento para canje",
+      "pick_hint": "Solo movimientos abiertos. Buscá por serial o cliente.",
+      "pick_movement": "Movimiento abierto",
+      "pick_placeholder": "Serial o cliente…",
+      "returned_cylinder": "Cilindro devuelto",
+      "replacement_cylinder": "Cilindro de reemplazo",
+      "replacement_hint": "Buscá por serial en stock (o Su Propiedad si es recarga).",
+      "return_date": "Fecha de devolución",
+      "swap_date": "Fecha del canje",
+      "confirm": "Confirmar canje"
+    },
+    "void": {
+      "title": "Anular movimiento",
+      "summary": "{{serial}} ({{state}})",
+      "reason": "Motivo",
+      "confirm": "Anular"
+    }
+  },
+  "enums": {
+    "coverage": {
+      "PRIVATE": "Privado",
+      "MUNICIPAL_HOSPITAL": "Hosp. municipal"
+    },
+    "status": {
+      "ACTIVE": "Activo",
+      "DORMANT": "Inactivo temporal",
+      "INACTIVE": "Baja"
+    },
+    "segment": {
+      "METALWORKING": "Metalúrgica",
+      "AGRO": "Agro",
+      "TRANSPORT": "Transporte",
+      "BEVERAGE": "Bebidas",
+      "FOOD_PROCESSING": "Alimentos",
+      "LASER_CUTTING": "Corte láser",
+      "MEDICAL_HOMECARE": "Oxígeno domiciliario",
+      "PUBLIC_SECTOR": "Sector público",
+      "RESELLER": "Revendedor",
+      "OTHER": "Otro"
+    },
+    "basis": {
+      "OURS": "Nuestra",
+      "SUPPLIER": "Proveedor",
+      "CUSTOMER": "Cliente"
+    },
+    "condition": {
+      "EMPTY": "Vacío",
+      "FULL": "Lleno"
+    },
+    "cylinder_state": {
+      "IN_STOCK_EMPTY": "Stock vacío",
+      "IN_STOCK_FULL": "Stock lleno",
+      "AT_CLIENT": "En cliente",
+      "AT_SUPPLIER": "En proveedor",
+      "SOLD": "Vendido",
+      "LOST": "Perdido",
+      "BROKEN": "Roto",
+      "RETURNED_TO_SUPPLIER": "Devuelto a proveedor",
+      "RETIRED": "Baja"
+    },
+    "movement_kind": {
+      "RENTAL": "Alquiler",
+      "REFILL": "Recarga"
+    },
+    "movement_state": {
+      "OPEN": "Abierto",
+      "CLOSED": "Cerrado",
+      "SWAPPED": "Canje",
+      "LOST": "Perdido",
+      "SOLD": "Vendido",
+      "VOID": "Anulado",
+      "REFILLED": "Recargado"
+    },
+    "rate_period": {
+      "DAILY": "Diaria",
+      "MONTHLY": "Mensual"
+    },
+    "invoice_status": {
+      "DRAFT": "Borrador",
+      "APPROVED": "Aprobado",
+      "EXPORTED": "Exportado",
+      "CANCELLED": "Anulado"
+    },
+    "loan_stage": {
+      "RECEIVED": "Recibido",
+      "OUT_TO_CLIENT": "En cliente",
+      "BACK_FROM_CLIENT": "Devuelto por cliente",
+      "RETURNED_TO_SUPPLIER": "Devuelto a proveedor"
+    },
+    "accessory_type": {
+      "REGULATOR": "Regulador",
+      "ADAPTER": "Adaptador",
+      "PORTABLE_O2_BACKPACK": "Mochila O2"
+    },
+    "accessory_state": {
+      "IN_STOCK": "En stock",
+      "ON_LOAN": "Prestado",
+      "IN_REPAIR": "En reparación",
+      "LOST": "Perdido",
+      "BROKEN": "Roto",
+      "RETIRED": "Baja"
+    },
+    "charge_basis": {
+      "RENTAL": "Alquiler",
+      "FREE_LOAN": "Préstamo gratis"
+    },
+    "variance_kind": {
+      "MATCHED": "Coincide",
+      "PRESENT_ELSEWHERE": "Presente pero en otro lado",
+      "ABSENT_HERE": "Ausente en el conteo",
+      "UNKNOWN_SERIAL": "Serial desconocido"
+    },
+    "suggested_action": {
+      "NONE": "—",
+      "LOSS": "Pérdida",
+      "TRANSFER": "Transferir",
+      "VERIFY": "Verificar"
+    },
+    "alert_type": {
+      "SUPPLIER_LIABILITY": "Responsabilidad proveedor",
+      "SUPPLIER_LOAN_OVERDUE": "Préstamo proveedor vencido",
+      "LONG_OUTSTANDING": "Circulación prolongada (>90 días)"
+    },
+    "gas": {
+      "O2": "Oxígeno",
+      "O2_MED": "O2 medicinal",
+      "O2_LASER": "O2 láser",
+      "CO2": "CO₂",
+      "N2": "Nitrógeno",
+      "AR": "Argón",
+      "AR_50": "Argón 5.0",
+      "ATAL": "ATAL",
+      "MIX20": "Mezcla 20%",
+      "MIX22": "Mezcla 22%",
+      "MAPAX30": "MAPAX 30",
+      "ACET": "Acetileno",
+      "HELIUM": "Helio",
+      "THERMOLENE": "Thermolene"
+    }
+  },
+  "validation": {
+    "required": "Campo obligatorio"
+  },
+  "errors": {
+    "invalid_credentials": "Usuario o contraseña incorrectos",
+    "generic": "Ocurrió un error. Intentá de nuevo.",
+    "load_failed": "No se pudieron cargar los datos",
+    "duplicate_cuit": "Ya existe un cliente con este CUIT",
+    "duplicate_serial": "Ya existe ese serial para el propietario",
+    "duplicate_location": "Ya existe una ubicación con ese nombre",
+    "cylinder_already_out": "El cilindro ya está en circulación",
+    "cylinder_terminal": "El cilindro está en estado terminal",
+    "kind_basis_mismatch": "Recarga solo aplica a cilindros del cliente (Su Propiedad); alquiler a nuestra/proveedor",
+    "return_before_delivery": "La devolución no puede ser anterior a la entrega",
+    "not_open": "El movimiento no está abierto",
+    "returned_cylinder_busy": "El cilindro devuelto ya tiene un movimiento abierto",
+    "already_terminal": "El cilindro ya está en estado terminal",
+    "too_few_members": "La batería necesita al menos 2 miembros",
+    "member_already_packed": "El cilindro ya pertenece a una batería activa",
+    "replacement_not_available": "El cilindro de reemplazo no está disponible en stock",
+    "stage_out_of_order": "La etapa del préstamo no puede avanzar en ese orden",
+    "date_order": "Las fechas del préstamo deben ser no decrecientes",
+    "same_party": "Origen y destino deben ser distintos",
+    "accessory_already_on_loan": "El accesorio ya está prestado",
+    "rate_overlap": "Ya hay una tarifa que se solapa para ese cliente/gas",
+    "period_locked": "El período ya tiene facturas aprobadas o exportadas",
+    "not_approved": "La corrida debe estar aprobada antes de exportar",
+    "forbidden_title": "Acceso denegado",
+    "forbidden_back": "Volver a clientes"
+  },
+  "actions": {
+    "toggle_language": "Cambiar idioma",
+    "toggle_theme": "Cambiar tema",
+    "logout": "Salir",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "close": "Cerrar",
+    "new_client": "Nuevo cliente",
+    "register_cylinder": "Registrar cilindro",
+    "new_delivery": "Nueva entrega",
+    "return": "Devolver",
+    "swap": "Canje",
+    "continue": "Continuar",
+    "void": "Anular",
+    "report_loss": "Pérdida",
+    "replace": "Reemplazo",
+    "new_battery": "Nueva batería",
+    "new_loan": "Nuevo préstamo",
+    "configure_overdue": "Configurar vencimiento",
+    "new_transfer": "Nueva transferencia",
+    "advance": "Avanzar",
+    "run_count": "Conciliar conteo",
+    "new_accessory": "Nuevo accesorio",
+    "rent_accessory": "Prestar / alquilar",
+    "refresh_alerts": "Actualizar alertas",
+    "resolve": "Resolver",
+    "new_rate": "Nueva tarifa",
+    "run_billing": "Generar borrador",
+    "run_billing_history": "Histórico",
+    "approve_billing": "Aprobar",
+    "export_billing": "Exportar",
+    "search": "Buscar"
+  },
+  "loans": {
+    "title": "Préstamos de proveedor",
+    "overdue_yes": "Vencido",
+    "overdue_threshold_chip": "{{days}} días",
+    "columns": {
+      "cylinder": "Cilindro",
+      "supplier": "Proveedor",
+      "stage": "Etapa",
+      "received": "Recibido",
+      "client": "Cliente",
+      "overdue": "Vencido"
+    },
+    "filters": {
+      "open": "Solo abiertos",
+      "overdue": "Solo vencidos (+{{days}} días)"
+    },
+    "threshold": {
+      "title": "Días para marcar vencido",
+      "help": "Un préstamo abierto se considera vencido cuando pasan estos días desde que se recibió del proveedor.",
+      "days": "Días",
+      "saved": "Umbral actualizado"
+    },
+    "form": {
+      "title": "Nuevo préstamo",
+      "cylinder_id": "ID cilindro",
+      "supplier_id": "ID partido proveedor",
+      "supplier_hint": "Debe ser un party tipo SUPPLIER",
+      "received_on": "Recibido del proveedor",
+      "client": "Cliente"
+    },
+    "advance": {
+      "title": "Avanzar etapa",
+      "summary": "{{serial}} → {{stage}}",
+      "date": "Fecha"
+    }
+  },
+  "transfers": {
+    "title": "Transferencias de stock",
+    "columns": {
+      "date": "Fecha",
+      "cylinder": "Cilindro",
+      "from": "Origen",
+      "to": "Destino",
+      "note": "Nota"
+    },
+    "form": {
+      "title": "Nueva transferencia",
+      "cylinder": "Cilindro",
+      "from": "Origen",
+      "to": "Destino",
+      "party_hint": "Buscá por nombre: nodos, hub, proveedores o clientes",
+      "date": "Fecha",
+      "note": "Nota"
+    },
+    "party_types": {
+      "SELF": "Hub / empresa",
+      "SUPPLIER": "Proveedor",
+      "SUBDISTRIBUTOR": "Nodo",
+      "CUSTOMER": "Cliente"
+    }
+  },
+  "reconciliation": {
+    "title": "Conciliación de inventario",
+    "to_verify": "Revisar",
+    "tabs": {
+      "outstanding": "En circulación",
+      "count": "Conteo físico"
+    },
+    "outstanding": {
+      "columns": {
+        "client": "Cliente",
+        "serial": "Serial",
+        "gas": "Gas",
+        "delivery": "Entrega",
+        "days": "Días",
+        "verify": "Verificar"
+      }
+    },
+    "count": {
+      "date": "Fecha del conteo",
+      "serials": "Seriales contados",
+      "serials_hint": "Uno por línea o separados por coma",
+      "read_only": "Necesitás permiso de escritura en cilindros para correr el conteo",
+      "summary": "Coincide {{matched}} · En otro lado {{elsewhere}} · Ausentes {{absent}} · Desconocidos {{unknown}}",
+      "columns": {
+        "kind": "Tipo",
+        "serial": "Serial",
+        "state": "Estado sistema",
+        "action": "Acción sugerida"
+      }
+    }
+  },
+  "accessories": {
+    "title": "Accesorios",
+    "tabs": {
+      "inventory": "Inventario",
+      "rentals": "Préstamos abiertos"
+    },
+    "columns": {
+      "type": "Tipo",
+      "identifier": "Identificador",
+      "state": "Estado",
+      "owner": "Dueño"
+    },
+    "form": {
+      "title": "Nuevo accesorio",
+      "type": "Tipo",
+      "identifier": "Identificador",
+      "owner_id": "ID dueño (party)"
+    },
+    "rent": {
+      "title": "Prestar / alquilar",
+      "accessory_id": "ID accesorio",
+      "client": "Cliente",
+      "start": "Inicio",
+      "basis": "Base de cobro"
+    },
+    "rentals": {
+      "columns": {
+        "client": "Cliente",
+        "start": "Inicio",
+        "basis": "Base"
+      }
+    }
+  },
+  "alerts": {
+    "title": "Alertas operativas",
+    "subtitle": "Lista de seguimiento: alquileres prolongados y recargas pendientes — llamar al cliente, anotar la respuesta y mantener trazabilidad del stock.",
+    "refreshed": "Alertas actualizadas: {{created}} nuevas · {{open}} abiertas",
+    "resolved": "Alerta resuelta",
+    "contact_saved": "Contacto registrado",
+    "filters": {
+      "type": "Tipo de alerta",
+      "kind": "Alquiler / Recarga",
+      "kind_hint_rental": "Cilindros nuestros o de proveedor con demasiado tiempo en el cliente — reclamar o confirmar si sigue el alquiler.",
+      "kind_hint_refill": "Cilindros del cliente sin movimiento reciente — preguntar si necesita una recarga."
+    },
+    "actions": {
+      "contact": "Contacto"
+    },
+    "contact": {
+      "title": "Registrar contacto con el cliente",
+      "date": "Fecha de contacto",
+      "note": "Notas / respuesta",
+      "note_placeholder": "Ej.: Llamó María — necesita refill la semana próxima / sigue alquilando / no contesta",
+      "note_help": "Queda registrado si se contactó al cliente y cuál fue su respuesta."
+    },
+    "columns": {
+      "type": "Tipo",
+      "kind": "Tipo mov.",
+      "summary": "Resumen",
+      "detail": "Detalle",
+      "cylinder": "Cilindro",
+      "client": "Cliente",
+      "phone": "Teléfono",
+      "days": "Días",
+      "gas": "Gas",
+      "severity": "Severidad",
+      "role": "Rol",
+      "created": "Creada",
+      "last_contact": "Últ. contacto",
+      "notes": "Notas"
+    },
+    "severity": {
+      "1": "Baja",
+      "2": "Media",
+      "3": "Alta",
+      "4": "Crítica"
+    },
+    "tokens": {
+      "cylinder": "cilindro {{serial}}",
+      "client": "cliente {{name}}",
+      "supplier": "proveedor {{name}}",
+      "days": "{{count}} días"
+    },
+    "menu": {
+      "title": "Alertas",
+      "empty": "No hay alertas abiertas",
+      "view_all": "Ver todas las alertas",
+      "open_count": "{{count}} abiertas"
+    }
+  },
+  "rates": {
+    "title": "Tarifas de alquiler",
+    "global": "Global",
+    "any_gas": "Cualquier gas",
+    "columns": {
+      "from": "Desde",
+      "to": "Hasta",
+      "client": "Cliente",
+      "gas": "Gas",
+      "period": "Período",
+      "amount": "Monto"
+    },
+    "form": {
+      "title": "Nueva tarifa",
+      "title_edit": "Editar tarifa",
+      "amount": "Monto (ARS)",
+      "period": "Período",
+      "client": "Cliente",
+      "gas": "Gas",
+      "effective_from": "Vigente desde",
+      "effective_to": "Vigente hasta",
+      "effective_to_hint": "Vacío = sin fecha de fin",
+      "precedence_hint": "Precedencia: cliente+gas → cliente → gas → global (BR-19 / D-14)."
+    }
+  },
+  "billing": {
+    "title": "Facturación",
+    "subtitle": "Borrador → aprobar → exportar. Generar borrador usa Desde/Hasta (entregas o devoluciones en ese rango). Histórico ignora esas fechas y lista todo el stock nuestro aún no devuelto, desde la entrega más antigua hasta hoy.",
+    "period_start": "Desde",
+    "period_end": "Hasta",
+    "empty": "Todavía no hay borrador para este período",
+    "run_summary": "Corrida #{{id}} ({{status}}): {{invoices}} facturas · total {{total}} ARS · {{from}} → {{to}}",
+    "export_ready": "Export listo: {{count}} facturas · {{at}}",
+    "filters": {
+      "client": "Cliente (opcional)",
+      "location": "Ubicación",
+      "all_locations": "Todas",
+      "territories": "Territorios",
+      "cities": "Localidades"
+    },
+    "lines": {
+      "title": "Líneas · {{client}} ({{count}})",
+      "description": "Descripción",
+      "days": "Días",
+      "unit_price": "Precio/día",
+      "amount": "Importe",
+      "empty": "Sin líneas de cargo"
+    },
+    "ledger": {
+      "subtitle": "Cilindros en poder, historial de entradas/salidas y alquileres — independiente de la factura.",
+      "open_full": "Ficha completa"
+    },
+    "columns": {
+      "client": "Cliente",
+      "locality": "Localidad",
+      "total": "Total",
+      "status": "Estado",
+      "lines": "Líneas"
+    }
+  },
+  "reports": {
+    "title": "Reportes",
+    "subtitle": "Flota, flotante, alquileres, pérdidas, devoluciones a proveedor, calidad de datos y liquidación médica.",
+    "empty": "Sin datos para estos parámetros",
+    "error": "No se pudo cargar el reporte",
+    "refresh": "Actualizar",
+    "tabs": {
+      "fleet": "Flota",
+      "float": "Flotante / aging",
+      "rental": "Alquiler",
+      "loss": "Pérdidas",
+      "supplier": "Devoluciones proveedor",
+      "quality": "Calidad de datos",
+      "medical": "Liquidación médica"
+    },
+    "filters": {
+      "group_by": "Agrupar por",
+      "bucket": "Bucket",
+      "period_start": "Desde",
+      "period_end": "Hasta",
+      "client": "Cliente",
+      "cylinder": "Cilindro",
+      "territory": "Territorio"
+    },
+    "group": {
+      "state": "Estado",
+      "gas": "Gas",
+      "owner": "Dueño"
+    },
+    "bucket": {
+      "all": "Todos"
+    },
+    "columns": {
+      "group": "Grupo",
+      "count": "Cantidad",
+      "client": "Cliente",
+      "serial": "Serie",
+      "delivery": "Entrega",
+      "days_out": "Días",
+      "bucket": "Bucket",
+      "gas": "Gas",
+      "rental_days": "Días alquiler",
+      "revenue": "Ingresos",
+      "movements": "Movimientos",
+      "owner": "Dueño",
+      "basis": "Base",
+      "state": "Estado",
+      "liability": "Responsable",
+      "supplier": "Proveedor",
+      "stage": "Etapa",
+      "days_open": "Días abiertos",
+      "source": "Origen",
+      "reason": "Motivo",
+      "status": "Estado",
+      "created": "Creado",
+      "deliveries": "Entregas",
+      "accessories": "Accesorios"
+    }
+  }
+}

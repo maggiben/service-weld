@@ -1,0 +1,753 @@
+{
+  "app": {
+    "title": "Cylinder Management",
+    "subtitle": "Custody, circulation & rental"
+  },
+  "nav": {
+    "clients": "Clients",
+    "cylinders": "Cylinders",
+    "batteries": "Batteries",
+    "movements": "Movements",
+    "supplier_loans": "Supplier loans",
+    "transfers": "Transfers",
+    "reconciliation": "Reconciliation",
+    "reports": "Reports",
+    "accessories": "Accessories",
+    "alerts": "Alerts",
+    "rates": "Rates",
+    "billing": "Billing"
+  },
+  "shell": {
+    "signed_in_as": "Signed in as {{username}}"
+  },
+  "login": {
+    "title": "Sign in",
+    "subtitle": "Enter your credentials to continue",
+    "username": "Username",
+    "password": "Password",
+    "submit": "Sign in"
+  },
+  "clients": {
+    "title": "Clients",
+    "empty": "No clients yet",
+    "columns": {
+      "name": "Name",
+      "territory": "Territory",
+      "coverage": "Coverage",
+      "segment": "Segment",
+      "status": "Status",
+      "version": "Version"
+    },
+    "filters": {
+      "coverage": "Coverage",
+      "status": "Status",
+      "territory": "Territory",
+      "all": "All"
+    },
+    "detail": {
+      "back": "Back to clients",
+      "empty": "No movements in this view",
+      "tabs": {
+        "outstanding": "Outstanding",
+        "history": "History",
+        "rentals": "Our property",
+        "refills": "Their property"
+      },
+      "filters": {
+        "open_only": "Open only"
+      },
+      "kpi": {
+        "outstanding": "Outstanding",
+        "rentals": "Open rentals",
+        "refills": "Open refills",
+        "closed_days": "Closed days (30d)",
+        "accessories": "Accessories"
+      },
+      "columns": {
+        "serial": "Serial",
+        "gas": "Gas",
+        "kind": "Kind",
+        "delivery": "Delivery",
+        "return": "Return",
+        "accrued_days": "Accrued days",
+        "rental_days": "Rental days",
+        "state": "State"
+      }
+    },
+    "form": {
+      "title_create": "New client",
+      "unsaved_confirm": "You have unsaved changes. Close anyway?",
+      "name": "Name",
+      "cuit": "CUIT",
+      "address_street": "Address",
+      "territory": "Territory",
+      "coverage": "Coverage",
+      "segment": "Segment",
+      "segment_none": "No segment",
+      "delivery_instructions": "Delivery instructions",
+      "contacts": "Contacts",
+      "add_contact": "Add contact",
+      "remove_contact": "Remove contact",
+      "contact_name": "Name",
+      "contact_phone": "Phone",
+      "contact_primary": "Primary"
+    }
+  },
+  "cylinders": {
+    "title": "Cylinder fleet",
+    "empty": "No cylinders registered",
+    "columns": {
+      "serial": "Serial",
+      "owner": "Owner",
+      "holder": "Current holder",
+      "gas": "Gas",
+      "capacity": "m³",
+      "basis": "Basis",
+      "state": "State",
+      "condition": "Condition",
+      "territory": "Home depot",
+      "city": "City"
+    },
+    "filters": {
+      "serial": "Search serial",
+      "state": "State",
+      "basis": "Basis",
+      "territory": "Location (territory)",
+      "location": "Location",
+      "depots": "Depots / origins",
+      "cities": "Cities"
+    },
+    "detail": {
+      "back": "Back to cylinders",
+      "title": "Cylinder {{serial}}",
+      "current_holder": "Current holder",
+      "in_stock": "In stock",
+      "history_title": "Circulation ledger",
+      "empty": "No movements yet — cylinder is new",
+      "columns": {
+        "delivery": "Delivery",
+        "holder": "Client",
+        "return": "Return",
+        "gas": "Gas",
+        "kind": "Kind",
+        "rental_days": "Rental days",
+        "state": "State",
+        "note": "Note"
+      }
+    },
+    "form": {
+      "title_create": "Register cylinder",
+      "unsaved_confirm": "You have unsaved changes. Close anyway?",
+      "serial": "Serial number",
+      "owner": "Owner",
+      "basis": "Ownership basis",
+      "basis_hint": "Derived from the owner (BR-07)",
+      "gas": "Gas",
+      "capacity": "Capacity (m³)",
+      "territory": "Depot / origin",
+      "territory_hint": "Home depot for the cylinder. Cities are used in the location filter or when creating a locality.",
+      "condition": "Condition",
+      "create_territory": "+ Create depot / origin…",
+      "create_locality": "+ Create city…",
+      "create_territory_title": "New depot / origin",
+      "create_locality_title": "New city",
+      "location_name": "Name",
+      "location_name_required": "Enter a name",
+      "locality_territory_hint": "Optional: operating territory this city belongs to"
+    },
+    "loss": {
+      "title": "Report loss / breakage",
+      "summary": "{{serial}} ({{state}})",
+      "outcome": "Outcome",
+      "occurred_on": "Date",
+      "note": "Note",
+      "confirm": "Confirm",
+      "supplier_alert": "A supplier-liability alert was raised (BR-12)."
+    },
+    "replace": {
+      "title": "Replace cylinder",
+      "summary": "Original {{serial}}",
+      "replacement": "Replacement cylinder",
+      "client": "Client",
+      "occurred_on": "Date",
+      "note": "Note",
+      "confirm": "Issue replacement"
+    }
+  },
+  "batteries": {
+    "title": "Batteries / manifolds",
+    "columns": {
+      "code": "Code",
+      "owner": "Owner",
+      "gas": "Gas",
+      "members": "Members",
+      "state": "State"
+    },
+    "form": {
+      "title": "New battery",
+      "code": "Code",
+      "owner": "Owner",
+      "gas": "Gas",
+      "members": "Cylinder IDs",
+      "members_hint": "At least 2 IDs, comma-separated (BR-13)"
+    }
+  },
+  "movements": {
+    "title": "Movements",
+    "empty": "No movements yet",
+    "columns": {
+      "delivery": "Delivery",
+      "return": "Return",
+      "serial": "Serial",
+      "holder": "Client",
+      "property": "Ownership",
+      "kind": "Kind",
+      "gas": "Gas",
+      "rental_days": "Days",
+      "state": "State",
+      "actions": "Actions"
+    },
+    "filters": {
+      "open_only": "Open only",
+      "kind": "Kind",
+      "state": "State"
+    },
+    "form": {
+      "title_deliver": "New delivery / refill",
+      "title_rental": "New delivery (rental)",
+      "title_refill": "New refill",
+      "kind_subtitle": "Movement type: {{kind}}",
+      "unsaved_confirm": "You have unsaved changes. Close anyway?",
+      "cylinder": "Cylinder",
+      "holder": "Client",
+      "kind": "Movement kind",
+      "gas": "Gas",
+      "delivery_date": "Delivery date",
+      "refill_date": "Refill date",
+      "note": "Note",
+      "hint_rental": "Rental: only our or supplier cylinders available in plant stock (not ones already with another client).",
+      "hint_refill": "Refill (customer-owned): the client is the cylinder owner — no separate picker.",
+      "cylinder_hint_rental": "Rentable only: in-stock empty/full, not held by a client.",
+      "cylinder_hint_refill": "Customer-owned cylinders only (not sold/lost).",
+      "owner_client": "Client (owner)",
+      "owner_client_hint": "Taken from the cylinder owner.",
+      "owner_client_placeholder": "Pick a cylinder to see the owner"
+    },
+    "return": {
+      "title": "Record return",
+      "summary": "{{serial}} → {{holder}} (delivered {{delivery}})",
+      "return_date": "Return date",
+      "preview": "Rental days: {{days}} (computed, not editable)",
+      "invalid_preview": "Return date must be on or after delivery",
+      "confirm": "Confirm return"
+    },
+    "swap": {
+      "title": "Record swap",
+      "summary": "Return {{serial}} from {{holder}} and deliver another cylinder instead",
+      "hint": "The current cylinder returns to empty stock and the replacement is delivered to the same client.",
+      "list_hint": "Swap: use the Swap button above, or on the right of an Open movement. Rentals also offer Return; customer-owned (refill) cylinders only allow Swap.",
+      "pick_title": "Choose movement to swap",
+      "pick_hint": "Open movements only. Search by serial or client.",
+      "pick_movement": "Open movement",
+      "pick_placeholder": "Serial or client…",
+      "returned_cylinder": "Returned cylinder",
+      "replacement_cylinder": "Replacement cylinder",
+      "replacement_hint": "Search stock by serial (or customer-owned for a refill).",
+      "return_date": "Return date",
+      "swap_date": "Swap date",
+      "confirm": "Confirm swap"
+    },
+    "void": {
+      "title": "Void movement",
+      "summary": "{{serial}} ({{state}})",
+      "reason": "Reason",
+      "confirm": "Void"
+    }
+  },
+  "enums": {
+    "coverage": {
+      "PRIVATE": "Private",
+      "MUNICIPAL_HOSPITAL": "Municipal hospital"
+    },
+    "status": {
+      "ACTIVE": "Active",
+      "DORMANT": "Dormant",
+      "INACTIVE": "Inactive"
+    },
+    "segment": {
+      "METALWORKING": "Metalworking",
+      "AGRO": "Agro",
+      "TRANSPORT": "Transport",
+      "BEVERAGE": "Beverage",
+      "FOOD_PROCESSING": "Food processing",
+      "LASER_CUTTING": "Laser cutting",
+      "MEDICAL_HOMECARE": "Medical homecare",
+      "PUBLIC_SECTOR": "Public sector",
+      "RESELLER": "Reseller",
+      "OTHER": "Other"
+    },
+    "basis": {
+      "OURS": "Ours",
+      "SUPPLIER": "Supplier",
+      "CUSTOMER": "Customer"
+    },
+    "condition": {
+      "EMPTY": "Empty",
+      "FULL": "Full"
+    },
+    "cylinder_state": {
+      "IN_STOCK_EMPTY": "In stock (empty)",
+      "IN_STOCK_FULL": "In stock (full)",
+      "AT_CLIENT": "At client",
+      "AT_SUPPLIER": "At supplier",
+      "SOLD": "Sold",
+      "LOST": "Lost",
+      "BROKEN": "Broken",
+      "RETURNED_TO_SUPPLIER": "Returned to supplier",
+      "RETIRED": "Retired"
+    },
+    "movement_kind": {
+      "RENTAL": "Rental",
+      "REFILL": "Refill"
+    },
+    "movement_state": {
+      "OPEN": "Open",
+      "CLOSED": "Closed",
+      "SWAPPED": "Swapped",
+      "LOST": "Lost",
+      "SOLD": "Sold",
+      "VOID": "Void",
+      "REFILLED": "Refilled"
+    },
+    "rate_period": {
+      "DAILY": "Daily",
+      "MONTHLY": "Monthly"
+    },
+    "invoice_status": {
+      "DRAFT": "Draft",
+      "APPROVED": "Approved",
+      "EXPORTED": "Exported",
+      "CANCELLED": "Cancelled"
+    },
+    "loan_stage": {
+      "RECEIVED": "Received",
+      "OUT_TO_CLIENT": "Out to client",
+      "BACK_FROM_CLIENT": "Back from client",
+      "RETURNED_TO_SUPPLIER": "Returned to supplier"
+    },
+    "accessory_type": {
+      "REGULATOR": "Regulator",
+      "ADAPTER": "Adapter",
+      "PORTABLE_O2_BACKPACK": "Portable O2 backpack"
+    },
+    "accessory_state": {
+      "IN_STOCK": "In stock",
+      "ON_LOAN": "On loan",
+      "IN_REPAIR": "In repair",
+      "LOST": "Lost",
+      "BROKEN": "Broken",
+      "RETIRED": "Retired"
+    },
+    "charge_basis": {
+      "RENTAL": "Rental",
+      "FREE_LOAN": "Free loan"
+    },
+    "variance_kind": {
+      "MATCHED": "Matched",
+      "PRESENT_ELSEWHERE": "Present elsewhere",
+      "ABSENT_HERE": "Absent from count",
+      "UNKNOWN_SERIAL": "Unknown serial"
+    },
+    "suggested_action": {
+      "NONE": "—",
+      "LOSS": "Loss",
+      "TRANSFER": "Transfer",
+      "VERIFY": "Verify"
+    },
+    "alert_type": {
+      "SUPPLIER_LIABILITY": "Supplier liability",
+      "SUPPLIER_LOAN_OVERDUE": "Supplier loan overdue",
+      "LONG_OUTSTANDING": "Long outstanding (>90 days)"
+    },
+    "gas": {
+      "O2": "Oxygen",
+      "O2_MED": "Medical O2",
+      "O2_LASER": "Laser O2",
+      "CO2": "CO₂",
+      "N2": "Nitrogen",
+      "AR": "Argon",
+      "AR_50": "Argon 5.0",
+      "ATAL": "ATAL",
+      "MIX20": "Mix 20%",
+      "MIX22": "Mix 22%",
+      "MAPAX30": "MAPAX 30",
+      "ACET": "Acetylene",
+      "HELIUM": "Helium",
+      "THERMOLENE": "Thermolene"
+    }
+  },
+  "validation": {
+    "required": "Required field"
+  },
+  "errors": {
+    "invalid_credentials": "Invalid username or password",
+    "generic": "Something went wrong. Please try again.",
+    "load_failed": "Could not load data",
+    "duplicate_cuit": "A client with this CUIT already exists",
+    "duplicate_serial": "That serial already exists for this owner",
+    "duplicate_location": "A location with that name already exists",
+    "cylinder_already_out": "Cylinder is already out",
+    "cylinder_terminal": "Cylinder is in a terminal state",
+    "kind_basis_mismatch": "Refill applies only to customer-owned cylinders; rental to ours/supplier",
+    "return_before_delivery": "Return cannot be before delivery",
+    "not_open": "Movement is not open",
+    "returned_cylinder_busy": "Returned cylinder already has an open movement",
+    "already_terminal": "Cylinder is already in a terminal state",
+    "too_few_members": "Battery needs at least 2 members",
+    "member_already_packed": "Cylinder is already in an active battery",
+    "replacement_not_available": "Replacement cylinder is not available in stock",
+    "stage_out_of_order": "Loan stage cannot advance in that order",
+    "date_order": "Loan stage dates must be non-decreasing",
+    "same_party": "Origin and destination must differ",
+    "accessory_already_on_loan": "Accessory is already on loan",
+    "rate_overlap": "An overlapping rate already exists for that client/gas",
+    "period_locked": "Period already has approved or exported invoices",
+    "not_approved": "Billing run must be approved before export",
+    "forbidden_title": "Access denied",
+    "forbidden_back": "Back to clients"
+  },
+  "actions": {
+    "toggle_language": "Change language",
+    "toggle_theme": "Toggle theme",
+    "logout": "Sign out",
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "new_client": "New client",
+    "register_cylinder": "Register cylinder",
+    "new_delivery": "New delivery",
+    "return": "Return",
+    "swap": "Swap",
+    "continue": "Continue",
+    "void": "Void",
+    "report_loss": "Loss",
+    "replace": "Replace",
+    "new_battery": "New battery",
+    "new_loan": "New loan",
+    "configure_overdue": "Configure overdue",
+    "new_transfer": "New transfer",
+    "advance": "Advance",
+    "run_count": "Run count",
+    "new_accessory": "New accessory",
+    "rent_accessory": "Rent / loan",
+    "refresh_alerts": "Refresh alerts",
+    "resolve": "Resolve",
+    "new_rate": "New rate",
+    "run_billing": "Generate draft",
+    "run_billing_history": "History",
+    "approve_billing": "Approve",
+    "export_billing": "Export",
+    "search": "Search"
+  },
+  "loans": {
+    "title": "Supplier loans",
+    "overdue_yes": "Overdue",
+    "overdue_threshold_chip": "{{days}} days",
+    "columns": {
+      "cylinder": "Cylinder",
+      "supplier": "Supplier",
+      "stage": "Stage",
+      "received": "Received",
+      "client": "Client",
+      "overdue": "Overdue"
+    },
+    "filters": {
+      "open": "Open only",
+      "overdue": "Overdue only (+{{days}} days)"
+    },
+    "threshold": {
+      "title": "Days until overdue",
+      "help": "An open supplier loan is overdue after this many days from receipt from the supplier.",
+      "days": "Days",
+      "saved": "Threshold updated"
+    },
+    "form": {
+      "title": "New supplier loan",
+      "cylinder_id": "Cylinder ID",
+      "supplier_id": "Supplier party ID",
+      "supplier_hint": "Must be a SUPPLIER party",
+      "received_on": "Received from supplier",
+      "client": "Client"
+    },
+    "advance": {
+      "title": "Advance stage",
+      "summary": "{{serial}} → {{stage}}",
+      "date": "Date"
+    }
+  },
+  "transfers": {
+    "title": "Stock transfers",
+    "columns": {
+      "date": "Date",
+      "cylinder": "Cylinder",
+      "from": "From",
+      "to": "To",
+      "note": "Note"
+    },
+    "form": {
+      "title": "New transfer",
+      "cylinder": "Cylinder",
+      "from": "Origin",
+      "to": "Destination",
+      "party_hint": "Search by name: nodes, hub, suppliers, or clients",
+      "date": "Date",
+      "note": "Note"
+    },
+    "party_types": {
+      "SELF": "Hub / company",
+      "SUPPLIER": "Supplier",
+      "SUBDISTRIBUTOR": "Node",
+      "CUSTOMER": "Client"
+    }
+  },
+  "reconciliation": {
+    "title": "Inventory reconciliation",
+    "to_verify": "To verify",
+    "tabs": {
+      "outstanding": "Outstanding",
+      "count": "Physical count"
+    },
+    "outstanding": {
+      "columns": {
+        "client": "Client",
+        "serial": "Serial",
+        "gas": "Gas",
+        "delivery": "Delivery",
+        "days": "Days",
+        "verify": "Verify"
+      }
+    },
+    "count": {
+      "date": "Count date",
+      "serials": "Counted serials",
+      "serials_hint": "One per line or comma-separated",
+      "read_only": "Cylinder write permission is required to run a count",
+      "summary": "Matched {{matched}} · Elsewhere {{elsewhere}} · Absent {{absent}} · Unknown {{unknown}}",
+      "columns": {
+        "kind": "Kind",
+        "serial": "Serial",
+        "state": "System state",
+        "action": "Suggested action"
+      }
+    }
+  },
+  "accessories": {
+    "title": "Accessories",
+    "tabs": {
+      "inventory": "Inventory",
+      "rentals": "Open loans"
+    },
+    "columns": {
+      "type": "Type",
+      "identifier": "Identifier",
+      "state": "State",
+      "owner": "Owner"
+    },
+    "form": {
+      "title": "New accessory",
+      "type": "Type",
+      "identifier": "Identifier",
+      "owner_id": "Owner party ID"
+    },
+    "rent": {
+      "title": "Rent / loan",
+      "accessory_id": "Accessory ID",
+      "client": "Client",
+      "start": "Start",
+      "basis": "Charge basis"
+    },
+    "rentals": {
+      "columns": {
+        "client": "Client",
+        "start": "Start",
+        "basis": "Basis"
+      }
+    }
+  },
+  "alerts": {
+    "title": "Operational alerts",
+    "subtitle": "Follow-up list: long rentals and pending refills — call the client, note the response, and keep stock traceability.",
+    "refreshed": "Alerts refreshed: {{created}} new · {{open}} open",
+    "resolved": "Alert resolved",
+    "contact_saved": "Contact saved",
+    "filters": {
+      "type": "Alert type",
+      "kind": "Rental / Refill",
+      "kind_hint_rental": "Our or supplier cylinders held too long — reclaim or confirm continued rental.",
+      "kind_hint_refill": "Customer-owned cylinders with no recent movement — ask if they need a refill."
+    },
+    "actions": {
+      "contact": "Contact"
+    },
+    "contact": {
+      "title": "Log client contact",
+      "date": "Contact date",
+      "note": "Notes / response",
+      "note_placeholder": "e.g. Spoke with María — needs refill next week / keeping rental / no answer",
+      "note_help": "Records whether the client was contacted and what they said."
+    },
+    "columns": {
+      "type": "Type",
+      "kind": "Kind",
+      "summary": "Summary",
+      "detail": "Detail",
+      "cylinder": "Cylinder",
+      "client": "Client",
+      "phone": "Phone",
+      "days": "Days",
+      "gas": "Gas",
+      "severity": "Severity",
+      "role": "Role",
+      "created": "Created",
+      "last_contact": "Last contact",
+      "notes": "Notes"
+    },
+    "severity": {
+      "1": "Low",
+      "2": "Medium",
+      "3": "High",
+      "4": "Critical"
+    },
+    "tokens": {
+      "cylinder": "cylinder {{serial}}",
+      "client": "client {{name}}",
+      "supplier": "supplier {{name}}",
+      "days": "{{count}} days"
+    },
+    "menu": {
+      "title": "Alerts",
+      "empty": "No open alerts",
+      "view_all": "View all alerts",
+      "open_count": "{{count}} open"
+    }
+  },
+  "rates": {
+    "title": "Rental rates",
+    "global": "Global",
+    "any_gas": "Any gas",
+    "columns": {
+      "from": "From",
+      "to": "To",
+      "client": "Client",
+      "gas": "Gas",
+      "period": "Period",
+      "amount": "Amount"
+    },
+    "form": {
+      "title": "New rate",
+      "title_edit": "Edit rate",
+      "amount": "Amount (ARS)",
+      "period": "Period",
+      "client": "Client",
+      "gas": "Gas",
+      "effective_from": "Effective from",
+      "effective_to": "Effective to",
+      "effective_to_hint": "Empty = no end date",
+      "precedence_hint": "Precedence: client+gas → client → gas → global (BR-19 / D-14)."
+    }
+  },
+  "billing": {
+    "title": "Billing",
+    "subtitle": "Draft → approve → export. Generate draft uses From/To (deliveries or returns in that range). History ignores those dates and lists all of our stock still not returned, from the oldest delivery through today.",
+    "period_start": "From",
+    "period_end": "To",
+    "empty": "No draft for this period yet",
+    "run_summary": "Run #{{id}} ({{status}}): {{invoices}} invoices · total {{total}} ARS · {{from}} → {{to}}",
+    "export_ready": "Export ready: {{count}} invoices · {{at}}",
+    "filters": {
+      "client": "Client (optional)",
+      "location": "Location",
+      "all_locations": "All",
+      "territories": "Territories",
+      "cities": "Localities"
+    },
+    "lines": {
+      "title": "Lines · {{client}} ({{count}})",
+      "description": "Description",
+      "days": "Days",
+      "unit_price": "Price/day",
+      "amount": "Amount",
+      "empty": "No charge lines"
+    },
+    "ledger": {
+      "subtitle": "Cylinders on hand, delivery/return history and rentals — independent of the invoice.",
+      "open_full": "Full client page"
+    },
+    "columns": {
+      "client": "Client",
+      "locality": "Locality",
+      "total": "Total",
+      "status": "Status",
+      "lines": "Lines"
+    }
+  },
+  "reports": {
+    "title": "Reports",
+    "subtitle": "Fleet, float aging, rentals, losses, supplier returns, data quality, and medical statements.",
+    "empty": "No data for these parameters",
+    "error": "Could not load report",
+    "refresh": "Refresh",
+    "tabs": {
+      "fleet": "Fleet",
+      "float": "Float / aging",
+      "rental": "Rental",
+      "loss": "Losses",
+      "supplier": "Supplier returns",
+      "quality": "Data quality",
+      "medical": "Medical statement"
+    },
+    "filters": {
+      "group_by": "Group by",
+      "bucket": "Bucket",
+      "period_start": "From",
+      "period_end": "To",
+      "client": "Client",
+      "cylinder": "Cylinder",
+      "territory": "Territory"
+    },
+    "group": {
+      "state": "State",
+      "gas": "Gas",
+      "owner": "Owner"
+    },
+    "bucket": {
+      "all": "All"
+    },
+    "columns": {
+      "group": "Group",
+      "count": "Count",
+      "client": "Client",
+      "serial": "Serial",
+      "delivery": "Delivery",
+      "days_out": "Days out",
+      "bucket": "Bucket",
+      "gas": "Gas",
+      "rental_days": "Rental days",
+      "revenue": "Revenue",
+      "movements": "Movements",
+      "owner": "Owner",
+      "basis": "Basis",
+      "state": "State",
+      "liability": "Liability",
+      "supplier": "Supplier",
+      "stage": "Stage",
+      "days_open": "Days open",
+      "source": "Source",
+      "reason": "Reason",
+      "status": "Status",
+      "created": "Created",
+      "deliveries": "Deliveries",
+      "accessories": "Accessories"
+    }
+  }
+}

@@ -1,0 +1,78 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# builds
+dist/
+build/
+.turbo/
+*.tsbuildinfo
+.next/
+out/
+
+# env & secrets — never commit real credentials
+.env
+.env.*
+!.env.example
+!.env*.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.p8
+*.keystore
+id_rsa*
+id_ed25519*
+id_dsa*
+*.secret
+*.secrets
+secrets/
+credentials/
+**/credentials.json
+**/service-account*.json
+**/google-services.json
+**/*-firebase-adminsdk*.json
+
+# test / coverage
+coverage/
+.nyc_output/
+*.lcov
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# editor / os / local tooling
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.claude/
+.cursor/
+*.local.json
+*.local.yml
+*.local.yaml
+
+# legacy source workbooks (large binaries; kept out of VCS — see migration/)
+*.xls
+*.xlsx
+
+# generated
+packages/api-client/generated/
+migration/reconciliation_report.json
+migration/.staging/
+migration/.venv/
+migration/venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# docker / local data
+*.sql.gz
+dump.sql
+pgdata/
