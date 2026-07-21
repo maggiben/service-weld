@@ -1,11 +1,20 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it, beforeEach } from "node:test";
+
 import { displayRentalDays } from "./features/movements/displayRentalDays";
 import {
   formatAlertDetail,
   alertEntityHref,
 } from "./features/alerts/alertDisplay";
 import { applyServerErrors } from "./hooks/useServerErrors";
+import { useNotificationStore } from "./store/notificationStore";
+import {
+  dashIfEmpty,
+  formatPartyLabel,
+  clampPercent,
+  pluralize,
+  boolLabel,
+} from "./lib/format";
 import { ApiClientError } from "@weld/api-client";
 import type { Alert } from "@weld/schemas";
 
@@ -197,5 +206,39 @@ describe("applyServerErrors", () => {
       ),
       true,
     );
+  });
+});
+
+describe("format helpers", () => {
+  it("covers all helpers", () => {
+    assert.equal(dashIfEmpty(null), "—");
+    assert.equal(dashIfEmpty(""), "—");
+    assert.equal(dashIfEmpty("  "), "—");
+    assert.equal(dashIfEmpty("ok"), "ok");
+    assert.equal(formatPartyLabel(3, "Acme"), "#3 Acme");
+    assert.equal(clampPercent(Number.NaN), 0);
+    assert.equal(clampPercent(-5), 0);
+    assert.equal(clampPercent(150), 100);
+    assert.equal(clampPercent(42), 42);
+    assert.equal(pluralize(1, "día", "días"), "día");
+    assert.equal(pluralize(2, "día", "días"), "días");
+    assert.equal(boolLabel(true), "sí");
+    assert.equal(boolLabel(false), "no");
+    assert.equal(boolLabel(true, "yes", "no"), "yes");
+  });
+});
+
+describe("stores", () => {
+  beforeEach(() => {
+    useNotificationStore.setState({ unreadCount: 0, toast: null });
+  });
+
+  it("notification store", () => {
+    useNotificationStore.getState().setUnreadFromAlerts(2);
+    useNotificationStore.getState().pushToast("hola");
+    assert.equal(useNotificationStore.getState().unreadCount, 2);
+    assert.equal(useNotificationStore.getState().toast, "hola");
+    useNotificationStore.getState().clearToast();
+    assert.equal(useNotificationStore.getState().toast, null);
   });
 });

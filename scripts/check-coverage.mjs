@@ -120,17 +120,9 @@ function round2(n) {
 
 function meets(totals) {
   const failed = [];
-  for (const m of ["lines", "branches", "statements"]) {
+  for (const m of ["lines", "branches", "functions", "statements"]) {
     const pct = totals[m] ?? 0;
     if (pct < THRESHOLD) failed.push(`${m}=${pct}%`);
-  }
-  // V8 function coverage on small TypeScript modules is noisy (signature /
-  // helper counts). Require functions ≥ threshold unless line coverage
-  // already clears the bar for this package.
-  const funcs = totals.functions ?? 0;
-  const lines = totals.lines ?? 0;
-  if (funcs < THRESHOLD && lines < THRESHOLD) {
-    failed.push(`functions=${funcs}%`);
   }
   return { ok: failed.length === 0, failed, totals };
 }
