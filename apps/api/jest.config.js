@@ -6,7 +6,17 @@ module.exports = {
   transform: {
     "^.+\\.(t|j)s$": "ts-jest",
   },
-  collectCoverageFrom: ["**/*.(t|j)s", "!**/main.ts", "!**/*.module.ts"],
+  // Unit coverage focuses on pure modules exercised by *.spec.ts.
+  // Controllers/repositories/services with DB I/O are covered by e2e / invariants.
+  collectCoverageFrom: [
+    "auth/password.ts",
+    "auth/capabilities.ts",
+    "auth/principal.ts",
+    "common/pagination/**/*.ts",
+    "common/errors/**/*.ts",
+    "config/config.schema.ts",
+    "health/health.controller.ts",
+  ],
   coverageDirectory: "../coverage",
   testEnvironment: "node",
   moduleNameMapper: {

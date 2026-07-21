@@ -4,21 +4,22 @@ import { ApiClientError } from "@weld/api-client";
 /**
  * Maps API `422 details[]` onto react-hook-form field errors (006 R5).
  */
-export function applyServerErrors<T extends FieldValues>(
+export function applyServerErrors(
   error: unknown,
-  setError: UseFormSetError<T>,
-  fallbackField?: Path<T>,
+  setError: UseFormSetError<FieldValues>,
+  fallbackField?: Path<FieldValues>,
 ): boolean {
   if (!(error instanceof ApiClientError) || error.httpStatus !== 422) {
     return false;
   }
-  if (error.details.length === 0 && fallbackField) {
-    setError(fallbackField, { type: "server", message: error.message });
+  if (error.details.length === 0) {
+    if (fallbackField) {
+      setError(fallbackField, { type: "server", message: error.message });
+    }
     return true;
   }
   for (const detail of error.details) {
-    const field = detail.field as Path<T>;
-    setError(field, { type: "server", message: detail.issue });
+    setError(detail.field, { type: "server", message: detail.issue });
   }
   return true;
 }
