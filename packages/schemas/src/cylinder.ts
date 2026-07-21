@@ -4,7 +4,6 @@ import {
   CylinderCondition,
   CylinderState,
   GasCode,
-  MovementKind,
   MovementState,
   OwnershipBasis,
   PackagingKind,
@@ -110,13 +109,32 @@ export type ReportCylinderLossResponse = z.infer<
   typeof ReportCylinderLossResponse
 >;
 
+/** Source of a circulation timeline row (client movement vs supplier loan). */
+export const CylinderHistoryEventSource = z.enum(["MOVEMENT", "SUPPLIER_LOAN"]);
+export type CylinderHistoryEventSource = z.infer<
+  typeof CylinderHistoryEventSource
+>;
+
+/**
+ * Kind shown on the cylinder ledger. Extends movement kinds with supplier-loan
+ * loops so devoluciones al proveedor appear alongside client custody.
+ */
+export const CylinderHistoryKind = z.enum([
+  "RENTAL",
+  "REFILL",
+  "SUPPLIER_LOAN",
+]);
+export type CylinderHistoryKind = z.infer<typeof CylinderHistoryKind>;
+
 /** Circulation timeline row (GET /cylinders/{id}/history). */
 export const CylinderHistoryRow = z.object({
-  movement_id: z.number().int(),
+  event_source: CylinderHistoryEventSource,
+  movement_id: z.number().int().nullable(),
+  loan_id: z.number().int().nullable(),
   holder_party_id: z.number().int(),
   holder_name: z.string(),
   gas_code: GasCode.nullable(),
-  movement_kind: MovementKind,
+  movement_kind: CylinderHistoryKind,
   delivery_date: IsoDate,
   return_date: IsoDate.nullable(),
   rental_days: z.number().int().nullable(),

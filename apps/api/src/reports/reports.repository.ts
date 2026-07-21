@@ -453,7 +453,7 @@ export class ReportsRepository {
     lte?: string,
   ): Promise<CylinderLifeRow[]> {
     const db = resolveDb(this.db);
-    let qb = db
+    let movementsQb = db
       .selectFrom("movement_event")
       .innerJoin("party", "party.id", "movement_event.holder_party_id")
       .select([
@@ -467,25 +467,97 @@ export class ReportsRepository {
         "movement_event.state",
         "movement_event.note",
       ])
-      .where("movement_event.cylinder_id", "=", cylinderId)
-      .orderBy("movement_event.delivery_date", "desc")
-      .orderBy("movement_event.id", "desc");
+      .where("movement_event.cylinder_id", "=", cylinderId);
 
-    if (gte) qb = qb.where("movement_event.delivery_date", ">=", gte);
-    if (lte) qb = qb.where("movement_event.delivery_date", "<=", lte);
+    if (gte)
+      movementsQb = movementsQb.where(
+        "movement_event.delivery_date",
+        ">=",
+        gte,
+      );
+    if (lte)
+      movementsQb = movementsQb.where(
+        "movement_event.delivery_date",
+        "<=",
+        lte,
+      );
 
-    const rows = await qb.execute();
-    return rows.map((row) => ({
-      movement_id: Number(row.movement_id),
-      holder_party_id: Number(row.holder_party_id),
-      holder_name: row.holder_name,
-      movement_kind: row.movement_kind,
-      delivery_date: isoDate(row.delivery_date)!,
-      return_date: isoDate(row.return_date),
-      rental_days: row.rental_days == null ? null : Number(row.rental_days),
-      state: row.state,
-      note: row.note,
-    }));
+    let loansQb = db
+      .selectFrom("supplier_loan_cycle")
+      .innerJoin("party", "party.id", "supplier_loan_cycle.supplier_party_id")
+      .select([
+        "supplier_loan_cycle.id as loan_id",
+        "supplier_loan_cycle.supplier_party_id as holder_party_id",
+        "party.display_name as holder_name",
+        "supplier_loan_cycle.received_from_supplier as delivery_date",
+        "supplier_loan_cycle.returned_to_supplier as return_date",
+      ])
+      .where("supplier_loan_cycle.cylinder_id", "=", cylinderId)
+      .where("supplier_loan_cycle.received_from_supplier", "is not", null);
+
+    if (gte) {
+      loansQb = loansQb.where(
+        "supplier_loan_cycle.received_from_supplier",
+        ">=",
+        gte,
+      );
+    }
+    if (lte) {
+      loansQb = loansQb.where(
+        "supplier_loan_cycle.received_from_supplier",
+        "<=",
+        lte,
+      );
+    }
+
+    const [movementRows, loanRows] = await Promise.all([
+      movementsQb.execute(),
+      loansQb.execute(),
+    ]);
+
+    const merged: CylinderLifeRow[] = [
+      ...movementRows.map((row) => ({
+        event_source: "MOVEMENT" as const,
+        movement_id: Number(row.movement_id),
+        loan_id: null,
+        holder_party_id: Number(row.holder_party_id),
+        holder_name: row.holder_name,
+        movement_kind: row.movement_kind,
+        delivery_date: isoDate(row.delivery_date)!,
+        return_date: isoDate(row.return_date),
+        rental_days: row.rental_days == null ? null : Number(row.rental_days),
+        state: row.state,
+        note: row.note,
+      })),
+      ...loanRows.map((row) => {
+        const returnDate = isoDate(row.return_date);
+        return {
+          event_source: "SUPPLIER_LOAN" as const,
+          movement_id: null,
+          loan_id: Number(row.loan_id),
+          holder_party_id: Number(row.holder_party_id),
+          holder_name: row.holder_name,
+          movement_kind: "SUPPLIER_LOAN",
+          delivery_date: isoDate(row.delivery_date)!,
+          return_date: returnDate,
+          rental_days: null,
+          state: returnDate != null ? "CLOSED" : "OPEN",
+          note: null,
+        };
+      }),
+    ];
+
+    merged.sort((a, b) => {
+      const dateCmp = b.delivery_date.localeCompare(a.delivery_date);
+      if (dateCmp !== 0) return dateCmp;
+      const aId = a.movement_id ?? a.loan_id ?? 0;
+      const bId = b.movement_id ?? b.loan_id ?? 0;
+      const sourceCmp = b.event_source.localeCompare(a.event_source);
+      if (sourceCmp !== 0) return sourceCmp;
+      return bId - aId;
+    });
+
+    return merged;
   }
 
   async medicalStatement(

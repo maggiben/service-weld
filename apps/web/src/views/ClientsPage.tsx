@@ -27,7 +27,7 @@ import { useRouter } from "next/navigation";
 import { api } from "../api/client";
 import type { ClientCoverage, ClientStatus } from "@weld/schemas";
 import { CreateClientDrawer } from "../features/clients/CreateClientDrawer";
-import { useTerritories } from "../hooks/useTerritories";
+import { useLocations } from "../hooks/useLocations";
 import { useSessionStore } from "../store/sessionStore";
 import { useUiStore } from "../store/uiStore";
 
@@ -73,11 +73,16 @@ export default function ClientsPage() {
   const locale = useUiStore((s) => s.locale);
   const router = useRouter();
   const canWrite = useSessionStore((s) => s.hasCapability("clients:write"));
-  const { territories, label: territoryLabel } = useTerritories();
+  const { localities, localityLabel } = useLocations();
+
+  const cityOptions = useMemo(
+    () => localities.filter((locality) => (locality.client_count ?? 0) > 0),
+    [localities],
+  );
 
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [territoryFilter, setTerritoryFilter] = useState<number | "">("");
+  const [cityFilter, setCityFilter] = useState<number | "">("");
   const [coverageFilter, setCoverageFilter] = useState<ClientCoverage | "">("");
   const [statusFilter, setStatusFilter] = useState<ClientStatus | "">("");
   const [sortModel, setSortModel] = useState<GridSortModel>([
@@ -108,9 +113,7 @@ export default function ClientsPage() {
       cursor,
       q: debouncedSearch || undefined,
       sort: sortToApiParam(sortModel),
-      ...(territoryFilter !== ""
-        ? { "filter[territory_id]": territoryFilter }
-        : {}),
+      ...(cityFilter !== "" ? { "filter[locality_id]": cityFilter } : {}),
       ...(coverageFilter ? { "filter[coverage]": coverageFilter } : {}),
       ...(statusFilter ? { "filter[status]": statusFilter } : {}),
     }),
@@ -119,7 +122,7 @@ export default function ClientsPage() {
       cursor,
       debouncedSearch,
       sortModel,
-      territoryFilter,
+      cityFilter,
       coverageFilter,
       statusFilter,
     ],
@@ -162,10 +165,11 @@ export default function ClientsPage() {
         minWidth: 180,
       },
       {
-        field: "territory_id",
+        field: "locality_id",
         headerName: t("clients.columns.territory"),
-        width: 140,
-        valueFormatter: (value: number) => territoryLabel(value),
+        width: 160,
+        sortable: false,
+        valueFormatter: (value: number | null) => localityLabel(value),
       },
       {
         field: "coverage",
@@ -188,7 +192,7 @@ export default function ClientsPage() {
       },
       { field: "version", headerName: t("clients.columns.version"), width: 90 },
     ],
-    [t, territoryLabel],
+    [t, localityLabel],
   );
 
   const resetPaging = () => {
@@ -224,21 +228,24 @@ export default function ClientsPage() {
           onChange={(event) => handleSearchChange(event.target.value)}
           sx={{ minWidth: 240 }}
         />
-        <FormControl size="small" sx={{ minWidth: 160 }}>
+        <FormControl size="small" sx={{ minWidth: 200 }}>
           <InputLabel>{t("clients.filters.territory")}</InputLabel>
           <Select
             label={t("clients.filters.territory")}
-            value={territoryFilter}
+            value={cityFilter}
             onChange={(event) => {
               const value = event.target.value;
-              setTerritoryFilter(value === "" ? "" : Number(value));
+              setCityFilter(value === "" ? "" : Number(value));
               resetPaging();
             }}
           >
             <MenuItem value="">{t("clients.filters.all")}</MenuItem>
-            {territories.map((territory) => (
-              <MenuItem key={territory.id} value={territory.id}>
-                {territory.name}
+            {cityOptions.map((locality) => (
+              <MenuItem key={locality.id} value={locality.id}>
+                {locality.name}
+                {locality.client_count != null
+                  ? ` (${locality.client_count})`
+                  : ""}
               </MenuItem>
             ))}
           </Select>

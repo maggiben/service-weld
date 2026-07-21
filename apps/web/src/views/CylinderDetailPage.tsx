@@ -108,15 +108,20 @@ export default function CylinderDetailPage() {
         headerName: t("cylinders.detail.columns.holder"),
         flex: 1,
         minWidth: 180,
-        renderCell: (params) => (
-          <Link
-            component={NextLink}
-            href={`/clients/${params.row.holder_party_id}`}
-            underline="hover"
-          >
-            {params.value}
-          </Link>
-        ),
+        renderCell: (params) =>
+          params.row.event_source === "SUPPLIER_LOAN" ? (
+            <Typography variant="body2" component="span">
+              {params.value}
+            </Typography>
+          ) : (
+            <Link
+              component={NextLink}
+              href={`/clients/${params.row.holder_party_id}`}
+              underline="hover"
+            >
+              {params.value}
+            </Link>
+          ),
       },
       {
         field: "return_date",
@@ -270,7 +275,11 @@ export default function CylinderDetailPage() {
         <DataGrid
           rows={rows}
           columns={columns}
-          getRowId={(row) => row.movement_id}
+          getRowId={(row) =>
+            row.event_source === "SUPPLIER_LOAN"
+              ? `loan-${row.loan_id}`
+              : `move-${row.movement_id}`
+          }
           loading={historyQuery.isLoading || historyQuery.isFetching}
           paginationMode="server"
           paginationModel={paginationModel}

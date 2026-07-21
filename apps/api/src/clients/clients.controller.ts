@@ -2,8 +2,10 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   Query,
   Req,
@@ -25,6 +27,7 @@ import {
   ClientListQueryDto,
   ClientListResponseDto,
   CreateClientDto,
+  UpdateClientDto,
 } from "./dto/clients.dto";
 import type { Client, ClientAccountResponse } from "@weld/schemas";
 
@@ -72,5 +75,23 @@ export class ClientsController {
     @Param("id", ParseIntPipe) id: number,
   ): Promise<Client> {
     return this.clientsService.getById(user, id);
+  }
+
+  @Patch(":id")
+  @RequireCapabilities("clients:write")
+  @ApiOkResponse({ description: "Client updated" })
+  update(
+    @CurrentUser() user: AuthPrincipal,
+    @Param("id", ParseIntPipe) id: number,
+    @Body() body: UpdateClientDto,
+    @Headers("if-match") ifMatch?: string,
+  ): Promise<Client> {
+    const version = ifMatch ? Number(ifMatch.replaceAll('"', "")) : undefined;
+    return this.clientsService.update(
+      user,
+      id,
+      body,
+      Number.isFinite(version) ? version : undefined,
+    );
   }
 }

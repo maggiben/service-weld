@@ -5,6 +5,7 @@ import type {
   ClientAccountResponse,
   ClientListQuery,
   CreateClientInput,
+  UpdateClientInput,
 } from "@weld/schemas";
 import type { AuthPrincipal } from "../auth/principal";
 import { territoryIdsForPrincipal } from "../auth/principal";
@@ -54,5 +55,33 @@ export class ClientsService {
 
   create(principal: AuthPrincipal, input: CreateClientInput): Promise<Client> {
     return this.repository.create(input, principal.id);
+  }
+
+  async update(
+    principal: AuthPrincipal,
+    id: number,
+    input: UpdateClientInput,
+    ifMatchVersion?: number,
+  ): Promise<Client> {
+    const client = await this.getById(principal, id);
+
+    if (input.daily_rate_default !== undefined) {
+      const canEditRate =
+        principal.roles.includes("ADMIN") ||
+        principal.roles.includes("BILLING") ||
+        principal.capabilities.includes("rates:write");
+      if (!canEditRate) {
+        throw ApiErrors.forbidden(
+          "Billing or admin role required to change daily rate",
+        );
+      }
+    }
+
+    const expected = ifMatchVersion ?? client.version;
+    if (expected !== client.version) {
+      throw ApiErrors.conflict("VERSION_CONFLICT", "Client version conflict");
+    }
+
+    return this.repository.update(id, input, principal.id, expected);
   }
 }

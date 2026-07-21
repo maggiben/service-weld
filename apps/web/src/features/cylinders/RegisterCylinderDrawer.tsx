@@ -199,6 +199,8 @@ export function RegisterCylinderDrawer({ open, onClose }: Props) {
         anchor="right"
         open={open}
         onClose={handleClose}
+        // Above the fixed AppBar (shell uses drawer + 1) so the title/labels are not clipped.
+        sx={{ zIndex: (theme) => theme.zIndex.modal }}
         PaperProps={{ sx: { width: { xs: "100%", sm: 480 } } }}
       >
         <Box

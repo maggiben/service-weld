@@ -145,3 +145,7 @@ export type AccessoryRentalState = z.infer<typeof AccessoryRentalState>;
 
 export const ChargeBasis = z.enum(["RENTAL", "FREE_LOAN"]);
 export type ChargeBasis = z.infer<typeof ChargeBasis>;
+
+/** Immutable audit trail action (003 / schema.sql `audit_action`). */
+export const AuditAction = z.enum(["INSERT", "UPDATE", "DELETE", "VOID"]);
+export type AuditAction = z.infer<typeof AuditAction>;

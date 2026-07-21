@@ -624,7 +624,34 @@ INSERT INTO role(code, name) VALUES
  ('SUBDIST','Sub-Distributor'), ('ADMIN','System Administrator'),
  ('MEDICAL','Hospital Coordinator'), ('CLIENT','Client Self-Service');
 
-INSERT INTO dispatch_territory(name) VALUES ('Junín'), ('Chacabuco'), ('Ceres');
+-- Route books (WB1/WB2). Ceres is kept inactive: it is a sub-distributor
+-- outpost/node (see party seed below), not a client delivery territory.
+INSERT INTO dispatch_territory(name, is_active) VALUES
+  ('Junín', true),
+  ('Chacabuco', true),
+  ('Ceres', false);
+
+-- Canonical towns served by the two route books (domain.md Locality enum).
+INSERT INTO locality(name, province, territory_id) VALUES
+  ('Junín', 'Buenos Aires', 1),
+  ('Salto', 'Buenos Aires', 1),
+  ('Rojas', 'Buenos Aires', 1),
+  ('Arrecifes', 'Buenos Aires', 1),
+  ('Colón', 'Buenos Aires', 1),
+  ('Carabelas', 'Buenos Aires', 1),
+  ('Carmen de Areco', 'Buenos Aires', 1),
+  ('Baigorrita', 'Buenos Aires', 1),
+  ('Vedia', 'Buenos Aires', 1),
+  ('Villa Sanguinetti', 'Buenos Aires', 1),
+  ('Chacabuco', 'Buenos Aires', 2),
+  ('O''Higgins', 'Buenos Aires', 2),
+  ('Rawson', 'Buenos Aires', 2),
+  ('Irala', 'Buenos Aires', 2),
+  ('Chivilcoy', 'Buenos Aires', 2),
+  ('Ascensión', 'Buenos Aires', 2),
+  ('Tres Sargentos', 'Buenos Aires', 2),
+  ('Castilla', 'Buenos Aires', 2),
+  ('Sarmiento', 'Buenos Aires', 2);
 
 INSERT INTO gas_type(code, name, family, purity, is_medical) VALUES
  ('O2','Oxígeno','oxygen',NULL,false),

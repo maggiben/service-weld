@@ -54,3 +54,8 @@ export function territoryIdsForPrincipal(
 export function isMedicalRole(roles: RoleCode[]): boolean {
   return roles.includes("MEDICAL") || roles.includes("ADMIN");
 }
+
+/** D-3: MEDICAL/ADMIN full access; BILLING for municipal statement / patient masters. */
+export function canViewMunicipalHospitalClients(roles: RoleCode[]): boolean {
+  return isMedicalRole(roles) || roles.includes("BILLING");
+}

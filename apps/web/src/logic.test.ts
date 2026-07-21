@@ -15,8 +15,19 @@ import {
   pluralize,
   boolLabel,
 } from "./lib/format";
+import { userInitials } from "./lib/userInitials";
 import { ApiClientError } from "@weld/api-client";
 import type { Alert } from "@weld/schemas";
+
+describe("userInitials", () => {
+  it("takes the first two letters", () => {
+    assert.equal(userInitials("admin"), "AD");
+    assert.equal(userInitials("driver.leo"), "DR");
+    assert.equal(userInitials("a"), "A");
+    assert.equal(userInitials(""), "?");
+    assert.equal(userInitials(null), "?");
+  });
+});
 
 describe("displayRentalDays", () => {
   it("covers all branches", () => {
@@ -25,6 +36,14 @@ describe("displayRentalDays", () => {
         rental_days: null,
         state: "OPEN",
         movement_kind: "REFILL",
+      }),
+      "—",
+    );
+    assert.equal(
+      displayRentalDays({
+        rental_days: null,
+        state: "CLOSED",
+        movement_kind: "SUPPLIER_LOAN",
       }),
       "—",
     );

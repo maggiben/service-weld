@@ -105,4 +105,10 @@ export const ApiErrors = {
   ): ApiError {
     return new ApiError("REPLACEMENT_NOT_AVAILABLE", message, 409);
   },
+
+  duplicateUsername(
+    message = "A user with this username already exists",
+  ): ApiError {
+    return new ApiError("DUPLICATE_USERNAME", message, 409);
+  },
 };

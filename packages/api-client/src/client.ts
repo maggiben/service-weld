@@ -13,6 +13,7 @@ import type {
   CreateBatteryInput,
   CreateBillingRunInput,
   CreateClientInput,
+  UpdateClientInput,
   CreateCylinderInput,
   CreateMovementInput,
   CreateRentalRateInput,
@@ -91,6 +92,13 @@ import type {
   CreateLocalityInput,
   SystemSettings,
   UpdateSystemSettingsInput,
+  AdminUser,
+  AdminUserListQuery,
+  AdminUserListResponse,
+  CreateAdminUserInput,
+  UpdateAdminUserInput,
+  AuditLogListQuery,
+  AuditLogListResponse,
 } from "@weld/schemas";
 import { ErrorEnvelope } from "@weld/schemas";
 import { ApiClientError } from "./errors";
@@ -249,6 +257,20 @@ export class WeldApiClient {
       headers: options?.idempotencyKey
         ? { "Idempotency-Key": options.idempotencyKey }
         : undefined,
+    });
+  }
+
+  updateClient(
+    id: number,
+    input: UpdateClientInput,
+    options?: { ifMatch?: number },
+  ): Promise<Client> {
+    return this.request<Client>("PATCH", `/clients/${id}`, {
+      body: input,
+      headers:
+        options?.ifMatch != null
+          ? { "If-Match": String(options.ifMatch) }
+          : undefined,
     });
   }
 
@@ -697,6 +719,42 @@ export class WeldApiClient {
           ? { "If-Match": String(options.ifMatch) }
           : undefined,
     });
+  }
+
+  listAdminUsers(
+    query: Partial<AdminUserListQuery> & Record<string, QueryValue> = {},
+  ): Promise<AdminUserListResponse> {
+    return this.request<AdminUserListResponse>(
+      "GET",
+      `/admin/users${toQuery(query as Record<string, QueryValue>)}`,
+    );
+  }
+
+  getAdminUser(id: number): Promise<AdminUser> {
+    return this.request<AdminUser>("GET", `/admin/users/${id}`);
+  }
+
+  createAdminUser(input: CreateAdminUserInput): Promise<AdminUser> {
+    return this.request<AdminUser>("POST", "/admin/users", { body: input });
+  }
+
+  updateAdminUser(id: number, input: UpdateAdminUserInput): Promise<AdminUser> {
+    return this.request<AdminUser>("PATCH", `/admin/users/${id}`, {
+      body: input,
+    });
+  }
+
+  removeAdminUser(id: number): Promise<{ ok: true }> {
+    return this.request<{ ok: true }>("DELETE", `/admin/users/${id}`);
+  }
+
+  listAuditLogs(
+    query: Partial<AuditLogListQuery> & Record<string, QueryValue> = {},
+  ): Promise<AuditLogListResponse> {
+    return this.request<AuditLogListResponse>(
+      "GET",
+      `/audit-logs${toQuery(query as Record<string, QueryValue>)}`,
+    );
   }
 
   listRentalRates(

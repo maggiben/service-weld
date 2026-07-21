@@ -5,7 +5,7 @@ import { ThemeProvider } from "@mui/material/styles";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useMemo, useState, type PropsWithChildren } from "react";
+import { useEffect, useMemo, useState, type PropsWithChildren } from "react";
 import { useTranslation } from "react-i18next";
 import "dayjs/locale/es";
 import "dayjs/locale/en";
@@ -33,7 +33,9 @@ export function AppProviders({ children }: PropsWithChildren) {
   const { i18n } = useTranslation();
   const theme = useMemo(() => buildTheme(mode), [mode]);
 
-  if (i18n.language !== locale) void i18n.changeLanguage(locale);
+  useEffect(() => {
+    if (i18n.language !== locale) void i18n.changeLanguage(locale);
+  }, [i18n, locale]);
 
   return (
     <QueryClientProvider client={queryClient}>

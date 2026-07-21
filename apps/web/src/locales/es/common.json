@@ -15,10 +15,19 @@
     "accessories": "Accesorios",
     "alerts": "Alertas",
     "rates": "Tarifas",
-    "billing": "Facturación"
+    "billing": "Facturación",
+    "settings": "Configuración",
+    "users": "Usuarios y permisos",
+    "audit": "Registro de auditoría"
   },
   "shell": {
-    "signed_in_as": "Sesión: {{username}}"
+    "signed_in_as": "Sesión: {{username}}",
+    "user_menu": "Menú de usuario",
+    "menu": {
+      "settings": "Configuración",
+      "users": "Usuarios y permisos",
+      "audit": "Registro de auditoría"
+    }
   },
   "login": {
     "title": "Iniciar sesión",
@@ -32,7 +41,7 @@
     "empty": "No hay clientes todavía",
     "columns": {
       "name": "Nombre",
-      "territory": "Territorio",
+      "territory": "Ciudad",
       "coverage": "Cobertura",
       "segment": "Segmento",
       "status": "Estado",
@@ -41,7 +50,7 @@
     "filters": {
       "coverage": "Cobertura",
       "status": "Estado",
-      "territory": "Territorio",
+      "territory": "Ciudad",
       "all": "Todas"
     },
     "detail": {
@@ -72,15 +81,27 @@
         "accrued_days": "Días acumulados",
         "rental_days": "Días alquiler",
         "state": "Estado"
-      }
+      },
+      "locality": "Localidad"
     },
     "form": {
       "title_create": "Nuevo cliente",
+      "title_edit": "Editar cliente",
       "unsaved_confirm": "Hay cambios sin guardar. ¿Cerrar de todos modos?",
       "name": "Nombre",
       "cuit": "CUIT",
       "address_street": "Dirección",
-      "territory": "Territorio",
+      "locality": "Localidad",
+      "locality_none": "Sin ciudad",
+      "territory": "Ciudad",
+      "territory_hint": "Lista de ciudades tomadas de los clientes. Se actualiza al cargar uno nuevo.",
+      "create_city": "+ Crear ciudad…",
+      "create_city_title": "Nueva ciudad",
+      "city_name": "Nombre de la ciudad",
+      "city_name_required": "Ingresá el nombre de la ciudad",
+      "city_depot": "Depósito / reparto",
+      "city_depot_required": "Elegí el depósito (Junín o Chacabuco)",
+      "city_depot_hint": "Reparto operativo al que pertenece la ciudad",
       "coverage": "Cobertura",
       "segment": "Segmento",
       "segment_none": "Sin segmento",
@@ -308,7 +329,8 @@
     },
     "movement_kind": {
       "RENTAL": "Alquiler",
-      "REFILL": "Recarga"
+      "REFILL": "Recarga",
+      "SUPPLIER_LOAN": "Préstamo proveedor"
     },
     "movement_state": {
       "OPEN": "Abierto",
@@ -394,6 +416,7 @@
     "generic": "Ocurrió un error. Intentá de nuevo.",
     "load_failed": "No se pudieron cargar los datos",
     "duplicate_cuit": "Ya existe un cliente con este CUIT",
+    "version_conflict": "Este registro fue modificado por otra persona. Recargá e intentá de nuevo.",
     "duplicate_serial": "Ya existe ese serial para el propietario",
     "duplicate_location": "Ya existe una ubicación con ese nombre",
     "cylinder_already_out": "El cilindro ya está en circulación",
@@ -414,7 +437,8 @@
     "period_locked": "El período ya tiene facturas aprobadas o exportadas",
     "not_approved": "La corrida debe estar aprobada antes de exportar",
     "forbidden_title": "Acceso denegado",
-    "forbidden_back": "Volver a clientes"
+    "forbidden_back": "Volver a clientes",
+    "duplicate_username": "Ya existe un usuario con ese nombre"
   },
   "actions": {
     "toggle_language": "Cambiar idioma",
@@ -423,6 +447,7 @@
     "save": "Guardar",
     "cancel": "Cancelar",
     "close": "Cerrar",
+    "edit": "Editar",
     "new_client": "Nuevo cliente",
     "register_cylinder": "Registrar cilindro",
     "new_delivery": "Nueva entrega",
@@ -447,7 +472,9 @@
     "run_billing_history": "Histórico",
     "approve_billing": "Aprobar",
     "export_billing": "Exportar",
-    "search": "Buscar"
+    "search": "Buscar",
+    "new_user": "Nuevo usuario",
+    "remove": "Eliminar"
   },
   "loans": {
     "title": "Préstamos de proveedor",
@@ -748,6 +775,74 @@
       "created": "Creado",
       "deliveries": "Entregas",
       "accessories": "Accesorios"
+    }
+  },
+  "settings": {
+    "title": "Configuración",
+    "subtitle": "Umbrales del sistema y ajustes operativos",
+    "saved": "Configuración guardada",
+    "supplier_loan_overdue_days": "Préstamo proveedor vencido (días)",
+    "supplier_loan_overdue_days_help": "Los ciclos abiertos más antiguos que esto se marcan como vencidos"
+  },
+  "users": {
+    "title": "Usuarios y permisos",
+    "subtitle": "Crear usuarios, asignar roles y territorios, o eliminar cuentas",
+    "active_yes": "Activo",
+    "active_no": "Inactivo",
+    "remove_title": "Eliminar usuario",
+    "remove_confirm": "¿Eliminar a {{username}}? Ya no podrá iniciar sesión.",
+    "columns": {
+      "username": "Usuario",
+      "email": "Email",
+      "roles": "Roles",
+      "territories": "Territorios",
+      "active": "Estado"
+    },
+    "filters": {
+      "role": "Rol",
+      "active": "Estado",
+      "all": "Todos"
+    },
+    "form": {
+      "title_create": "Nuevo usuario",
+      "title_edit": "Editar usuario",
+      "username": "Usuario",
+      "email": "Email",
+      "password": "Contraseña",
+      "password_optional": "Nueva contraseña",
+      "password_optional_help": "Dejar vacío para mantener la contraseña actual",
+      "roles": "Roles",
+      "territories": "Territorios",
+      "mfa_enabled": "MFA habilitado",
+      "is_active": "Activo"
+    }
+  },
+  "audit": {
+    "title": "Registro de auditoría",
+    "subtitle": "Historial inmutable de quién cambió qué y cuándo",
+    "empty": "No hay entradas para estos filtros",
+    "view_diff": "Diff",
+    "diff_title": "Detalle del cambio",
+    "before": "Antes",
+    "after": "Después",
+    "unknown_user": "Usuario desconocido",
+    "system_user": "Sistema / migración",
+    "columns": {
+      "occurred": "Cuándo",
+      "actor": "Usuario",
+      "role": "Rol",
+      "action": "Acción",
+      "entity": "Entidad",
+      "entity_id": "Id entidad",
+      "source": "Origen"
+    },
+    "filters": {
+      "entity_table": "Tabla",
+      "actor": "Usuario",
+      "action": "Acción",
+      "from": "Desde",
+      "to": "Hasta",
+      "all": "Todas"
     }
   }
 }

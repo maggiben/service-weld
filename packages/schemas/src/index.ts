@@ -24,3 +24,5 @@ export * from "./alert";
 export * from "./reports";
 export * from "./geo";
 export * from "./settings";
+export * from "./admin-user";
+export * from "./audit-log";

@@ -11,7 +11,15 @@ import psycopg
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
-from .normalize import EXTRA_GAS_ALIASES, request_id_for, resolve_gas
+from .normalize import (
+    EXTRA_GAS_ALIASES,
+    coverage_from_holder_name,
+    fold_person_key,
+    is_noise_holder_name,
+    person_token_set,
+    request_id_for,
+    resolve_gas,
+)
 from .parse import ExtractResult, StagedClient, StagedCylinder, StagedMovement
 
 
@@ -53,6 +61,10 @@ class Loader:
         self.gas_alias: dict[str, str] = {}
         self.cylinder_id: dict[tuple[int, str], int] = {}  # (owner_id, serial) -> id
         self.client_id: dict[str, int] = {}  # display_name.casefold() -> party_id
+        # (fold_person_key, territory_id|None) -> party_id for territory-aware resolve
+        self.client_by_fold_territory: dict[tuple[str, int | None], int] = {}
+        self.client_territory: dict[int, int | None] = {}  # party_id -> territory_id
+        self.client_fold_index: dict[str, list[int]] = {}  # fold_key -> [party_ids]
         self.origin_parties: dict[str, int] = {}
         self._existing_request_ids: set[str] = set()
         # merge index: (serial, delivery_date) -> True once loaded from client book
@@ -171,13 +183,13 @@ class Loader:
             self._cyl_owner[row["id"]] = row["owner_party_id"]
         for row in conn.execute(
             """
-            SELECT p.id, p.display_name::text AS display_name
+            SELECT p.id, p.display_name::text AS display_name, c.territory_id
             FROM party p
             JOIN client c ON c.party_id = p.id
             WHERE p.deleted_at IS NULL AND c.deleted_at IS NULL
             """
         ):
-            self.client_id[row["display_name"].casefold()] = row["id"]
+            self._register_client(row["display_name"], row["id"], row["territory_id"])
         for row in conn.execute("SELECT request_id::text AS request_id FROM movement_event"):
             self._existing_request_ids.add(row["request_id"])
         for row in conn.execute(
@@ -189,6 +201,23 @@ class Loader:
             """
         ):
             self._client_movement_keys.add((row["serial_number"], row["delivery_date"]))
+
+    def _register_client(
+        self, display_name: str, party_id: int, territory_id: int | None
+    ) -> None:
+        key = display_name.casefold()
+        self.client_id[key] = party_id
+        self.party_by_name[key] = party_id
+        self.party_type[party_id] = "CUSTOMER"
+        self.client_territory[party_id] = territory_id
+        fold = fold_person_key(display_name)
+        if fold:
+            self.client_by_fold_territory[(fold, territory_id)] = party_id
+            self.client_fold_index.setdefault(fold, [])
+            if party_id not in self.client_fold_index[fold]:
+                self.client_fold_index[fold].append(party_id)
+            # Also index without territory for fallback resolve
+            self.client_by_fold_territory.setdefault((fold, None), party_id)
 
     def _close_stale_opens(
         self, conn: psycopg.Connection, cyl_id: int, new_delivery: date
@@ -467,10 +496,6 @@ class Loader:
                     self.stats["subdist_linked"] += 1
                     continue
 
-            if key in self.client_id:
-                self.stats["client_exists"] += 1
-                continue
-
             territory_id = self.territory_by_name.get((cl.territory or "").casefold())
             if territory_id is None and cl.territory:
                 # normalize accents
@@ -478,6 +503,57 @@ class Loader:
                     if tname.startswith(cl.territory[:4].casefold()):
                         territory_id = tid
                         break
+
+            # Same display name already imported — usually idempotent re-run.
+            # Spec 011 edge case: same name may legitimately exist in both territories.
+            if key in self.client_id:
+                existing_id = self.client_id[key]
+                existing_tid = self.client_territory.get(existing_id)
+                if (
+                    territory_id is not None
+                    and existing_tid is not None
+                    and territory_id != existing_tid
+                ):
+                    disambiguated = f"{cl.display_name} ({cl.territory})"
+                    dkey = disambiguated.casefold()
+                    if dkey in self.client_id:
+                        self.stats["client_exists"] += 1
+                        continue
+                    self._flag(
+                        conn,
+                        cl.workbook,
+                        cl.sheet,
+                        "header",
+                        "CROSS_TERRITORY_NAME_COLLISION",
+                        {
+                            "name": cl.display_name,
+                            "territory": cl.territory,
+                            "existing_party_id": existing_id,
+                            "imported_as": disambiguated,
+                        },
+                    )
+                    cl = StagedClient(
+                        workbook=cl.workbook,
+                        sheet=cl.sheet,
+                        display_name=disambiguated,
+                        territory=cl.territory,
+                        address=cl.address,
+                        locality=cl.locality,
+                        cuit=cl.cuit,
+                        phones=cl.phones,
+                        coverage=cl.coverage,
+                        is_subdistributor=cl.is_subdistributor,
+                    )
+                    key = dkey
+                else:
+                    # Refresh coverage from authoritative sheet header (fixes bare-"municipal").
+                    if cl.coverage:
+                        conn.execute(
+                            "UPDATE client SET coverage = %s WHERE party_id = %s AND deleted_at IS NULL",
+                            (cl.coverage, existing_id),
+                        )
+                    self.stats["client_exists"] += 1
+                    continue
 
             locality_id = self._ensure_locality(conn, cl.locality, territory_id)
 
@@ -523,8 +599,6 @@ class Loader:
                 )
                 continue
             party_id = prow["id"]
-            self.party_by_name[key] = party_id
-            self.party_type[party_id] = "CUSTOMER"
 
             try:
                 with self._sp(conn):
@@ -534,7 +608,11 @@ class Loader:
                             party_id, legal_name, cuit, cuit_valid, address_street,
                             locality_id, territory_id, coverage, status
                         ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,'ACTIVE')
-                        ON CONFLICT (party_id) DO NOTHING
+                        ON CONFLICT (party_id) DO UPDATE SET
+                            coverage = EXCLUDED.coverage,
+                            territory_id = COALESCE(client.territory_id, EXCLUDED.territory_id),
+                            address_street = COALESCE(client.address_street, EXCLUDED.address_street),
+                            locality_id = COALESCE(client.locality_id, EXCLUDED.locality_id)
                         """,
                         (
                             party_id,
@@ -569,7 +647,12 @@ class Loader:
                         (party_id, cl.display_name, cl.address, locality_id, territory_id, cl.coverage),
                     )
 
-            self.client_id[key] = party_id
+            self._register_client(cl.display_name, party_id, territory_id)
+            # Alias the bare sheet name to this party when disambiguated, but only
+            # for territory-aware resolve (exact key stays on first territory).
+            if cl.display_name != cl.sheet and fold_person_key(cl.sheet):
+                fold = fold_person_key(cl.sheet)
+                self.client_by_fold_territory[(fold, territory_id)] = party_id
             self.stats["client_inserted"] += 1
             self.stats["imported_clean"] += 1
 
@@ -582,20 +665,185 @@ class Loader:
                     (party_id, phone, i == 0),
                 )
 
-    def _resolve_holder(self, name: str) -> int | None:
+    def _resolve_holder(self, name: str, territory: str | None = None) -> int | None:
         key = name.casefold().strip()
         if not key:
             return None
+
+        territory_id = None
+        if territory:
+            territory_id = self.territory_by_name.get(territory.casefold())
+            if territory_id is None and len(territory) >= 4:
+                for tname, tid in self.territory_by_name.items():
+                    if tname.startswith(territory[:4].casefold()):
+                        territory_id = tid
+                        break
+
+        fold = fold_person_key(name)
+        if fold and territory_id is not None:
+            hit = self.client_by_fold_territory.get((fold, territory_id))
+            if hit is not None:
+                return hit
+            # Disambiguated import: "NAME (Territory)"
+            dis_key = f"{name} ({territory})".casefold()
+            if dis_key in self.client_id:
+                return self.client_id[dis_key]
+
         if key in self.client_id:
             return self.client_id[key]
+        if fold and fold in self.client_fold_index:
+            candidates = self.client_fold_index[fold]
+            if territory_id is not None:
+                for cid in candidates:
+                    if self.client_territory.get(cid) == territory_id:
+                        return cid
+            return candidates[0]
         if key in self.party_by_name:
             return self.party_by_name[key]
-        # fuzzy: startswith / contains
+
+        tokens = person_token_set(name)
+        if tokens:
+            best_id: int | None = None
+            best_score = 0.0
+            for fold_key, ids in self.client_fold_index.items():
+                ct = person_token_set(fold_key)
+                if not ct:
+                    continue
+                inter = len(tokens & ct)
+                if inter == 0:
+                    continue
+                # Require solid overlap to avoid false merges (e.g. single short token).
+                if inter == 1:
+                    only = next(iter(tokens & ct))
+                    if len(only) < 5 or (len(tokens) > 1 and len(ct) > 1):
+                        continue
+                score = inter / max(len(tokens), len(ct))
+                if score < 0.5:
+                    continue
+                # Prefer same territory when known
+                for cid in ids:
+                    adj = score
+                    if territory_id is not None and self.client_territory.get(cid) == territory_id:
+                        adj += 0.05
+                    if adj > best_score:
+                        best_score = adj
+                        best_id = cid
+            if best_id is not None:
+                return best_id
+
+        # Legacy fuzzy: startswith / contains with length guard
         for cname, cid in self.client_id.items():
-            if cname.startswith(key) or key.startswith(cname) or key in cname or cname in key:
-                if abs(len(cname) - len(key)) <= 8:
+            cf = fold_person_key(cname)
+            if not fold or not cf:
+                continue
+            if cf.startswith(fold) or fold.startswith(cf) or fold in cf or cf in fold:
+                if abs(len(cf) - len(fold)) <= 8:
                     return cid
         return None
+
+    def _looks_like_person_holder(self, name: str) -> bool:
+        s = (name or "").strip()
+        if len(s) < 3:
+            return False
+        low = s.casefold()
+        if low in {"unknown", "x", "xx", "xxx", "????", "n/a", "na"}:
+            return False
+        if is_noise_holder_name(s):
+            return False
+        return True
+
+    def _ensure_provisional_client(
+        self,
+        conn: psycopg.Connection,
+        name: str,
+        territory: str | None = None,
+        workbook: str = "PROPIOS",
+        sheet: str = "",
+        row_ref: str = "circulation",
+    ) -> int | None:
+        """Create a reviewable client for circulation-only holders (011 C1)."""
+        if not self._looks_like_person_holder(name):
+            return None
+        existing = self._resolve_holder(name, territory)
+        if existing is not None:
+            return existing
+
+        territory_id = self.territory_by_name.get((territory or "Junín").casefold())
+        if territory_id is None:
+            territory_id = self.territory_by_name.get("junín") or self.territory_by_name.get("junin")
+        # Prefer first active delivery territory
+        if territory_id is None:
+            territory_id = next(iter(self.territory_by_name.values()), None)
+
+        display = name.strip()
+        coverage = coverage_from_holder_name(display)
+        # Unique display_name — suffix if collision
+        base = display
+        attempt = display
+        n = 2
+        while attempt.casefold() in self.client_id or attempt.casefold() in self.party_by_name:
+            attempt = f"{base} (circulación {n})"
+            n += 1
+            if n > 20:
+                return None
+        display = attempt
+
+        try:
+            with self._sp(conn):
+                prow = conn.execute(
+                    """
+                    INSERT INTO party(party_type, display_name)
+                    VALUES ('CUSTOMER', %s)
+                    RETURNING id
+                    """,
+                    (display,),
+                ).fetchone()
+        except psycopg.Error:
+            prow = conn.execute(
+                """
+                SELECT id FROM party
+                WHERE party_type = 'CUSTOMER' AND display_name = %s AND deleted_at IS NULL
+                """,
+                (display,),
+            ).fetchone()
+        if not prow:
+            return None
+        party_id = prow["id"]
+        with self._sp(conn):
+            conn.execute(
+                """
+                INSERT INTO client(
+                    party_id, legal_name, territory_id, coverage, status, delivery_instructions
+                ) VALUES (%s,%s,%s,%s,'ACTIVE',%s)
+                ON CONFLICT (party_id) DO NOTHING
+                """,
+                (
+                    party_id,
+                    display,
+                    territory_id,
+                    coverage,
+                    "Provisional: created from CILINDROS PROPIOS holder text — review/merge",
+                ),
+            )
+        self._register_client(display, party_id, territory_id)
+        # Also index original holder spelling
+        fold = fold_person_key(name)
+        if fold:
+            self.client_by_fold_territory[(fold, territory_id)] = party_id
+            self.client_fold_index.setdefault(fold, [])
+            if party_id not in self.client_fold_index[fold]:
+                self.client_fold_index[fold].append(party_id)
+        self._flag(
+            conn,
+            workbook,
+            sheet or display,
+            row_ref,
+            "CLIENT_PROVISIONAL_FROM_CIRCULATION",
+            {"name": name, "imported_as": display, "party_id": party_id, "coverage": coverage},
+        )
+        self.stats["client_provisional"] += 1
+        self.stats["client_inserted"] += 1
+        return party_id
 
     def _ensure_customer_cylinder(
         self,
@@ -705,7 +953,7 @@ class Loader:
             self._insert_ledger_movement(conn, mv)
 
     def _insert_ledger_movement(self, conn: psycopg.Connection, mv: StagedMovement) -> None:
-        holder_id = self._resolve_holder(mv.holder_name)
+        holder_id = self._resolve_holder(mv.holder_name, mv.territory)
         if holder_id is None:
             self._flag(
                 conn,
@@ -919,7 +1167,16 @@ class Loader:
             return
         # No client-ledger counterpart — quarantine (don't invent holder from free text alone
         # when holder can't be resolved; if resolvable, import as gap-fill).
-        holder_id = self._resolve_holder(mv.holder_name)
+        holder_id = self._resolve_holder(mv.holder_name, mv.territory)
+        if holder_id is None:
+            holder_id = self._ensure_provisional_client(
+                conn,
+                mv.holder_name,
+                territory=mv.territory,
+                workbook=mv.workbook,
+                sheet=mv.sheet,
+                row_ref=mv.row_ref,
+            )
         if holder_id is None:
             self._flag(
                 conn,
@@ -943,12 +1200,13 @@ class Loader:
             gas_raw=mv.gas_raw,
             flags=mv.flags + ["GAP_FILL_FROM_CIRCULATION"],
             raw=mv.raw,
+            territory=mv.territory,
         )
         self._insert_ledger_movement(conn, gap)
         self.stats["circulation_gap_fill"] += 1
 
     def _load_accessory(self, conn: psycopg.Connection, mv: StagedMovement) -> None:
-        holder_id = self._resolve_holder(mv.holder_name)
+        holder_id = self._resolve_holder(mv.holder_name, mv.territory)
         if holder_id is None or mv.delivery_date is None or not mv.accessory_type:
             self._flag(
                 conn,
@@ -1078,7 +1336,7 @@ class Loader:
         if cyl_id is None:
             self._flag(conn, mv.workbook, mv.sheet, mv.row_ref, "LOAN_CYLINDER_MISSING", {"serial": serial})
             return
-        client_id = self._resolve_holder(mv.holder_name)
+        client_id = self._resolve_holder(mv.holder_name, mv.territory)
         stage = "RECEIVED"
         if mv.returned_to_supplier:
             stage = "RETURNED_TO_SUPPLIER"

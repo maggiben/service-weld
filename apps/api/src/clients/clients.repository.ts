@@ -8,6 +8,7 @@ import type {
   CreateClientInput,
   MovementEvent,
   RoleCode,
+  UpdateClientInput,
 } from "@weld/schemas";
 import { ApiErrors } from "../common/errors/api-error";
 import {
@@ -18,7 +19,7 @@ import {
 } from "../common/pagination/cursor";
 import { KYSELY, type DB } from "../database/database.module";
 import { resolveDb } from "../database/transaction.context";
-import { isMedicalRole } from "../auth/principal";
+import { canViewMunicipalHospitalClients } from "../auth/principal";
 import type {
   ClientCoverage,
   ClientSegment,
@@ -142,7 +143,7 @@ export class ClientsRepository {
       qb = qb.where("client.territory_id", "in", input.territoryIds);
     }
 
-    if (!isMedicalRole(input.roles)) {
+    if (!canViewMunicipalHospitalClients(input.roles)) {
       qb = qb.where("client.coverage", "<>", "MUNICIPAL_HOSPITAL");
     }
 
@@ -268,7 +269,7 @@ export class ClientsRepository {
       qb = qb.where("client.territory_id", "in", input.territoryIds);
     }
 
-    if (!isMedicalRole(input.roles)) {
+    if (!canViewMunicipalHospitalClients(input.roles)) {
       qb = qb.where("client.coverage", "<>", "MUNICIPAL_HOSPITAL");
     }
 
@@ -579,6 +580,138 @@ export class ClientsRepository {
       );
     }
     return created;
+  }
+
+  async update(
+    id: number,
+    input: UpdateClientInput,
+    actorUserId: number,
+    expectedVersion: number,
+  ): Promise<Client> {
+    const db = resolveDb(this.db);
+
+    if (input.cuit !== undefined && input.cuit != null) {
+      const existing = await db
+        .selectFrom("client")
+        .select("party_id")
+        .where("cuit", "=", input.cuit)
+        .where("party_id", "<>", id)
+        .where("deleted_at", "is", null)
+        .executeTakeFirst();
+      if (existing) {
+        throw ApiErrors.duplicateCuit();
+      }
+    }
+
+    if (input.name !== undefined) {
+      const partyUpdated = await db
+        .updateTable("party")
+        .set({
+          display_name: input.name,
+          updated_by: actorUserId,
+        })
+        .where("id", "=", id)
+        .where("deleted_at", "is", null)
+        .executeTakeFirst();
+      if (Number(partyUpdated.numUpdatedRows ?? 0) === 0) {
+        throw ApiErrors.notFound("Client not found");
+      }
+    }
+
+    const patch: {
+      legal_name?: string;
+      cuit?: string | null;
+      cuit_valid?: boolean;
+      address_street?: string | null;
+      locality_id?: number | null;
+      territory_id?: number;
+      coverage?: ClientCoverage;
+      segment?: ClientSegment | null;
+      delivery_instructions?: string | null;
+      daily_rate_default?: string | null;
+      status?: ClientStatus;
+      updated_by: number;
+      version: number;
+    } = {
+      updated_by: actorUserId,
+      version: expectedVersion + 1,
+    };
+
+    if (input.name !== undefined) patch.legal_name = input.name;
+    if (input.cuit !== undefined) {
+      patch.cuit = input.cuit;
+      patch.cuit_valid = input.cuit != null;
+    }
+    if (input.address_street !== undefined) {
+      patch.address_street = input.address_street;
+    }
+    if (input.locality_id !== undefined) patch.locality_id = input.locality_id;
+    if (input.territory_id !== undefined) {
+      patch.territory_id = input.territory_id;
+    }
+    if (input.coverage !== undefined) patch.coverage = input.coverage;
+    if (input.segment !== undefined) patch.segment = input.segment;
+    if (input.delivery_instructions !== undefined) {
+      patch.delivery_instructions = input.delivery_instructions;
+    }
+    if (input.daily_rate_default !== undefined) {
+      patch.daily_rate_default =
+        input.daily_rate_default != null
+          ? String(input.daily_rate_default)
+          : null;
+    }
+    if (input.status !== undefined) patch.status = input.status;
+
+    try {
+      const updated = await db
+        .updateTable("client")
+        .set(patch)
+        .where("party_id", "=", id)
+        .where("version", "=", expectedVersion)
+        .where("deleted_at", "is", null)
+        .executeTakeFirst();
+
+      if (Number(updated.numUpdatedRows ?? 0) === 0) {
+        throw ApiErrors.conflict("VERSION_CONFLICT", "Client version conflict");
+      }
+    } catch (error) {
+      if (isUniqueViolation(error, "uq_client_cuit")) {
+        throw ApiErrors.duplicateCuit();
+      }
+      throw error;
+    }
+
+    if (input.contacts !== undefined) {
+      await db
+        .deleteFrom("client_contact")
+        .where("client_party_id", "=", id)
+        .execute();
+
+      if (input.contacts.length > 0) {
+        await db
+          .insertInto("client_contact")
+          .values(
+            input.contacts.map((contact) => ({
+              client_party_id: id,
+              name: contact.name ?? null,
+              phone: contact.phone ?? null,
+              role: contact.role ?? null,
+              is_primary: contact.is_primary ?? false,
+            })),
+          )
+          .execute();
+      }
+    }
+
+    const result = await this.getById({
+      id,
+      territoryIds: null,
+      roles: ["ADMIN"],
+    });
+    if (!result) {
+      throw ApiErrors.notFound("Client not found");
+    }
+    return result;
   }
 
   private async countOpenMovements(clientPartyId: number): Promise<number> {

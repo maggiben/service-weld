@@ -15,10 +15,19 @@
     "accessories": "Accessories",
     "alerts": "Alerts",
     "rates": "Rates",
-    "billing": "Billing"
+    "billing": "Billing",
+    "settings": "Configuration",
+    "users": "Users & permissions",
+    "audit": "Audit log"
   },
   "shell": {
-    "signed_in_as": "Signed in as {{username}}"
+    "signed_in_as": "Signed in as {{username}}",
+    "user_menu": "User menu",
+    "menu": {
+      "settings": "Configuration",
+      "users": "Users & permissions",
+      "audit": "Audit log"
+    }
   },
   "login": {
     "title": "Sign in",
@@ -32,7 +41,7 @@
     "empty": "No clients yet",
     "columns": {
       "name": "Name",
-      "territory": "Territory",
+      "territory": "City",
       "coverage": "Coverage",
       "segment": "Segment",
       "status": "Status",
@@ -41,7 +50,7 @@
     "filters": {
       "coverage": "Coverage",
       "status": "Status",
-      "territory": "Territory",
+      "territory": "City",
       "all": "All"
     },
     "detail": {
@@ -72,15 +81,27 @@
         "accrued_days": "Accrued days",
         "rental_days": "Rental days",
         "state": "State"
-      }
+      },
+      "locality": "Locality"
     },
     "form": {
       "title_create": "New client",
+      "title_edit": "Edit client",
       "unsaved_confirm": "You have unsaved changes. Close anyway?",
       "name": "Name",
       "cuit": "CUIT",
       "address_street": "Address",
-      "territory": "Territory",
+      "locality": "Locality",
+      "locality_none": "No city",
+      "territory": "City",
+      "territory_hint": "Cities taken from existing clients. Updates when you add a client in a new city.",
+      "create_city": "+ Create city…",
+      "create_city_title": "New city",
+      "city_name": "City name",
+      "city_name_required": "Enter a city name",
+      "city_depot": "Depot / route",
+      "city_depot_required": "Choose a depot (Junín or Chacabuco)",
+      "city_depot_hint": "Operational route this city belongs to",
       "coverage": "Coverage",
       "segment": "Segment",
       "segment_none": "No segment",
@@ -308,7 +329,8 @@
     },
     "movement_kind": {
       "RENTAL": "Rental",
-      "REFILL": "Refill"
+      "REFILL": "Refill",
+      "SUPPLIER_LOAN": "Supplier loan"
     },
     "movement_state": {
       "OPEN": "Open",
@@ -394,6 +416,7 @@
     "generic": "Something went wrong. Please try again.",
     "load_failed": "Could not load data",
     "duplicate_cuit": "A client with this CUIT already exists",
+    "version_conflict": "This record was modified by someone else. Reload and try again.",
     "duplicate_serial": "That serial already exists for this owner",
     "duplicate_location": "A location with that name already exists",
     "cylinder_already_out": "Cylinder is already out",
@@ -414,7 +437,8 @@
     "period_locked": "Period already has approved or exported invoices",
     "not_approved": "Billing run must be approved before export",
     "forbidden_title": "Access denied",
-    "forbidden_back": "Back to clients"
+    "forbidden_back": "Back to clients",
+    "duplicate_username": "A user with this username already exists"
   },
   "actions": {
     "toggle_language": "Change language",
@@ -423,6 +447,7 @@
     "save": "Save",
     "cancel": "Cancel",
     "close": "Close",
+    "edit": "Edit",
     "new_client": "New client",
     "register_cylinder": "Register cylinder",
     "new_delivery": "New delivery",
@@ -447,7 +472,9 @@
     "run_billing_history": "History",
     "approve_billing": "Approve",
     "export_billing": "Export",
-    "search": "Search"
+    "search": "Search",
+    "new_user": "New user",
+    "remove": "Remove"
   },
   "loans": {
     "title": "Supplier loans",
@@ -748,6 +775,74 @@
       "created": "Created",
       "deliveries": "Deliveries",
       "accessories": "Accessories"
+    }
+  },
+  "settings": {
+    "title": "Configuration",
+    "subtitle": "System thresholds and operational settings",
+    "saved": "Settings saved",
+    "supplier_loan_overdue_days": "Supplier loan overdue (days)",
+    "supplier_loan_overdue_days_help": "Open supplier loan loops older than this are marked overdue"
+  },
+  "users": {
+    "title": "Users & permissions",
+    "subtitle": "Create users, assign roles and territories, or remove accounts",
+    "active_yes": "Active",
+    "active_no": "Inactive",
+    "remove_title": "Remove user",
+    "remove_confirm": "Remove {{username}}? They will no longer be able to sign in.",
+    "columns": {
+      "username": "Username",
+      "email": "Email",
+      "roles": "Roles",
+      "territories": "Territories",
+      "active": "Status"
+    },
+    "filters": {
+      "role": "Role",
+      "active": "Status",
+      "all": "All"
+    },
+    "form": {
+      "title_create": "New user",
+      "title_edit": "Edit user",
+      "username": "Username",
+      "email": "Email",
+      "password": "Password",
+      "password_optional": "New password",
+      "password_optional_help": "Leave blank to keep the current password",
+      "roles": "Roles",
+      "territories": "Territories",
+      "mfa_enabled": "MFA enabled",
+      "is_active": "Active"
+    }
+  },
+  "audit": {
+    "title": "Audit log",
+    "subtitle": "Immutable trail of who changed what and when",
+    "empty": "No audit entries for these filters",
+    "view_diff": "Diff",
+    "diff_title": "Change detail",
+    "before": "Before",
+    "after": "After",
+    "unknown_user": "Unknown user",
+    "system_user": "System / migration",
+    "columns": {
+      "occurred": "When",
+      "actor": "User",
+      "role": "Role",
+      "action": "Action",
+      "entity": "Entity",
+      "entity_id": "Entity id",
+      "source": "Source"
+    },
+    "filters": {
+      "entity_table": "Entity table",
+      "actor": "User",
+      "action": "Action",
+      "from": "From",
+      "to": "To",
+      "all": "All"
     }
   }
 }

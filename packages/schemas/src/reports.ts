@@ -104,7 +104,9 @@ export const SupplierReturnsQuery = PaginationQuery.extend({
 export type SupplierReturnsQuery = z.infer<typeof SupplierReturnsQuery>;
 
 export const CylinderLifeRow = z.object({
-  movement_id: z.number().int(),
+  event_source: z.enum(["MOVEMENT", "SUPPLIER_LOAN"]),
+  movement_id: z.number().int().nullable(),
+  loan_id: z.number().int().nullable(),
   holder_party_id: z.number().int(),
   holder_name: z.string(),
   movement_kind: z.string(),

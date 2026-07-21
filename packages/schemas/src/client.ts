@@ -44,17 +44,19 @@ export type Client = z.infer<typeof Client>;
 
 export const CreateClientContactInput = ClientContact.omit({ id: true });
 
+const optionalCuit = z
+  .string()
+  .regex(CUIT_FORMAT, { message: "CUIT must match NN-NNNNNNNN-N" })
+  .nullable()
+  .optional()
+  .refine((value) => value == null || isValidCuit(value), {
+    message: "Invalid CUIT check digit",
+  });
+
 export const CreateClientInput = z
   .object({
     name: z.string().min(1),
-    cuit: z
-      .string()
-      .regex(CUIT_FORMAT, { message: "CUIT must match NN-NNNNNNNN-N" })
-      .nullable()
-      .optional()
-      .refine((value) => value == null || isValidCuit(value), {
-        message: "Invalid CUIT check digit",
-      }),
+    cuit: optionalCuit,
     address_street: z.string().nullable().optional(),
     locality_id: z.number().int().nullable().optional(),
     territory_id: z.number().int(),
@@ -74,6 +76,32 @@ export const CreateClientInput = z
     { message: "At most one primary contact is allowed", path: ["contacts"] },
   );
 export type CreateClientInput = z.infer<typeof CreateClientInput>;
+
+export const UpdateClientInput = z
+  .object({
+    name: z.string().min(1).optional(),
+    cuit: optionalCuit,
+    address_street: z.string().nullable().optional(),
+    locality_id: z.number().int().nullable().optional(),
+    territory_id: z.number().int().optional(),
+    coverage: ClientCoverage.optional(),
+    segment: ClientSegment.nullable().optional(),
+    delivery_instructions: z.string().nullable().optional(),
+    daily_rate_default: z.coerce
+      .number()
+      .multipleOf(0.01)
+      .nullable()
+      .optional(),
+    status: ClientStatus.optional(),
+    contacts: z.array(CreateClientContactInput).optional(),
+  })
+  .refine(
+    (value) =>
+      value.contacts == null ||
+      value.contacts.filter((contact) => contact.is_primary).length <= 1,
+    { message: "At most one primary contact is allowed", path: ["contacts"] },
+  );
+export type UpdateClientInput = z.infer<typeof UpdateClientInput>;
 
 export const ClientListQuery = PaginationQuery.extend({
   q: z.string().optional(),

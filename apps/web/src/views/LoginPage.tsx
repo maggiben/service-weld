@@ -84,8 +84,24 @@ export default function LoginPage() {
         <Card sx={{ width: "100%", maxWidth: 420 }}>
           <CardContent>
             <Stack spacing={3}>
-              <Box>
-                <Typography variant="h5">{t("login.title")}</Typography>
+              <Box sx={{ textAlign: "center" }}>
+                <Box
+                  component="img"
+                  src="/service-weld-logo.png"
+                  alt="Service Weld S.R.L."
+                  sx={{
+                    width: "100%",
+                    maxWidth: 280,
+                    height: "auto",
+                    display: "block",
+                    mx: "auto",
+                    borderRadius: 1,
+                    bgcolor: "#000",
+                  }}
+                />
+                <Typography variant="h5" sx={{ mt: 2 }}>
+                  {t("login.title")}
+                </Typography>
                 <Typography variant="body2" color="text.secondary">
                   {t("login.subtitle")}
                 </Typography>

@@ -109,6 +109,7 @@ describe("WeldApiClient", () => {
         idempotencyKey: "k",
       },
     );
+    await api.updateClient(1, { address_street: "Calle 1" }, { ifMatch: 1 });
     await api.listCylinders({});
     await api.getCylinder(1);
     await api.getCylinderHistory(1);
@@ -211,6 +212,17 @@ describe("WeldApiClient", () => {
     await api.createLocality({ name: "L" });
     await api.getSettings();
     await api.updateSettings({ supplier_loan_overdue_days: 90 });
+    await api.listAdminUsers({});
+    await api.getAdminUser(1);
+    await api.createAdminUser({
+      username: "driver.leo",
+      password: "password1",
+      roles: ["DRIVER"],
+      territory_ids: [1],
+    });
+    await api.updateAdminUser(1, { is_active: false });
+    await api.removeAdminUser(2);
+    await api.listAuditLogs({});
     await api.listRentalRates({});
     await api.createRentalRate({ amount: 1, effective_from: "2024-01-01" });
     await api.updateRentalRate(1, { amount: 2 });

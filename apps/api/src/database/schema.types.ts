@@ -354,6 +354,22 @@ export interface SystemSettingTable {
   version: Generated<number>;
 }
 
+export type AuditActionDb = "INSERT" | "UPDATE" | "DELETE" | "VOID";
+
+export interface AuditLogTable {
+  id: Generated<number>;
+  occurred_at: Generated<Date>;
+  actor_user_id: number | null;
+  actor_role: string | null;
+  action: AuditActionDb;
+  entity_table: string;
+  entity_id: number | null;
+  before: unknown | null;
+  after: unknown | null;
+  request_id: string | null;
+  source: string | null;
+}
+
 export interface Database {
   app_user: AppUserTable;
   role: RoleTable;
@@ -382,4 +398,5 @@ export interface Database {
   delivery_note: DeliveryNoteTable;
   migration_exception: MigrationExceptionTable;
   system_setting: SystemSettingTable;
+  audit_log: AuditLogTable;
 }

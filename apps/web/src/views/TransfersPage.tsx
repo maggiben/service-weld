@@ -287,6 +287,8 @@ export default function TransfersPage() {
         anchor="right"
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
+        // Above the fixed AppBar (shell uses drawer + 1) so the title/labels are not clipped.
+        sx={{ zIndex: (theme) => theme.zIndex.modal }}
         PaperProps={{ sx: { width: { xs: "100%", sm: 420 }, p: 3 } }}
       >
         <Stack spacing={2}>

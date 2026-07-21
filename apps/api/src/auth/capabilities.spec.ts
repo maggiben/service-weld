@@ -8,6 +8,7 @@ import {
   hasGlobalTerritoryAccess,
   territoryIdsForPrincipal,
   isMedicalRole,
+  canViewMunicipalHospitalClients,
   type AuthPrincipal,
 } from "./principal";
 
@@ -43,6 +44,10 @@ describe("principal territory helpers", () => {
     expect(isMedicalRole(["MEDICAL"])).toBe(true);
     expect(isMedicalRole(["ADMIN"])).toBe(true);
     expect(isMedicalRole(["CLERK"])).toBe(false);
+    expect(canViewMunicipalHospitalClients(["BILLING"])).toBe(true);
+    expect(canViewMunicipalHospitalClients(["MEDICAL"])).toBe(true);
+    expect(canViewMunicipalHospitalClients(["CLERK"])).toBe(false);
+    expect(canViewMunicipalHospitalClients(["MANAGER"])).toBe(false);
   });
 
   it("territoryIdsForPrincipal", () => {

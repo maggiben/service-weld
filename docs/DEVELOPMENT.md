@@ -46,7 +46,7 @@ Phase 5 = accessories inventory/rentals (W11) + in-app alert worklist (**D-15**;
 
 Phase 6 **core** = field login, IndexedDB `outboxStore`, capture deliver/return → queue, sync drain on reconnect, conflict retry/discard, web manifest. Full service-worker asset cache / barcode scan / route stops remain follow-ups.
 
-Phase 7 **core** = Python `.xls` importer (`migration/weld_migration`), dry-run + load CLI (`pnpm migrate:xls[:dry]`), exceptions → `migration_exception`, reconciliation report. Full production cutover / workbook-specific cleanups remain ops follow-ups.
+Phase 7 **core** = Python `.xls` importer (`migration/weld_migration`), dry-run + load CLI (`pnpm migrate:xls[:dry]`), exceptions → `migration_exception`, reconciliation report. Full production cutover / workbook-specific cleanups remain ops follow-ups. Customer-facing exception language: `docs/MIGRATION_EXCEPTIONS_CUSTOMER.md`.
 
 Phase 8 **core** = report endpoints (`fleet`, `float-aging`, `rental`, `loss`, `supplier-returns`, `cylinder-life`, `medical-statement`, `data-quality`) + web `/reports`. Outstanding stays on reconciliation. Deployment: container stubs + compose sketch; full scheduler/backups/observability remain follow-ups.
 

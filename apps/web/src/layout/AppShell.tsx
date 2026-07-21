@@ -17,23 +17,31 @@ import NotificationsIcon from "@mui/icons-material/Notifications";
 import BuildIcon from "@mui/icons-material/Build";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
 import AssessmentIcon from "@mui/icons-material/Assessment";
+import SettingsIcon from "@mui/icons-material/Settings";
+import ManageAccountsIcon from "@mui/icons-material/ManageAccounts";
+import HistoryIcon from "@mui/icons-material/History";
+import Avatar from "@mui/material/Avatar";
 import Badge from "@mui/material/Badge";
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
 import Breadcrumbs from "@mui/material/Breadcrumbs";
+import Divider from "@mui/material/Divider";
 import Drawer from "@mui/material/Drawer";
 import IconButton from "@mui/material/IconButton";
 import List from "@mui/material/List";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { useTheme } from "@mui/material/styles";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import type { PropsWithChildren } from "react";
+import type { MouseEvent, PropsWithChildren } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "@/api/client";
 import { useSessionStore } from "@/store/sessionStore";
@@ -42,6 +50,7 @@ import { useNotificationStore } from "@/store/notificationStore";
 import { ToastHost } from "@/layout/ToastHost";
 import { AlertsBellMenu } from "@/features/alerts/AlertsBellMenu";
 import { useAlertsInbox } from "@/features/alerts/useAlertsInbox";
+import { userInitials } from "@/lib/userInitials";
 
 const DRAWER_WIDTH = 240;
 
@@ -140,6 +149,9 @@ const BREADCRUMB_BY_PREFIX: Record<string, string> = {
   "/alerts": "nav.alerts",
   "/rates": "nav.rates",
   "/billing": "nav.billing",
+  "/settings": "nav.settings",
+  "/admin/users": "nav.users",
+  "/audit-logs": "nav.audit",
 };
 
 export default function AppShell({ children }: PropsWithChildren) {
@@ -150,13 +162,16 @@ export default function AppShell({ children }: PropsWithChildren) {
   const { t } = useTranslation();
   const pathname = usePathname();
   const router = useRouter();
-  const username = useSessionStore((s) => s.user?.username);
+  const user = useSessionStore((s) => s.user);
   const hasCapability = useSessionStore((s) => s.hasCapability);
   const clearSession = useSessionStore((s) => s.clearSession);
   const { locale, setLocale, mode, setMode, sidebarOpen, toggleSidebar } =
     useUiStore();
   const unreadCount = useNotificationStore((s) => s.unreadCount);
   useAlertsInbox();
+
+  const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
+  const menuOpen = Boolean(menuAnchor);
 
   const visibleNav = NAV_ITEMS.filter((item) => hasCapability(item.capability));
 
@@ -166,12 +181,24 @@ export default function AppShell({ children }: PropsWithChildren) {
     )?.[1] ?? "app.title";
 
   const handleLogout = async () => {
+    setMenuAnchor(null);
     try {
       await api.logout();
     } catch {
       clearSession();
     }
     router.replace("/login");
+  };
+
+  const openMenu = (event: MouseEvent<HTMLElement>) => {
+    setMenuAnchor(event.currentTarget);
+  };
+
+  const closeMenu = () => setMenuAnchor(null);
+
+  const go = (path: string) => {
+    closeMenu();
+    router.push(path);
   };
 
   const drawer = (
@@ -207,6 +234,8 @@ export default function AppShell({ children }: PropsWithChildren) {
       </List>
     </Box>
   );
+
+  const initials = userInitials(user?.username);
 
   return (
     <Box sx={{ display: "flex", minHeight: "100vh" }}>
@@ -247,11 +276,77 @@ export default function AppShell({ children }: PropsWithChildren) {
           </IconButton>
           <IconButton
             color="inherit"
-            onClick={handleLogout}
-            title={t("actions.logout")}
+            onClick={openMenu}
+            aria-controls={menuOpen ? "user-menu" : undefined}
+            aria-haspopup="true"
+            aria-expanded={menuOpen ? "true" : undefined}
+            title={user?.username ?? t("shell.user_menu")}
+            sx={{ ml: 0.5 }}
           >
-            <LogoutIcon />
+            <Avatar
+              sx={{
+                width: 32,
+                height: 32,
+                fontSize: 13,
+                bgcolor: "secondary.main",
+                color: "secondary.contrastText",
+              }}
+            >
+              {initials}
+            </Avatar>
           </IconButton>
+          <Menu
+            id="user-menu"
+            anchorEl={menuAnchor}
+            open={menuOpen}
+            onClose={closeMenu}
+            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+            transformOrigin={{ vertical: "top", horizontal: "right" }}
+            slotProps={{ paper: { sx: { minWidth: 220 } } }}
+          >
+            {user && (
+              <Box sx={{ px: 2, py: 1.25 }}>
+                <Typography variant="subtitle2" noWrap>
+                  {user.username}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" noWrap>
+                  {user.roles.join(", ")}
+                </Typography>
+              </Box>
+            )}
+            <Divider />
+            {hasCapability("admin:write") && (
+              <MenuItem onClick={() => go("/settings")}>
+                <ListItemIcon>
+                  <SettingsIcon fontSize="small" />
+                </ListItemIcon>
+                {t("shell.menu.settings")}
+              </MenuItem>
+            )}
+            {hasCapability("admin:write") && (
+              <MenuItem onClick={() => go("/admin/users")}>
+                <ListItemIcon>
+                  <ManageAccountsIcon fontSize="small" />
+                </ListItemIcon>
+                {t("shell.menu.users")}
+              </MenuItem>
+            )}
+            {hasCapability("audit:read") && (
+              <MenuItem onClick={() => go("/audit-logs")}>
+                <ListItemIcon>
+                  <HistoryIcon fontSize="small" />
+                </ListItemIcon>
+                {t("shell.menu.audit")}
+              </MenuItem>
+            )}
+            <Divider />
+            <MenuItem onClick={handleLogout}>
+              <ListItemIcon>
+                <LogoutIcon fontSize="small" />
+              </ListItemIcon>
+              {t("actions.logout")}
+            </MenuItem>
+          </Menu>
         </Toolbar>
       </AppBar>
 
@@ -287,11 +382,6 @@ export default function AppShell({ children }: PropsWithChildren) {
           <Typography color="text.primary">{t("app.title")}</Typography>
           <Typography color="text.primary">{t(breadcrumbKey)}</Typography>
         </Breadcrumbs>
-        {username && (
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            {t("shell.signed_in_as", { username })}
-          </Typography>
-        )}
         {children}
       </Box>
       <ToastHost />

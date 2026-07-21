@@ -31,7 +31,10 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
+import { CreateClientDrawer } from "../features/clients/CreateClientDrawer";
 import { displayRentalDays } from "../features/movements/displayRentalDays";
+import { useLocations } from "../hooks/useLocations";
+import { useSessionStore } from "../store/sessionStore";
 import { useUiStore } from "../store/uiStore";
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
@@ -48,11 +51,14 @@ function formatDate(value: string | null | undefined): string {
 export default function ClientDetailPage() {
   const { t } = useTranslation();
   const locale = useUiStore((s) => s.locale);
+  const { localityLabel } = useLocations();
+  const canWrite = useSessionStore((s) => s.hasCapability("clients:write"));
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const clientId = Number(params.id);
 
   const [tab, setTab] = useState<LedgerTab>("outstanding");
+  const [editOpen, setEditOpen] = useState(false);
   const [openOnly, setOpenOnly] = useState(false);
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
     page: 0,
@@ -253,7 +259,12 @@ export default function ClientDetailPage() {
 
   return (
     <Stack spacing={2} sx={{ height: "calc(100vh - 180px)" }}>
-      <Stack direction="row" spacing={1} alignItems="center">
+      <Stack
+        direction="row"
+        spacing={1}
+        alignItems="center"
+        justifyContent="space-between"
+      >
         <Button
           startIcon={<ArrowBackIcon />}
           onClick={() => router.push("/clients")}
@@ -261,6 +272,15 @@ export default function ClientDetailPage() {
         >
           {t("clients.detail.back")}
         </Button>
+        {canWrite && client && (
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => setEditOpen(true)}
+          >
+            {t("actions.edit")}
+          </Button>
+        )}
       </Stack>
 
       {clientQuery.isError && (
@@ -298,6 +318,49 @@ export default function ClientDetailPage() {
                 )}
                 <Chip size="small" label={t(`enums.status.${client.status}`)} />
               </Stack>
+              {(client.address_street || client.locality_id != null) && (
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mt: 1 }}
+                >
+                  {[
+                    client.address_street,
+                    client.locality_id != null
+                      ? `${t("clients.detail.locality")}: ${localityLabel(client.locality_id)}`
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </Typography>
+              )}
+              {client.contacts
+                ?.filter((c) => c.phone || c.name)
+                .sort((a, b) => Number(b.is_primary) - Number(a.is_primary))
+                .map((contact) => {
+                  const prefix = [contact.name, contact.role]
+                    .filter(Boolean)
+                    .join(" · ");
+                  return (
+                    <Typography
+                      key={contact.id ?? `${contact.name}-${contact.phone}`}
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mt: 0.5 }}
+                    >
+                      {prefix || null}
+                      {prefix && contact.phone ? " · " : null}
+                      {contact.phone ? (
+                        <Link href={`tel:${contact.phone}`} underline="hover">
+                          {contact.phone}
+                        </Link>
+                      ) : null}
+                      {contact.is_primary
+                        ? ` · ${t("clients.form.contact_primary")}`
+                        : null}
+                    </Typography>
+                  );
+                })}
               {client.delivery_instructions && (
                 <Typography
                   variant="body2"
@@ -451,6 +514,12 @@ export default function ClientDetailPage() {
           />
         )}
       </Box>
+
+      <CreateClientDrawer
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        client={client}
+      />
     </Stack>
   );
 }

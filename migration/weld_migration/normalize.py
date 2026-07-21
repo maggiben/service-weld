@@ -111,6 +111,11 @@ def parse_cuit(raw: Any) -> str | None:
 
 
 def coverage_from_sheet(sheet_name: str, header_blob: str) -> str:
+    """Map legacy hospital tags → MUNICIPAL_HOSPITAL.
+
+    Require an explicit hospital+municipal cue. Bare "municipal" alone is not
+    enough (e.g. CORRALON MUNICIPAL is an industrial client, not a patient).
+    """
     blob = f"{sheet_name} {header_blob}".casefold()
     if any(
         t in blob
@@ -120,11 +125,63 @@ def coverage_from_sheet(sheet_name: str, header_blob: str) -> str:
             "hosp.munic.",
             "hospmunic",
             "h.munic",
-            "municipal",
+            "hospital municipal",
+            "hosp-municipal",
+            "hosp municipal",
         )
     ):
         return "MUNICIPAL_HOSPITAL"
+    # Compact forms without separators: "hospmunic", "hospitalmunic"
+    if re.search(r"hosp(?:ital)?\s*\.?\s*munic", blob):
+        return "MUNICIPAL_HOSPITAL"
     return "PRIVATE"
+
+
+_HOSP_TAG_RE = re.compile(
+    r"[\s\-_/]*\(?\s*hosp(?:ital)?\.?\s*\-?\s*munic(?:ipal)?\.?\s*\)?\.?",
+    re.IGNORECASE,
+)
+_NON_ALNUM_RE = re.compile(r"[^a-z0-9\s]+")
+_WS_RE = re.compile(r"\s+")
+
+
+def fold_person_key(value: Any) -> str:
+    """Casefold + strip accents/punctuation for fuzzy client matching."""
+    import unicodedata
+
+    s = norm_text(value)
+    if not s:
+        return ""
+    s = unicodedata.normalize("NFKD", s)
+    s = "".join(c for c in s if not unicodedata.combining(c))
+    s = _HOSP_TAG_RE.sub(" ", s)
+    s = s.casefold()
+    s = _NON_ALNUM_RE.sub(" ", s)
+    return _WS_RE.sub(" ", s).strip()
+
+
+def person_token_set(value: Any) -> set[str]:
+    stop = {"de", "del", "la", "el", "los", "las", "y", "e", "ex", "sa", "srl"}
+    return {t for t in fold_person_key(value).split() if t and t not in stop}
+
+
+def coverage_from_holder_name(name: str) -> str:
+    return coverage_from_sheet(name, "")
+
+
+def is_noise_holder_name(name: str) -> bool:
+    s = norm_text(name)
+    if not s:
+        return True
+    if re.fullmatch(r"[xX\?\|\.\-\s]+", s):
+        return True
+    if re.match(
+        r"^(ver\s|sin\s|en\s|posible|cobrar|reemplazado|xxxxx)",
+        s,
+        re.IGNORECASE,
+    ):
+        return True
+    return False
 
 
 def parse_capacity(raw: Any) -> float | None:

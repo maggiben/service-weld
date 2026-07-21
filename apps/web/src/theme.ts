@@ -36,6 +36,21 @@ export function buildTheme(mode: "light" | "dark") {
     palette: { mode, gas },
     shape: { borderRadius: 8 },
     typography: { fontSize: 14 },
+    components: {
+      // Safari/WebKit: outlined notch uses max-width: 100% on <legend>, which
+      // fails inside flex (Stack) and transform (Drawer) — border cuts through
+      // floating labels. Upstream: mui/material-ui#46891 / #48566.
+      MuiFormControl: {
+        styleOverrides: {
+          root: {
+            "&:has(.MuiInputLabel-shrink) .MuiOutlinedInput-notchedOutline legend":
+              {
+                maxWidth: "none",
+              },
+          },
+        },
+      },
+    },
   };
   return createTheme(options);
 }

@@ -20,7 +20,6 @@ import { resolveDb } from "../database/transaction.context";
 import type {
   CylinderCondition,
   CylinderState,
-  MovementKind,
   MovementState,
   OwnershipBasis,
   PackagingKind,
@@ -424,8 +423,11 @@ export class CylindersRepository {
     const db = resolveDb(this.db);
     const limit = query.limit;
     const sort = parseSort(query.sort, ["delivery_date"]);
+    const gte = query["filter[delivery_date][gte]"];
+    const lte = query["filter[delivery_date][lte]"];
+    const holderPartyId = query["filter[holder_party_id]"];
 
-    let qb = db
+    let movementsQb = db
       .selectFrom("movement_event")
       .innerJoin("party", "party.id", "movement_event.holder_party_id")
       .select([
@@ -442,88 +444,153 @@ export class CylindersRepository {
       ])
       .where("movement_event.cylinder_id", "=", cylinderId);
 
-    if (query["filter[delivery_date][gte]"]) {
-      qb = qb.where(
+    if (gte) {
+      movementsQb = movementsQb.where(
         "movement_event.delivery_date",
         ">=",
-        query["filter[delivery_date][gte]"],
+        gte,
       );
     }
-    if (query["filter[delivery_date][lte]"]) {
-      qb = qb.where(
+    if (lte) {
+      movementsQb = movementsQb.where(
         "movement_event.delivery_date",
         "<=",
-        query["filter[delivery_date][lte]"],
+        lte,
       );
     }
-    if (query["filter[holder_party_id]"] != null) {
-      qb = qb.where(
+    if (holderPartyId != null) {
+      movementsQb = movementsQb.where(
         "movement_event.holder_party_id",
         "=",
-        query["filter[holder_party_id]"],
+        holderPartyId,
       );
     }
 
+    let loansQb = db
+      .selectFrom("supplier_loan_cycle")
+      .innerJoin("party", "party.id", "supplier_loan_cycle.supplier_party_id")
+      .select([
+        "supplier_loan_cycle.id as loan_id",
+        "supplier_loan_cycle.supplier_party_id as holder_party_id",
+        "party.display_name as holder_name",
+        "supplier_loan_cycle.gas_code",
+        "supplier_loan_cycle.received_from_supplier as delivery_date",
+        "supplier_loan_cycle.returned_to_supplier as return_date",
+      ])
+      .where("supplier_loan_cycle.cylinder_id", "=", cylinderId)
+      .where("supplier_loan_cycle.received_from_supplier", "is not", null);
+
+    if (gte) {
+      loansQb = loansQb.where(
+        "supplier_loan_cycle.received_from_supplier",
+        ">=",
+        gte,
+      );
+    }
+    if (lte) {
+      loansQb = loansQb.where(
+        "supplier_loan_cycle.received_from_supplier",
+        "<=",
+        lte,
+      );
+    }
+    if (holderPartyId != null) {
+      loansQb = loansQb.where(
+        "supplier_loan_cycle.supplier_party_id",
+        "=",
+        holderPartyId,
+      );
+    }
+
+    const [movementRows, loanRows] = await Promise.all([
+      movementsQb.execute(),
+      loansQb.execute(),
+    ]);
+
+    const merged: CylinderHistoryRow[] = [
+      ...movementRows.map((row) => ({
+        event_source: "MOVEMENT" as const,
+        movement_id: Number(row.movement_id),
+        loan_id: null,
+        holder_party_id: Number(row.holder_party_id),
+        holder_name: row.holder_name,
+        gas_code: row.gas_code as CylinderHistoryRow["gas_code"],
+        movement_kind: row.movement_kind as CylinderHistoryRow["movement_kind"],
+        delivery_date: toIsoDate(row.delivery_date)!,
+        return_date: toIsoDate(row.return_date),
+        rental_days: row.rental_days == null ? null : Number(row.rental_days),
+        state: row.state as MovementState,
+        note: row.note,
+      })),
+      ...loanRows.map((row) => {
+        const returnDate = toIsoDate(row.return_date);
+        return {
+          event_source: "SUPPLIER_LOAN" as const,
+          movement_id: null,
+          loan_id: Number(row.loan_id),
+          holder_party_id: Number(row.holder_party_id),
+          holder_name: row.holder_name,
+          gas_code: row.gas_code as CylinderHistoryRow["gas_code"],
+          movement_kind: "SUPPLIER_LOAN" as const,
+          delivery_date: toIsoDate(row.delivery_date)!,
+          return_date: returnDate,
+          rental_days: null,
+          state: (returnDate != null ? "CLOSED" : "OPEN") as MovementState,
+          note: null,
+        };
+      }),
+    ];
+
+    const direction = sort.direction;
+    merged.sort((a, b) => {
+      const dateCmp = a.delivery_date.localeCompare(b.delivery_date);
+      if (dateCmp !== 0) return direction === "asc" ? dateCmp : -dateCmp;
+      const aId = a.movement_id ?? a.loan_id ?? 0;
+      const bId = b.movement_id ?? b.loan_id ?? 0;
+      const sourceCmp = a.event_source.localeCompare(b.event_source);
+      if (sourceCmp !== 0) return direction === "asc" ? sourceCmp : -sourceCmp;
+      return direction === "asc" ? aId - bId : bId - aId;
+    });
+
+    let filtered = merged;
     if (query.cursor) {
       const cursor = decodeCursor(query.cursor);
       const cursorDate = String(cursor.delivery_date ?? "");
       const cursorId = Number(cursor.id ?? 0);
-      qb =
-        sort.direction === "asc"
-          ? qb.where((eb) =>
-              eb.or([
-                eb("movement_event.delivery_date", ">", cursorDate),
-                eb.and([
-                  eb("movement_event.delivery_date", "=", cursorDate),
-                  eb("movement_event.id", ">", cursorId),
-                ]),
-              ]),
-            )
-          : qb.where((eb) =>
-              eb.or([
-                eb("movement_event.delivery_date", "<", cursorDate),
-                eb.and([
-                  eb("movement_event.delivery_date", "=", cursorDate),
-                  eb("movement_event.id", "<", cursorId),
-                ]),
-              ]),
-            );
+      const cursorSource = String(cursor.event_source ?? "MOVEMENT");
+      filtered = merged.filter((row) => {
+        const rowId = row.movement_id ?? row.loan_id ?? 0;
+        if (direction === "asc") {
+          if (row.delivery_date > cursorDate) return true;
+          if (row.delivery_date < cursorDate) return false;
+          if (row.event_source > cursorSource) return true;
+          if (row.event_source < cursorSource) return false;
+          return rowId > cursorId;
+        }
+        if (row.delivery_date < cursorDate) return true;
+        if (row.delivery_date > cursorDate) return false;
+        if (row.event_source < cursorSource) return true;
+        if (row.event_source > cursorSource) return false;
+        return rowId < cursorId;
+      });
     }
 
-    const rows = await qb
-      .orderBy("movement_event.delivery_date", sort.direction)
-      .orderBy("movement_event.id", sort.direction)
-      .limit(limit + 1)
-      .execute();
-
-    const hasMore = rows.length > limit;
-    const pageRows = hasMore ? rows.slice(0, limit) : rows;
+    const hasMore = filtered.length > limit;
+    const pageRows = hasMore ? filtered.slice(0, limit) : filtered;
     const last = pageRows[pageRows.length - 1];
-
-    const data: CylinderHistoryRow[] = pageRows.map((row) => ({
-      movement_id: Number(row.movement_id),
-      holder_party_id: Number(row.holder_party_id),
-      holder_name: row.holder_name,
-      gas_code: row.gas_code as CylinderHistoryRow["gas_code"],
-      movement_kind: row.movement_kind as MovementKind,
-      delivery_date: toIsoDate(row.delivery_date)!,
-      return_date: toIsoDate(row.return_date),
-      rental_days: row.rental_days == null ? null : Number(row.rental_days),
-      state: row.state as MovementState,
-      note: row.note,
-    }));
 
     return {
       cylinder_id: cylinderId,
-      data,
+      data: pageRows,
       page: buildPageMeta({
         limit,
         hasMore,
         nextCursor:
           hasMore && last
             ? encodeCursor({
-                delivery_date: toIsoDate(last.delivery_date),
-                id: Number(last.movement_id),
+                delivery_date: last.delivery_date,
+                id: last.movement_id ?? last.loan_id,
+                event_source: last.event_source,
               })
             : null,
       }),

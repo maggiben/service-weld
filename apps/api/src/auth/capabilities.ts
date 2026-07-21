@@ -86,6 +86,7 @@ export const ROLE_CAPABILITIES: Record<RoleCode, readonly string[]> = {
     "rates:read",
     "alerts:read",
     "search:read",
+    "audit:read",
   ],
   SUBDIST: [
     "clients:read",
@@ -122,6 +123,7 @@ export const ROLE_CAPABILITIES: Record<RoleCode, readonly string[]> = {
     "search:read",
     "admin:read",
     "admin:write",
+    "audit:read",
     "medical:read",
   ],
   MEDICAL: [
