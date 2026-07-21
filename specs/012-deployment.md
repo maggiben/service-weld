@@ -13,8 +13,12 @@ Define the deployment topology, configuration, scheduled jobs, observability, an
 - R3. Implement **scheduled jobs** (worker): pre-create next month's `audit_log` partition; nightly aging + accrual snapshots for `007`; alert generation (long-outstanding, supplier-overdue, medical replenishment-due, pending owner returns); export retries.
 - R4. Implement **backups**: daily base backup + WAL for point-in-time recovery; periodic restore drills; export artifacts retained per fiscal policy.
 - R5. Implement **observability**: structured logs with `request_id` correlation across API/audit/notifications, metrics (request latency, error rates, job durations, sync backlog), health/readiness checks, and alerting on failures.
-- R6. Implement **CI/CD**: run the full test suite (`010`) incl. schema load + invariant tests; apply DDL migrations on deploy; zero-downtime rollout where possible.
+- R6. Implement **CI/CD**: run the full test suite (`010`) incl. schema load + invariant tests, format/typecheck, unit tests, and the **≥80% global coverage gate** (`pnpm run test:coverage`); apply DDL migrations on deploy; zero-downtime rollout where possible.
 - R7. Enforce **security** in ops: TLS everywhere, secrets in a manager (never in images), least-privilege DB roles (app role has no `UPDATE/DELETE` on `audit_log`), MFA for privileged users.
+- R8. Enforce **local git hooks** (Husky, `core.hooksPath=.husky`, installed via `prepare` / `scripts/install-hooks.mjs`) that mirror CI intent:
+  - **pre-commit:** `pnpm run check:secrets` → lint-staged (Prettier) → `pnpm run typecheck`.
+  - **pre-push:** `pnpm run test:coverage` (≥80% lines/branches/functions/statements on every workspace package — `010` R9).
+  - Commits MUST NOT be created without these checks having passed; `--no-verify` / skipping hooks is forbidden unless the user explicitly requests a bypass.
 
 ## Constraints
 
@@ -23,6 +27,7 @@ Define the deployment topology, configuration, scheduled jobs, observability, an
 - C3. Accounting/AFIP export is an **external dependency**; failures are retriable and alertable, and must not corrupt billing state (stay "approved, not exported").
 - C4. Schema evolution is additive; never destructive to ledger tables (`003` C4).
 - C5. Business timezone (Argentina) is configured centrally and used for all "today"/period boundaries.
+- C6. Local hooks and CI MUST stay aligned: a change that passes locally but would fail CI (or vice versa) is a process bug — fix the gate, do not weaken it.
 
 ## Acceptance Criteria
 
@@ -31,7 +36,8 @@ Define the deployment topology, configuration, scheduled jobs, observability, an
 - AC3. A simulated accounting-export outage leaves billing in "approved, not exported" and raises an alert; retry succeeds after recovery.
 - AC4. A restore drill recovers the DB to a chosen point in time.
 - AC5. Logs for a single request correlate across API, audit, and any triggered notification via `request_id`.
-- AC6. CI blocks deploy if the schema fails to load or any invariant/contract test fails.
+- AC6. CI blocks deploy if the schema fails to load, any invariant/contract test fails, or coverage falls below 80% on any gated package.
+- AC7. After `pnpm install`, git hooks are active (`core.hooksPath=.husky`); committing without secrets/Prettier/typecheck passing fails; pushing without coverage ≥80% fails.
 
 ## Edge Cases
 
@@ -51,3 +57,4 @@ Define the deployment topology, configuration, scheduled jobs, observability, an
 - Keep the DDL baseline (`schema.sql`) plus incremental migration files under version control; apply via a migration tool in the deploy pipeline.
 - Schedule partition creation and snapshot jobs with idempotent, observable workers; alert on job failure.
 - Document a runbook: deploy, rollback, backup/restore, partition maintenance, and migration re-run procedures.
+- **Quality gates (local ↔ CI):** `.husky/pre-commit`, `.husky/pre-push`, `.github/workflows/ci.yml`, and `scripts/check-coverage.mjs` are the source of truth for what must pass. Agents: never commit until secrets + format + typecheck pass; never push until `test:coverage` passes. See `docs/DEVELOPMENT.md` § Quality gates.

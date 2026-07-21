@@ -120,6 +120,12 @@ Legend: **D-n** decision · resolves inconsistency **I-n** / missing **M-n** fro
 - Web: `notificationStore` holds unread count / toasts only (006); server alerts are TanStack Query data.
 - Shell polls `GET /alerts/summary` (60s) for the AppBar/nav badge; resolve/refresh push Snackbar toasts.
 
+### D-16 — Quality gates: hooks + ≥80% coverage _(process)_
+
+- **Coverage:** every workspace package MUST stay at **≥80%** lines, branches, functions, and statements. Gate: `pnpm run test:coverage` (`scripts/check-coverage.mjs`). Same threshold in CI and in the **pre-push** hook.
+- **pre-commit:** secrets scan → Prettier (lint-staged) → typecheck. **pre-push:** coverage gate.
+- **Policy:** do not create a commit until pre-commit checks pass; do not push until coverage passes; do not skip hooks (`--no-verify`) unless the operator explicitly requests a bypass. Specs `010` / `012` / `000` and `docs/DEVELOPMENT.md` are authoritative.
+
 ---
 
 ## Deviations from spec (flagged)

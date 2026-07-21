@@ -96,3 +96,28 @@ DDL migrations under `db/migrations` are **additive only** (003 C4). The app nev
 lets an ORM own or sync the schema/constraints/triggers (004).
 
 ESLint packages are deferred — see `docs/ESLINT.md`.
+
+## Quality gates (mandatory)
+
+Local hooks and CI enforce the same intent. **Never commit without the pre-commit checks having passed. Never push without the coverage gate having passed. Never skip hooks with `--no-verify` unless you explicitly choose to bypass.**
+
+| Gate          | When                      | What runs                                                                                          |
+| ------------- | ------------------------- | -------------------------------------------------------------------------------------------------- |
+| pre-commit    | every `git commit`        | `pnpm run check:secrets` → lint-staged (Prettier on staged files) → `pnpm run typecheck`           |
+| pre-push      | every `git push`          | `pnpm run test:coverage` — **≥80%** lines / branches / functions / statements on **every** package |
+| CI (`ci.yml`) | every PR / push to `main` | format check, typecheck, unit tests, coverage ≥80%, build + DB schema/invariants                   |
+
+Coverage is global per workspace package (`apps/api`, `apps/web`, `apps/field`, `packages/domain`, `packages/schemas`, `packages/api-client`), enforced by `scripts/check-coverage.mjs` (default threshold `80`, overridable only via `COVERAGE_THRESHOLD`). Specs: `010` R9–R10 / AC7–AC8, `012` R8 / AC6–AC7, `000` commit policy.
+
+Hooks live in `.husky/` (`core.hooksPath=.husky`, installed on `pnpm install` via Husky `prepare`). Manual reinstall: `node scripts/install-hooks.mjs`.
+
+### Before you ask an agent (or yourself) to commit
+
+```bash
+pnpm run check:secrets
+pnpm run format:check   # or rely on lint-staged for staged files only
+pnpm run typecheck
+pnpm run test:coverage  # required before push; recommended before commit if tests changed
+```
+
+If any of these fail, fix the failure — do not create the commit.

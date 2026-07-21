@@ -1,5 +1,10 @@
 # Gas-Cylinder Distribution — Reverse-Engineering & System Design
 
+[![CI](https://github.com/maggiben/service-weld/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/maggiben/service-weld/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/badge/coverage-%E2%89%A580%25-brightgreen)](./scripts/check-coverage.mjs)
+[![Node](https://img.shields.io/badge/node-20.16-blue)](./.nvmrc)
+[![pnpm](https://img.shields.io/badge/pnpm-10.8-blue)](./package.json)
+
 This repository reverse-engineers a real, spreadsheet-run business — a regional **industrial & medical gas-cylinder distributor/refiller** in northwest Buenos Aires Province, Argentina — and specifies the software system to replace it.
 
 The entire operation lives today in **three Excel workbooks** (~2,140 sheets, ~180,000 movement rows). These documents decode that business and turn it into an implementable design.
@@ -31,6 +36,8 @@ Each client ledger has two panes — **NUESTRA PROPIEDAD** (cylinders we own, re
 | 7   | **`openapi_specification.md`**         | OpenAPI 3.1 REST API — ~60 endpoints across 15 tags, each with method, URL, purpose, auth, request/response JSON, validation, error codes, pagination, filtering, sorting, permissions.                                                                 |
 | 8   | **`frontend_design.md`**               | Frontend UI/UX — back-office web app + offline mobile field app; every screen (purpose, components, tables, forms, filters, dialogs, validation, actions, permissions, loading/error/empty states, navigation, responsive, shortcuts) + navigation map. |
 | 9   | **`specs/`**                           | Agent-ready implementation specifications (000–012), each with Purpose · Requirements · Constraints · Acceptance Criteria · Edge Cases · Dependencies · Implementation Notes. See `specs/README.md`.                                                    |
+| 10  | **`docs/DEVELOPMENT.md`**              | Dev setup + **quality gates** (pre-commit / pre-push / CI; **≥80% coverage**; never commit without checks).                                                                                                                                             |
+| 11  | **`AGENTS.md`**                        | Short agent policy: hooks, coverage threshold, do not commit until checks pass.                                                                                                                                                                         |
 
 Everything is cross-referenced: workflows `Wnn` → stories `US-nn` → rules `BR-nn` → tables/constraints → API endpoints.
 

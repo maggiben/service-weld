@@ -14,8 +14,8 @@ Build a single system of record that replaces three manual Excel workbooks (~2,1
 - R3. Support the 10 user roles (`CLERK, DRIVER, PLANT, INVENTORY, BILLING, MANAGER, SUBDIST, ADMIN, MEDICAL, CLIENT`) and cover all workflows `W1`–`W20`.
 - R4. Migrate legacy workbook data into the new model (spec `011`) with a cleanup/exceptions pipeline.
 - R5. Enforce the 20 canonical business rules (`spec 001`) at the database, API, and UI layers.
-- R6. Provide test coverage that proves every business rule and workflow (spec `010`).
-- R7. Be deployable and operable (spec `012`), including scheduled accrual snapshots and alert generation.
+- R6. Provide test coverage that proves every business rule and workflow (spec `010`), including the **≥80% global coverage gate** on every workspace package.
+- R7. Be deployable and operable (spec `012`), including scheduled accrual snapshots and alert generation, **CI gates**, and **local git hooks** (pre-commit / pre-push) that MUST pass before commit/push.
 
 ## Constraints
 
@@ -56,3 +56,4 @@ Build a single system of record that replaces three manual Excel workbooks (~2,1
 - **Repo layout (suggested):** `apps/api` (NestJS), `apps/web` (Next.js App Router back-office), `apps/field` (Next.js App Router field PWA), `packages/domain`, `packages/schemas` (shared Zod schemas), `packages/api-client` (generated from the **Swagger-emitted** OpenAPI JSON), `db/` (`schema.sql`, migrations), `migration/` (workbook importer), `specs/`.
 - **Source of truth ordering:** if specs and the root analysis docs disagree, the numbered `specs/` win; flag the discrepancy.
 - **Agent guidance:** each spec is self-contained with testable acceptance criteria; implement to the criteria, not to prose. Prefer generating the API client and types from the OpenAPI document to keep contracts in sync.
+- **Commit / push policy (mandatory for agents):** NEVER create a git commit until the pre-commit checks pass (`check:secrets`, Prettier on staged files, `typecheck`). NEVER push until `pnpm run test:coverage` passes (≥80% lines/branches/functions/statements per package). NEVER use `--no-verify` or otherwise skip hooks unless the user explicitly requests it. Details: `010` R9–R10, `012` R8, `docs/DEVELOPMENT.md`.

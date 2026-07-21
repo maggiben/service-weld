@@ -16,13 +16,19 @@ Guarantee that the implementation enforces the domain rules, that the API honors
 - R6. **Migration tests**: run the importer on representative legacy fixtures; assert clean vs flagged counts, dual-book merge, no dropped movements, correct exception classification (`011`).
 - R7. **Reporting reconciliation tests**: revenue report equals billing charge lines; float/aging equals open-movement counts.
 - R8. **Auth tests**: RBAC denials, territory scoping, MFA gating, medical-data hiding.
+- R9. **Global coverage gate ≥80%**: every workspace package (`apps/api`, `apps/web`, `apps/field`, `packages/domain`, `packages/schemas`, `packages/api-client`) MUST meet **≥80%** coverage on **lines, branches, functions, and statements**. Enforced by `pnpm run test:coverage` (`scripts/check-coverage.mjs`; override only via `COVERAGE_THRESHOLD`, default `80`). This is a hard gate — not aspirational.
+- R10. **Local git quality gates** (see `012` R8 / `docs/DEVELOPMENT.md`):
+  - **pre-commit** (`.husky/pre-commit`): `check:secrets` → lint-staged (Prettier on staged files) → `typecheck`.
+  - **pre-push** (`.husky/pre-push`): `test:coverage` (≥80% global gate).
+  - Agents and humans MUST run the same checks before creating a commit; never bypass hooks (`--no-verify`) unless the user explicitly requests it.
 
 ## Constraints
 
 - C1. Integration/DB tests run against a **real PostgreSQL** (ephemeral container), not mocks, so constraints/triggers are exercised.
 - C2. Tests are deterministic: inject the "as-of"/clock; no reliance on wall-clock for rental math.
-- C3. CI runs the full suite on every change; migrations tested on a copy-shaped dataset.
+- C3. CI runs the full suite on every change (format, typecheck, unit tests, **coverage ≥80%**, build) plus schema load + invariants; migrations tested on a copy-shaped dataset.
 - C4. Coverage target: 100% of business rules (`001`) have at least one passing positive + negative test.
+- C5. The **80% global metric gate** (R9) is independent of C4: BR/workflow proof is qualitative completeness; line/branch/function/statement % is quantitative and applies to every package listed in R9.
 
 ## Acceptance Criteria
 
@@ -32,6 +38,8 @@ Guarantee that the implementation enforces the domain rules, that the API honors
 - AC4. Contract tests fail the build if the API diverges from the OpenAPI document.
 - AC5. Offline-sync test proves no data loss and correct conflict routing.
 - AC6. Migration test proves row-count reconciliation and exception-queue population on dirty fixtures.
+- AC7. `pnpm run test:coverage` exits 0; any package below 80% lines/branches/functions/statements fails the gate (CI job + pre-push hook).
+- AC8. A commit that would fail secrets check, Prettier on staged files, or typecheck is rejected by the pre-commit hook.
 
 ## Edge Cases
 
@@ -51,3 +59,5 @@ Guarantee that the implementation enforces the domain rules, that the API honors
 - Reuse the verified DB smoke suite as the seed of the invariant test file; expand to all 20 BRs.
 - Tag tests by BR/workflow id so coverage maps directly to `001`/`workflows.md`.
 - Keep a small, curated **legacy fixture set** (a few real-shaped sheets, anonymized) for migration tests.
+- **Before every commit:** run (or rely on) the pre-commit hook checks — `pnpm run check:secrets`, Prettier on touched files, `pnpm run typecheck`. **Before every push:** ensure `pnpm run test:coverage` passes (≥80% per package). Do not create a git commit until those checks pass; do not use `--no-verify` to skip them.
+- Coverage tooling: Node `--experimental-test-coverage` for non-API packages; Jest `--coverage` + `coverageThreshold.global` (80) for `@weld/api`. The monorepo gate is `scripts/check-coverage.mjs`.
