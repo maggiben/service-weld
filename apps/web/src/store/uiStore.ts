@@ -6,6 +6,7 @@ import {
   getThemePreset,
   preferredThemeForMode,
   resolveThemeId,
+  resolveThemeIdForMode,
   type ThemeId,
   type ThemeMode,
 } from "@/theme";
@@ -45,6 +46,29 @@ function themeIdFromLegacyMode(mode: ThemeMode | undefined): ThemeId {
   return mode === "dark" ? DEFAULT_DARK_THEME_ID : DEFAULT_LIGHT_THEME_ID;
 }
 
+function sanitizeThemeState(state: UiPersistedV0, version: number) {
+  const themeId = resolveThemeId(
+    state.themeId ??
+      (version < 1 ? themeIdFromLegacyMode(state.mode) : undefined),
+  );
+  const preset = getThemePreset(themeId);
+  const lastLightThemeId = resolveThemeIdForMode(
+    preset.mode === "light" ? themeId : state.lastLightThemeId,
+    "light",
+  );
+  const lastDarkThemeId = resolveThemeIdForMode(
+    preset.mode === "dark" ? themeId : state.lastDarkThemeId,
+    "dark",
+  );
+  return {
+    locale: state.locale ?? "es",
+    themeId,
+    lastLightThemeId,
+    lastDarkThemeId,
+    sidebarOpen: state.sidebarOpen ?? true,
+  };
+}
+
 export const useUiStore = create<UiState>()(
   persist(
     (set, get) => ({
@@ -65,41 +89,20 @@ export const useUiStore = create<UiState>()(
       },
       setMode: (mode) => {
         const { lastLightThemeId, lastDarkThemeId } = get();
-        set({
-          themeId: preferredThemeForMode(
-            mode,
-            lastLightThemeId,
-            lastDarkThemeId,
-          ),
-        });
+        get().setThemeId(
+          preferredThemeForMode(mode, lastLightThemeId, lastDarkThemeId),
+        );
       },
       toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
     }),
     {
       name: "weld.ui",
-      version: 1,
+      // v2: coerce lastLight/lastDark to the correct mode (v1 could store a
+      // light id as lastDark via resolveThemeId fallback, so the AppBar toggle
+      // applied a non-selected / unreadable theme).
+      version: 2,
       migrate: (persisted, version) => {
-        const state = (persisted ?? {}) as UiPersistedV0;
-        const themeId = resolveThemeId(
-          state.themeId ??
-            (version < 1 ? themeIdFromLegacyMode(state.mode) : undefined),
-        );
-        const preset = getThemePreset(themeId);
-        return {
-          locale: state.locale ?? "es",
-          themeId,
-          lastLightThemeId:
-            preset.mode === "light"
-              ? themeId
-              : resolveThemeId(
-                  state.lastLightThemeId ?? DEFAULT_LIGHT_THEME_ID,
-                ),
-          lastDarkThemeId:
-            preset.mode === "dark"
-              ? themeId
-              : resolveThemeId(state.lastDarkThemeId ?? DEFAULT_DARK_THEME_ID),
-          sidebarOpen: state.sidebarOpen ?? true,
-        };
+        return sanitizeThemeState((persisted ?? {}) as UiPersistedV0, version);
       },
     },
   ),

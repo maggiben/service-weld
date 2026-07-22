@@ -2,8 +2,8 @@
 
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import DarkModeIcon from "@mui/icons-material/DarkMode";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
+import DarkModeIcon from "@mui/icons-material/DarkMode";
 import LightModeIcon from "@mui/icons-material/LightMode";
 import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import LogoutIcon from "@mui/icons-material/Logout";

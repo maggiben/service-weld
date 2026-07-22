@@ -318,8 +318,17 @@ export function resolveThemeId(value: unknown): ThemeId {
   return isThemeId(value) ? value : DEFAULT_LIGHT_THEME_ID;
 }
 
+/** Like resolveThemeId, but never returns a preset of the wrong mode. */
+export function resolveThemeIdForMode(
+  value: unknown,
+  mode: ThemeMode,
+): ThemeId {
+  if (isThemeId(value) && THEME_PRESETS[value].mode === mode) return value;
+  return mode === "light" ? DEFAULT_LIGHT_THEME_ID : DEFAULT_DARK_THEME_ID;
+}
+
 export function getThemePreset(themeId: ThemeId): ThemePreset {
-  return THEME_PRESETS[themeId];
+  return THEME_PRESETS[resolveThemeId(themeId)];
 }
 
 export function listThemePresets(mode?: ThemeMode): ThemePreset[] {
@@ -332,9 +341,7 @@ export function preferredThemeForMode(
   lastLight: ThemeId,
   lastDark: ThemeId,
 ): ThemeId {
-  return mode === "light"
-    ? resolveThemeId(lastLight)
-    : resolveThemeId(lastDark);
+  return resolveThemeIdForMode(mode === "light" ? lastLight : lastDark, mode);
 }
 
 export function buildTheme(themeId: ThemeId = DEFAULT_LIGHT_THEME_ID) {

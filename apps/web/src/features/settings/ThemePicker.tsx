@@ -5,7 +5,12 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import { alpha } from "@mui/material/styles";
 import { useTranslation } from "react-i18next";
-import { listThemePresets, type ThemeMode, type ThemePreset } from "@/theme";
+import {
+  listThemePresets,
+  resolveThemeId,
+  type ThemeMode,
+  type ThemePreset,
+} from "@/theme";
 import { useUiStore } from "@/store/uiStore";
 
 function ThemeThumbnail({
@@ -199,7 +204,7 @@ function ThemeThumbnail({
 
 function ThemeGroup({ mode }: { mode: ThemeMode }) {
   const { t } = useTranslation();
-  const themeId = useUiStore((s) => s.themeId);
+  const themeId = resolveThemeId(useUiStore((s) => s.themeId));
   const setThemeId = useUiStore((s) => s.setThemeId);
   const presets = listThemePresets(mode);
 

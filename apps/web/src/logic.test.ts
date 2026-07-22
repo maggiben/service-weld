@@ -17,6 +17,7 @@ import {
   listThemePresets,
   preferredThemeForMode,
   resolveThemeId,
+  resolveThemeIdForMode,
 } from "./theme";
 import {
   dashIfEmpty,
@@ -290,6 +291,16 @@ describe("theme presets", () => {
       preferredThemeForMode("light", "slate-light", "charcoal-dark"),
       "slate-light",
     );
+    // Wrong-mode or invalid last* ids must fall back to a listed preset.
+    assert.equal(
+      preferredThemeForMode("dark", "weld-light", "weld-light"),
+      DEFAULT_DARK_THEME_ID,
+    );
+    assert.equal(
+      preferredThemeForMode("light", "charcoal-dark", "midnight-dark"),
+      DEFAULT_LIGHT_THEME_ID,
+    );
+    assert.equal(resolveThemeIdForMode("nope", "dark"), DEFAULT_DARK_THEME_ID);
 
     for (const preset of listThemePresets()) {
       const theme = buildTheme(preset.id);
@@ -326,6 +337,19 @@ describe("uiStore theme", () => {
     assert.equal(useUiStore.getState().themeId, "mist-light");
     useUiStore.getState().setMode("dark");
     assert.equal(useUiStore.getState().themeId, "midnight-dark");
+    assert.equal(selectThemeMode(useUiStore.getState()), "dark");
+  });
+
+  it("sanitizes mismatched lastDark when toggling to dark", () => {
+    useUiStore.setState({
+      themeId: "mist-light",
+      lastLightThemeId: "mist-light",
+      // Legacy bug: resolveThemeId(invalid) stored a light id as lastDark.
+      lastDarkThemeId: "weld-light",
+    });
+    useUiStore.getState().setMode("dark");
+    assert.equal(useUiStore.getState().themeId, DEFAULT_DARK_THEME_ID);
+    assert.equal(useUiStore.getState().lastDarkThemeId, DEFAULT_DARK_THEME_ID);
     assert.equal(selectThemeMode(useUiStore.getState()), "dark");
   });
 });
