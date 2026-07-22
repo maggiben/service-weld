@@ -395,6 +395,7 @@ export default function ClientDetailPage() {
         open={editOpen}
         onClose={() => setEditOpen(false)}
         client={client}
+        onDeleted={() => router.push("/clients")}
       />
     </Stack>
   );

@@ -714,6 +714,58 @@ export class ClientsRepository {
     return result;
   }
 
+  async softDelete(
+    id: number,
+    actorUserId: number,
+    expectedVersion: number,
+  ): Promise<void> {
+    const openMovements = await this.countOpenMovements(id);
+    if (openMovements > 0) {
+      throw ApiErrors.conflict(
+        "HAS_OPEN_MOVEMENTS",
+        "Client has open movements",
+      );
+    }
+
+    const openAccessories = await this.countOpenAccessories(id);
+    if (openAccessories > 0) {
+      throw ApiErrors.conflict(
+        "HAS_OPEN_ACCESSORIES",
+        "Client holds accessories on loan",
+      );
+    }
+
+    const db = resolveDb(this.db);
+    const now = new Date();
+
+    const updated = await db
+      .updateTable("client")
+      .set({
+        status: "INACTIVE",
+        deleted_at: now,
+        updated_by: actorUserId,
+        version: expectedVersion + 1,
+      })
+      .where("party_id", "=", id)
+      .where("version", "=", expectedVersion)
+      .where("deleted_at", "is", null)
+      .executeTakeFirst();
+
+    if (Number(updated.numUpdatedRows ?? 0) === 0) {
+      throw ApiErrors.conflict("VERSION_CONFLICT", "Client version conflict");
+    }
+
+    await db
+      .updateTable("party")
+      .set({
+        deleted_at: now,
+        updated_by: actorUserId,
+      })
+      .where("id", "=", id)
+      .where("deleted_at", "is", null)
+      .execute();
+  }
+
   private async countOpenMovements(clientPartyId: number): Promise<number> {
     const db = resolveDb(this.db);
     const row = await db

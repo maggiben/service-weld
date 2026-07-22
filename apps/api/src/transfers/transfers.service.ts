@@ -2,9 +2,11 @@ import { Injectable } from "@nestjs/common";
 import {
   assertDistinctTransferParties,
   assertPlausibleBusinessDate,
+  assertTransferReturnOrder,
   isTerminalCylinderState,
 } from "@weld/domain";
 import type {
+  CloseStockTransferInput,
   CreateStockTransferInput,
   StockTransfer,
   StockTransferListQuery,
@@ -34,6 +36,10 @@ export class TransfersService {
   ): Promise<StockTransfer> {
     try {
       assertPlausibleBusinessDate(input.transfer_date);
+      if (input.return_date) {
+        assertPlausibleBusinessDate(input.return_date);
+      }
+      assertTransferReturnOrder(input.transfer_date, input.return_date);
       assertDistinctTransferParties(input.from_party_id, input.to_party_id);
     } catch (error) {
       mapDomainError(error);
@@ -59,5 +65,30 @@ export class TransfersService {
     }
 
     return this.repository.create(input, principal.id);
+  }
+
+  async close(
+    id: number,
+    input: CloseStockTransferInput,
+  ): Promise<StockTransfer> {
+    const existing = await this.repository.getById(id);
+    if (!existing) throw ApiErrors.notFound("Transfer not found");
+    if (existing.return_date != null) {
+      throw ApiErrors.conflict(
+        "ALREADY_CLOSED",
+        "Transfer already has an entry date",
+      );
+    }
+
+    try {
+      assertPlausibleBusinessDate(input.return_date);
+      assertTransferReturnOrder(existing.transfer_date, input.return_date);
+    } catch (error) {
+      mapDomainError(error);
+    }
+
+    const closed = await this.repository.close(id, input.return_date);
+    if (!closed) throw ApiErrors.notFound("Transfer not found");
+    return closed;
   }
 }

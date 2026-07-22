@@ -28,12 +28,13 @@
       "refill": "Cylinder refills",
       "supplies": "Welding supplies, regulators, hoses, and safety equipment"
     },
-    "imageAlt": "Service Weld storefront in Chacabuco"
+    "imageAlt": "MIG welding machine on the Service Weld shop floor"
   },
   "services": {
     "eyebrow": "Products & services",
     "title": "What we offer",
     "subtitle": "Practical service for teams that work with gases and welding every day.",
+    "imageAlt": "Industrial welding machine with helmet and gloves in the workshop",
     "items": {
       "refill": {
         "title": "Cylinder refills",

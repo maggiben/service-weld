@@ -297,6 +297,7 @@ export interface StockTransferTable {
   from_party_id: number;
   to_party_id: number;
   transfer_date: string;
+  return_date: string | null;
   note: string | null;
   created_at: Generated<Date>;
   created_by: number | null;

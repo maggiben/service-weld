@@ -2,6 +2,7 @@
 
 import Box from "@mui/material/Box";
 import Grid from "@mui/material/Grid2";
+import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import LocalGasStationOutlinedIcon from "@mui/icons-material/LocalGasStationOutlined";
 import SwapHorizOutlinedIcon from "@mui/icons-material/SwapHorizOutlined";
@@ -11,6 +12,7 @@ import BuildOutlinedIcon from "@mui/icons-material/BuildOutlined";
 import HealthAndSafetyOutlinedIcon from "@mui/icons-material/HealthAndSafetyOutlined";
 import type { SvgIconComponent } from "@mui/icons-material";
 import { useTranslation } from "react-i18next";
+import { COMPANY } from "../company";
 import { LandingSection } from "./LandingSection";
 
 const SERVICES: { key: string; Icon: SvgIconComponent }[] = [
@@ -32,50 +34,83 @@ export function ServicesSection() {
       title={t("services.title")}
       subtitle={t("services.subtitle")}
     >
-      <Grid container spacing={2.5}>
-        {SERVICES.map(({ key, Icon }) => (
-          <Grid key={key} size={{ xs: 12, sm: 6, md: 4 }}>
-            <Box
-              sx={{
-                height: "100%",
-                p: 2.5,
-                borderRadius: 2,
-                border: 1,
-                borderColor: "divider",
-                bgcolor: "background.paper",
-                transition: "border-color 0.2s ease, box-shadow 0.2s ease",
-                "&:hover": {
-                  borderColor: "primary.main",
-                  boxShadow: (theme) =>
-                    theme.palette.mode === "light"
-                      ? "0 4px 16px rgba(10,122,62,0.08)"
-                      : "0 4px 16px rgba(0,0,0,0.35)",
-                },
-              }}
-            >
-              <Icon
-                color="primary"
-                sx={{ mb: 1.5, fontSize: 28 }}
-                aria-hidden
-              />
-              <Typography
-                component="h3"
-                variant="h6"
-                sx={{ mb: 1, fontWeight: 650 }}
+      <Stack spacing={{ xs: 3.5, md: 4.5 }}>
+        <Box
+          sx={{
+            borderRadius: 2,
+            overflow: "hidden",
+            bgcolor: "action.hover",
+            boxShadow: (theme) =>
+              theme.palette.mode === "light"
+                ? "0 8px 28px rgba(0,0,0,0.08)"
+                : "0 8px 28px rgba(0,0,0,0.45)",
+            aspectRatio: { xs: "4 / 3", md: "21 / 9" },
+            maxHeight: { md: 360 },
+          }}
+        >
+          <Box
+            component="img"
+            src={COMPANY.images.services}
+            alt={t("services.imageAlt")}
+            width={900}
+            height={900}
+            loading="lazy"
+            decoding="async"
+            sx={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: "center",
+              display: "block",
+            }}
+          />
+        </Box>
+
+        <Grid container spacing={2.5}>
+          {SERVICES.map(({ key, Icon }) => (
+            <Grid key={key} size={{ xs: 12, sm: 6, md: 4 }}>
+              <Box
+                sx={{
+                  height: "100%",
+                  p: 2.5,
+                  borderRadius: 2,
+                  border: 1,
+                  borderColor: "divider",
+                  bgcolor: "background.paper",
+                  transition: "border-color 0.2s ease, box-shadow 0.2s ease",
+                  "&:hover": {
+                    borderColor: "primary.main",
+                    boxShadow: (theme) =>
+                      theme.palette.mode === "light"
+                        ? "0 4px 16px rgba(10,122,62,0.08)"
+                        : "0 4px 16px rgba(0,0,0,0.35)",
+                  },
+                }}
               >
-                {t(`services.items.${key}.title`)}
-              </Typography>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ lineHeight: 1.65 }}
-              >
-                {t(`services.items.${key}.body`)}
-              </Typography>
-            </Box>
-          </Grid>
-        ))}
-      </Grid>
+                <Icon
+                  color="primary"
+                  sx={{ mb: 1.5, fontSize: 28 }}
+                  aria-hidden
+                />
+                <Typography
+                  component="h3"
+                  variant="h6"
+                  sx={{ mb: 1, fontWeight: 650 }}
+                >
+                  {t(`services.items.${key}.title`)}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ lineHeight: 1.65 }}
+                >
+                  {t(`services.items.${key}.body`)}
+                </Typography>
+              </Box>
+            </Grid>
+          ))}
+        </Grid>
+      </Stack>
     </LandingSection>
   );
 }

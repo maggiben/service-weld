@@ -15,6 +15,8 @@ import {
   assertNotPackedMember,
   assertReplaceable,
   assertDistinctTransferParties,
+  assertTransferReturnOrder,
+  classifyTransferCustodyStatus,
   assertAccessoryRentable,
   assertAccessoryOnLoan,
   agingBucket,
@@ -183,6 +185,25 @@ describe("battery / accessory / transfer", () => {
     assert.throws(() => assertAccessoryOnLoan("IN_STOCK"));
     assertDistinctTransferParties(1, 2);
     assert.throws(() => assertDistinctTransferParties(1, 1));
+    assertTransferReturnOrder("2024-01-01", null);
+    assertTransferReturnOrder("2024-01-01", "2024-01-01");
+    assertTransferReturnOrder("2024-01-01", "2024-01-10");
+    assert.throws(() => assertTransferReturnOrder("2024-01-10", "2024-01-01"));
+    assert.equal(classifyTransferCustodyStatus("CUSTOMER", null), "LOANED");
+    assert.equal(classifyTransferCustodyStatus("SUPPLIER", null), "REFILL");
+    assert.equal(classifyTransferCustodyStatus("SELF", null), "CUSTODY");
+    assert.equal(
+      classifyTransferCustodyStatus("SUBDISTRIBUTOR", null),
+      "CUSTODY",
+    );
+    assert.equal(
+      classifyTransferCustodyStatus("CUSTOMER", "2024-01-15"),
+      "CUSTODY",
+    );
+    assert.equal(
+      classifyTransferCustodyStatus("SUPPLIER", "2024-01-15"),
+      "CUSTODY",
+    );
   });
 });
 

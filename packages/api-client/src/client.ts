@@ -39,6 +39,7 @@ import type {
   StockTransferListQuery,
   StockTransferListResponse,
   CreateStockTransferInput,
+  CloseStockTransferInput,
   SupplierLoan,
   SupplierLoanListQuery,
   SupplierLoanListResponse,
@@ -274,6 +275,15 @@ export class WeldApiClient {
     });
   }
 
+  deleteClient(id: number, options?: { ifMatch?: number }): Promise<void> {
+    return this.request<void>("DELETE", `/clients/${id}`, {
+      headers:
+        options?.ifMatch != null
+          ? { "If-Match": String(options.ifMatch) }
+          : undefined,
+    });
+  }
+
   listCylinders(
     query: Partial<CylinderListQuery> & Record<string, QueryValue> = {},
   ): Promise<CylinderListResponse> {
@@ -497,6 +507,15 @@ export class WeldApiClient {
 
   createTransfer(input: CreateStockTransferInput): Promise<StockTransfer> {
     return this.request<StockTransfer>("POST", "/transfers", { body: input });
+  }
+
+  closeTransfer(
+    id: number,
+    input: CloseStockTransferInput,
+  ): Promise<StockTransfer> {
+    return this.request<StockTransfer>("PATCH", `/transfers/${id}/close`, {
+      body: input,
+    });
   }
 
   listOutstanding(

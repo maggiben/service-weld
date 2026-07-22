@@ -28,12 +28,13 @@
       "refill": "Recarga de cilindros",
       "supplies": "Insumos de soldadura, reguladores, mangueras y elementos de seguridad"
     },
-    "imageAlt": "Local de Service Weld en Chacabuco"
+    "imageAlt": "Equipo de soldadura MIG en el taller de Service Weld"
   },
   "services": {
     "eyebrow": "Productos y servicios",
     "title": "Lo que ofrecemos",
     "subtitle": "Servicio operativo para quien trabaja con gases y soldadura todos los días.",
+    "imageAlt": "Equipo de soldadura industrial con casco y guantes en el taller",
     "items": {
       "refill": {
         "title": "Recarga de cilindros",

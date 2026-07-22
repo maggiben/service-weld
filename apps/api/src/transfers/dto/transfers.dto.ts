@@ -1,5 +1,6 @@
 import { createZodDto } from "nestjs-zod";
 import {
+  CloseStockTransferInput,
   CreateStockTransferInput,
   StockTransferListQuery,
   StockTransferListResponse,
@@ -7,6 +8,9 @@ import {
 
 export class CreateStockTransferDto extends createZodDto(
   CreateStockTransferInput,
+) {}
+export class CloseStockTransferDto extends createZodDto(
+  CloseStockTransferInput,
 ) {}
 export class StockTransferListQueryDto extends createZodDto(
   StockTransferListQuery,

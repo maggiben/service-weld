@@ -9,6 +9,7 @@ import Checkbox from "@mui/material/Checkbox";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
+import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
 import Divider from "@mui/material/Divider";
 import Drawer from "@mui/material/Drawer";
@@ -38,6 +39,9 @@ import { ApiClientError } from "@weld/api-client";
 import { api } from "../../api/client";
 import { useLocations } from "../../hooks/useLocations";
 import { applyServerErrors } from "../../hooks/useServerErrors";
+import { useSessionStore } from "../../store/sessionStore";
+
+type ConfirmAction = "deactivate" | "reactivate" | "remove" | null;
 
 const COVERAGE_VALUES = ClientCoverage.options;
 const SEGMENT_VALUES = ClientSegment.options;
@@ -48,6 +52,8 @@ interface CreateClientDrawerProps {
   onClose: () => void;
   /** When set, the drawer edits this client instead of creating a new one. */
   client?: Client | null;
+  /** Called after a successful soft-delete (e.g. navigate away from detail). */
+  onDeleted?: () => void;
 }
 
 function toFormValues(
@@ -96,9 +102,13 @@ export function CreateClientDrawer({
   open,
   onClose,
   client = null,
+  onDeleted,
 }: CreateClientDrawerProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const isAdmin = useSessionStore(
+    (s) => s.user?.roles.includes("ADMIN") ?? false,
+  );
   const { territories, localities, refetch: refetchLocations } = useLocations();
   const [conflictError, setConflictError] = useState<string | null>(null);
   const [createCityOpen, setCreateCityOpen] = useState(false);
@@ -107,7 +117,9 @@ export function CreateClientDrawer({
     number | ""
   >("");
   const [createCityError, setCreateCityError] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
   const isEdit = client != null;
+  const isInactive = client?.status === "INACTIVE";
 
   const defaultTerritoryId = territories[0]?.id ?? 1;
 
@@ -150,6 +162,7 @@ export function CreateClientDrawer({
       setConflictError(null);
       setCreateCityOpen(false);
       setCreateCityError(null);
+      setConfirmAction(null);
     }
   }, [open, reset, defaultTerritoryId, client]);
 
@@ -265,7 +278,75 @@ export function CreateClientDrawer({
     },
   });
 
-  const pending = createMutation.isPending || updateMutation.isPending;
+  const statusMutation = useMutation({
+    mutationFn: (status: "ACTIVE" | "INACTIVE") => {
+      if (!client) throw new Error("Missing client for status change");
+      return api.updateClient(
+        client.id,
+        { status },
+        { ifMatch: client.version },
+      );
+    },
+    onSuccess: async (updated) => {
+      setConfirmAction(null);
+      await invalidateClientQueries(updated.id);
+      onClose();
+    },
+    onError: (error) => {
+      if (
+        error instanceof ApiClientError &&
+        error.code === "VERSION_CONFLICT"
+      ) {
+        setConflictError(t("errors.version_conflict"));
+        setConfirmAction(null);
+        return;
+      }
+      setConflictError(t("errors.generic"));
+      setConfirmAction(null);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => {
+      if (!client) throw new Error("Missing client for delete");
+      return api.deleteClient(client.id, { ifMatch: client.version });
+    },
+    onSuccess: async () => {
+      setConfirmAction(null);
+      await invalidateClientQueries(client?.id);
+      onClose();
+      onDeleted?.();
+    },
+    onError: (error) => {
+      if (error instanceof ApiClientError) {
+        if (error.code === "HAS_OPEN_MOVEMENTS") {
+          setConflictError(t("errors.has_open_movements"));
+          setConfirmAction(null);
+          return;
+        }
+        if (error.code === "HAS_OPEN_ACCESSORIES") {
+          setConflictError(t("errors.has_open_accessories"));
+          setConfirmAction(null);
+          return;
+        }
+        if (error.code === "VERSION_CONFLICT") {
+          setConflictError(t("errors.version_conflict"));
+          setConfirmAction(null);
+          return;
+        }
+      }
+      setConflictError(t("errors.generic"));
+      setConfirmAction(null);
+    },
+  });
+
+  const pending =
+    createMutation.isPending ||
+    updateMutation.isPending ||
+    statusMutation.isPending ||
+    deleteMutation.isPending;
+
+  const confirmPending = statusMutation.isPending || deleteMutation.isPending;
 
   const handleClose = () => {
     if (isDirty && !window.confirm(t("clients.form.unsaved_confirm"))) {
@@ -584,6 +665,39 @@ export function CreateClientDrawer({
             {errors.contacts?.message && (
               <FormHelperText error>{errors.contacts.message}</FormHelperText>
             )}
+
+            {isEdit && (
+              <>
+                <Divider />
+                <Typography variant="subtitle2">
+                  {t("clients.form.danger_zone")}
+                </Typography>
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                  <Button
+                    color={isInactive ? "primary" : "warning"}
+                    variant="outlined"
+                    disabled={pending}
+                    onClick={() =>
+                      setConfirmAction(isInactive ? "reactivate" : "deactivate")
+                    }
+                  >
+                    {t(
+                      isInactive ? "actions.reactivate" : "actions.deactivate",
+                    )}
+                  </Button>
+                  {isAdmin && (
+                    <Button
+                      color="error"
+                      variant="outlined"
+                      disabled={pending}
+                      onClick={() => setConfirmAction("remove")}
+                    >
+                      {t("actions.remove")}
+                    </Button>
+                  )}
+                </Stack>
+              </>
+            )}
           </Stack>
 
           <Stack
@@ -603,6 +717,63 @@ export function CreateClientDrawer({
           </Stack>
         </Box>
       </Drawer>
+
+      <Dialog
+        open={confirmAction != null}
+        onClose={() => !confirmPending && setConfirmAction(null)}
+      >
+        <DialogTitle>
+          {confirmAction === "deactivate" && t("clients.deactivate_title")}
+          {confirmAction === "reactivate" && t("clients.reactivate_title")}
+          {confirmAction === "remove" && t("clients.remove_title")}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {confirmAction === "deactivate" &&
+              t("clients.deactivate_confirm", { name: client?.name })}
+            {confirmAction === "reactivate" &&
+              t("clients.reactivate_confirm", { name: client?.name })}
+            {confirmAction === "remove" &&
+              t("clients.remove_confirm", { name: client?.name })}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setConfirmAction(null)}
+            disabled={confirmPending}
+          >
+            {t("actions.cancel")}
+          </Button>
+          <Button
+            color={
+              confirmAction === "remove"
+                ? "error"
+                : confirmAction === "reactivate"
+                  ? "primary"
+                  : "warning"
+            }
+            variant="contained"
+            disabled={confirmPending}
+            onClick={() => {
+              if (confirmAction === "deactivate") {
+                statusMutation.mutate("INACTIVE");
+                return;
+              }
+              if (confirmAction === "reactivate") {
+                statusMutation.mutate("ACTIVE");
+                return;
+              }
+              if (confirmAction === "remove") {
+                deleteMutation.mutate();
+              }
+            }}
+          >
+            {confirmAction === "deactivate" && t("actions.deactivate")}
+            {confirmAction === "reactivate" && t("actions.reactivate")}
+            {confirmAction === "remove" && t("actions.remove")}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog
         open={createCityOpen}

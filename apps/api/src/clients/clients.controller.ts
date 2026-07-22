@@ -1,8 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Headers,
+  HttpCode,
   Param,
   ParseIntPipe,
   Patch,
@@ -13,6 +15,7 @@ import {
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
+  ApiNoContentResponse,
   ApiOkResponse,
   ApiTags,
 } from "@nestjs/swagger";
@@ -91,6 +94,23 @@ export class ClientsController {
       user,
       id,
       body,
+      Number.isFinite(version) ? version : undefined,
+    );
+  }
+
+  @Delete(":id")
+  @RequireCapabilities("clients:write")
+  @HttpCode(204)
+  @ApiNoContentResponse({ description: "Client soft-deleted" })
+  remove(
+    @CurrentUser() user: AuthPrincipal,
+    @Param("id", ParseIntPipe) id: number,
+    @Headers("if-match") ifMatch?: string,
+  ): Promise<void> {
+    const version = ifMatch ? Number(ifMatch.replaceAll('"', "")) : undefined;
+    return this.clientsService.remove(
+      user,
+      id,
       Number.isFinite(version) ? version : undefined,
     );
   }

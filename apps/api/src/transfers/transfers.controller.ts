@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   Query,
 } from "@nestjs/common";
@@ -18,6 +19,7 @@ import type { AuthPrincipal } from "../auth/principal";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { RequireCapabilities } from "../common/decorators/require-capabilities.decorator";
 import {
+  CloseStockTransferDto,
   CreateStockTransferDto,
   StockTransferListQueryDto,
   StockTransferListResponseDto,
@@ -45,6 +47,16 @@ export class TransfersController {
     @Body() body: CreateStockTransferDto,
   ): Promise<StockTransfer> {
     return this.transfersService.create(user, body);
+  }
+
+  @Patch(":id/close")
+  @RequireCapabilities("transfers:write")
+  @ApiOkResponse({ description: "Transfer entry (return) date recorded" })
+  close(
+    @Param("id", ParseIntPipe) id: number,
+    @Body() body: CloseStockTransferDto,
+  ): Promise<StockTransfer> {
+    return this.transfersService.close(id, body);
   }
 
   @Get(":id")

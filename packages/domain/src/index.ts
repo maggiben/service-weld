@@ -48,7 +48,12 @@ export {
   previousDateForAdvance,
   isLoanOverdue,
 } from "./supplier-loan";
-export { assertDistinctTransferParties } from "./transfer";
+export {
+  assertDistinctTransferParties,
+  assertTransferReturnOrder,
+  classifyTransferCustodyStatus,
+} from "./transfer";
+export type { TransferPartyType, TransferCustodyStatus } from "./transfer";
 export {
   classifyPhysicalCountRow,
   absentHereRow,

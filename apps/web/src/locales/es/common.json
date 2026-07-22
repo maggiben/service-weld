@@ -117,8 +117,15 @@
       "remove_contact": "Quitar contacto",
       "contact_name": "Nombre",
       "contact_phone": "Teléfono",
-      "contact_primary": "Principal"
-    }
+      "contact_primary": "Principal",
+      "danger_zone": "Estado de la cuenta"
+    },
+    "deactivate_title": "Desactivar cliente",
+    "deactivate_confirm": "¿Desactivar a {{name}}? Pasará a estado Baja y dejará de figurar como activo en listados y operaciones.",
+    "reactivate_title": "Reactivar cliente",
+    "reactivate_confirm": "¿Reactivar a {{name}}? Volverá a estado Activo.",
+    "remove_title": "Eliminar cliente",
+    "remove_confirm": "¿Eliminar a {{name}}? Esta acción no se puede deshacer desde la app. Solo se permite si no tiene cilindros ni accesorios en poder."
   },
   "cylinders": {
     "title": "Flota de cilindros",
@@ -438,7 +445,7 @@
     "member_already_packed": "El cilindro ya pertenece a una batería activa",
     "replacement_not_available": "El cilindro de reemplazo no está disponible en stock",
     "stage_out_of_order": "La etapa del préstamo no puede avanzar en ese orden",
-    "date_order": "Las fechas del préstamo deben ser no decrecientes",
+    "date_order": "Las fechas deben ser no decrecientes (entrada ≥ salida)",
     "same_party": "Origen y destino deben ser distintos",
     "accessory_already_on_loan": "El accesorio ya está prestado",
     "rate_overlap": "Ya hay una tarifa que se solapa para ese cliente/gas",
@@ -446,7 +453,9 @@
     "not_approved": "La corrida debe estar aprobada antes de exportar",
     "forbidden_title": "Acceso denegado",
     "forbidden_back": "Volver a clientes",
-    "duplicate_username": "Ya existe un usuario con ese nombre"
+    "duplicate_username": "Ya existe un usuario con ese nombre",
+    "has_open_movements": "El cliente tiene cilindros en poder. Devolvé o cerrá esos movimientos antes de eliminarlo.",
+    "has_open_accessories": "El cliente tiene accesorios en préstamo. Recuperálos antes de eliminarlo."
   },
   "actions": {
     "toggle_language": "Cambiar idioma",
@@ -482,7 +491,9 @@
     "export_billing": "Exportar",
     "search": "Buscar",
     "new_user": "Nuevo usuario",
-    "remove": "Eliminar"
+    "remove": "Eliminar",
+    "deactivate": "Desactivar",
+    "reactivate": "Reactivar"
   },
   "loans": {
     "title": "Préstamos de proveedor",
@@ -522,12 +533,28 @@
   },
   "transfers": {
     "title": "Transferencias de stock",
+    "subtitle": "Movimientos entre nodos, préstamos a clientes o envíos a recarga. La píldora indica dónde está el cilindro.",
     "columns": {
+      "status": "Estado",
+      "exit_date": "Salida",
+      "entry_date": "Entrada",
       "date": "Fecha",
       "cylinder": "Cilindro",
       "from": "Origen",
       "to": "Destino",
       "note": "Nota"
+    },
+    "custody_status": {
+      "LOANED": "Prestado",
+      "REFILL": "En recarga",
+      "CUSTODY": "En custodia"
+    },
+    "actions": {
+      "mark_entry": "Registrar entrada"
+    },
+    "close": {
+      "title": "Registrar entrada",
+      "summary": "Cilindro {{serial}} — vuelve desde {{to}}"
     },
     "form": {
       "title": "Nueva transferencia",
@@ -536,11 +563,15 @@
       "to": "Destino",
       "party_hint": "Buscá por nombre: nodos, hub, proveedores o clientes",
       "date": "Fecha",
+      "exit_date": "Fecha de salida",
+      "exit_date_hint": "Cuándo salió del origen",
+      "entry_date": "Fecha de entrada",
+      "entry_date_hint": "Opcional: cuándo volvió. Si todavía está afuera, dejalo vacío.",
       "note": "Nota"
     },
     "party_types": {
       "SELF": "Hub / empresa",
-      "SUPPLIER": "Proveedor",
+      "SUPPLIER": "Proveedor / llenado",
       "SUBDISTRIBUTOR": "Nodo",
       "CUSTOMER": "Cliente"
     }

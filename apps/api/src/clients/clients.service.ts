@@ -84,4 +84,22 @@ export class ClientsService {
 
     return this.repository.update(id, input, principal.id, expected);
   }
+
+  async remove(
+    principal: AuthPrincipal,
+    id: number,
+    ifMatchVersion?: number,
+  ): Promise<void> {
+    if (!principal.roles.includes("ADMIN")) {
+      throw ApiErrors.forbidden("Admin role required to delete a client");
+    }
+
+    const client = await this.getById(principal, id);
+    const expected = ifMatchVersion ?? client.version;
+    if (expected !== client.version) {
+      throw ApiErrors.conflict("VERSION_CONFLICT", "Client version conflict");
+    }
+
+    await this.repository.softDelete(id, principal.id, expected);
+  }
 }

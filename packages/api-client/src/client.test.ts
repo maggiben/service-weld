@@ -110,6 +110,7 @@ describe("WeldApiClient", () => {
       },
     );
     await api.updateClient(1, { address_street: "Calle 1" }, { ifMatch: 1 });
+    await api.deleteClient(1, { ifMatch: 1 });
     await api.listCylinders({});
     await api.getCylinder(1);
     await api.getCylinderHistory(1);
@@ -175,6 +176,7 @@ describe("WeldApiClient", () => {
       to_party_id: 2,
       transfer_date: "2024-01-01",
     });
+    await api.closeTransfer(1, { return_date: "2024-01-15" });
     await api.listOutstanding({});
     await api.runPhysicalCount({
       counted_on: "2024-01-01",

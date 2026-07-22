@@ -117,8 +117,15 @@
       "remove_contact": "Remove contact",
       "contact_name": "Name",
       "contact_phone": "Phone",
-      "contact_primary": "Primary"
-    }
+      "contact_primary": "Primary",
+      "danger_zone": "Account status"
+    },
+    "deactivate_title": "Deactivate client",
+    "deactivate_confirm": "Deactivate {{name}}? They will move to Inactive status and no longer appear as active in lists and operations.",
+    "reactivate_title": "Reactivate client",
+    "reactivate_confirm": "Reactivate {{name}}? They will return to Active status.",
+    "remove_title": "Delete client",
+    "remove_confirm": "Delete {{name}}? This cannot be undone from the app. Only allowed if they hold no cylinders or accessories."
   },
   "cylinders": {
     "title": "Cylinder fleet",
@@ -438,7 +445,7 @@
     "member_already_packed": "Cylinder is already in an active battery",
     "replacement_not_available": "Replacement cylinder is not available in stock",
     "stage_out_of_order": "Loan stage cannot advance in that order",
-    "date_order": "Loan stage dates must be non-decreasing",
+    "date_order": "Dates must be non-decreasing (entry ≥ exit)",
     "same_party": "Origin and destination must differ",
     "accessory_already_on_loan": "Accessory is already on loan",
     "rate_overlap": "An overlapping rate already exists for that client/gas",
@@ -446,7 +453,9 @@
     "not_approved": "Billing run must be approved before export",
     "forbidden_title": "Access denied",
     "forbidden_back": "Back to clients",
-    "duplicate_username": "A user with this username already exists"
+    "duplicate_username": "A user with this username already exists",
+    "has_open_movements": "This client still holds cylinders. Return or close those movements before deleting.",
+    "has_open_accessories": "This client still holds accessories on loan. Recover them before deleting."
   },
   "actions": {
     "toggle_language": "Change language",
@@ -482,7 +491,9 @@
     "export_billing": "Export",
     "search": "Search",
     "new_user": "New user",
-    "remove": "Remove"
+    "remove": "Remove",
+    "deactivate": "Deactivate",
+    "reactivate": "Reactivate"
   },
   "loans": {
     "title": "Supplier loans",
@@ -522,12 +533,28 @@
   },
   "transfers": {
     "title": "Stock transfers",
+    "subtitle": "Moves between nodes, loans to clients, or trips to refill. The pill shows where the cylinder is.",
     "columns": {
+      "status": "Status",
+      "exit_date": "Out",
+      "entry_date": "In",
       "date": "Date",
       "cylinder": "Cylinder",
       "from": "From",
       "to": "To",
       "note": "Note"
+    },
+    "custody_status": {
+      "LOANED": "On loan",
+      "REFILL": "At refill",
+      "CUSTODY": "In custody"
+    },
+    "actions": {
+      "mark_entry": "Mark returned"
+    },
+    "close": {
+      "title": "Mark returned",
+      "summary": "Cylinder {{serial}} — back from {{to}}"
     },
     "form": {
       "title": "New transfer",
@@ -536,11 +563,15 @@
       "to": "Destination",
       "party_hint": "Search by name: nodes, hub, suppliers, or clients",
       "date": "Date",
+      "exit_date": "Exit date",
+      "exit_date_hint": "When it left the origin",
+      "entry_date": "Entry date",
+      "entry_date_hint": "Optional: when it came back. Leave empty if still out.",
       "note": "Note"
     },
     "party_types": {
       "SELF": "Hub / company",
-      "SUPPLIER": "Supplier",
+      "SUPPLIER": "Supplier / filling",
       "SUBDISTRIBUTOR": "Node",
       "CUSTOMER": "Client"
     }

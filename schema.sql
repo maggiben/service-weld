@@ -362,12 +362,15 @@ CREATE TABLE stock_transfer (
     from_party_id bigint NOT NULL REFERENCES party(id),
     to_party_id   bigint NOT NULL REFERENCES party(id),
     transfer_date date NOT NULL,
+    return_date   date,
     note          text,
     created_at timestamptz NOT NULL DEFAULT now(), created_by bigint,
-    CONSTRAINT ck_transfer_diff CHECK (from_party_id <> to_party_id)
+    CONSTRAINT ck_transfer_diff CHECK (from_party_id <> to_party_id),
+    CONSTRAINT ck_transfer_return_order CHECK (return_date IS NULL OR return_date >= transfer_date)
 );
 CREATE INDEX ix_transfer_cyl ON stock_transfer(cylinder_id, transfer_date);
 CREATE INDEX ix_transfer_to  ON stock_transfer(to_party_id);
+CREATE INDEX ix_transfer_open ON stock_transfer (transfer_date) WHERE return_date IS NULL;
 
 CREATE TABLE accessory_rental (
     id              bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
