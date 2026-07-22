@@ -2,7 +2,14 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { isValidCuit, Cuit } from "./cuit";
 import {
+  CreateLocalityInput,
   CreateTerritoryInput,
+  Locality,
+  LocalityListQuery,
+  LocalityListResponse,
+  Territory,
+  TerritoryListQuery,
+  TerritoryListResponse,
   normalizeTerritoryName,
   territoryMatchKey,
 } from "./geo";
@@ -58,6 +65,8 @@ describe("settings", () => {
 
 describe("territory name normalization", () => {
   it("trims, collapses spaces, and title-cases", () => {
+    assert.equal(normalizeTerritoryName(""), "");
+    assert.equal(normalizeTerritoryName("   "), "");
     assert.equal(normalizeTerritoryName("  pergamino  "), "Pergamino");
     assert.equal(normalizeTerritoryName("LA   PLATA"), "La Plata");
     assert.equal(normalizeTerritoryName("junín"), "Junín");
@@ -78,5 +87,80 @@ describe("territory name normalization", () => {
       "San Pedro",
     );
     assert.throws(() => CreateTerritoryInput.parse({ name: "   " }));
+    assert.throws(() => CreateTerritoryInput.parse({ name: "x".repeat(121) }));
+  });
+});
+
+describe("geo schemas", () => {
+  it("parses territory list payloads", () => {
+    const territory = Territory.parse({
+      id: 1,
+      name: "Junín",
+      is_active: true,
+    });
+    assert.equal(territory.name, "Junín");
+
+    const query = TerritoryListQuery.parse({
+      limit: 50,
+      q: "jun",
+      "filter[is_active]": "true",
+    });
+    assert.equal(query.q, "jun");
+    assert.equal(query["filter[is_active]"], "true");
+
+    const list = TerritoryListResponse.parse({
+      data: [territory],
+      page: {
+        limit: 50,
+        has_more: false,
+        next_cursor: null,
+        total_estimate: null,
+      },
+    });
+    assert.equal(list.data.length, 1);
+  });
+
+  it("parses locality create and list payloads", () => {
+    const locality = Locality.parse({
+      id: 10,
+      name: "Pergamino",
+      province: "Buenos Aires",
+      territory_id: 1,
+      territory_name: "Junín",
+      client_count: 3,
+      cylinder_count: 12,
+    });
+    assert.equal(locality.territory_id, 1);
+
+    const created = CreateLocalityInput.parse({ name: "  Rojas " });
+    assert.equal(created.name, "Rojas");
+    assert.equal(created.province, "Buenos Aires");
+    assert.equal(
+      CreateLocalityInput.parse({
+        name: "Salto",
+        province: "Buenos Aires",
+        territory_id: null,
+      }).territory_id,
+      null,
+    );
+
+    const query = LocalityListQuery.parse({
+      limit: 25,
+      q: "per",
+      "filter[territory_id]": "2",
+      "filter[has_clients]": "true",
+    });
+    assert.equal(query["filter[territory_id]"], 2);
+
+    const list = LocalityListResponse.parse({
+      data: [locality],
+      page: {
+        limit: 25,
+        has_more: false,
+        next_cursor: null,
+        total_estimate: 1,
+      },
+    });
+    assert.equal(list.data[0]?.name, "Pergamino");
   });
 });
