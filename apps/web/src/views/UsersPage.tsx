@@ -57,9 +57,13 @@ const ASSIGNABLE_ROLES: RoleCode[] = [
 type TerritoryOption = {
   id: number;
   name: string;
-  /** When set, selecting this option creates a new territory. */
+  /** When set, selecting this option creates a new territory with this name. */
   inputValue?: string;
+  /** Fixed dropdown action that opens the create-territory dialog. */
+  action?: "prompt";
 };
+
+const CREATE_PROMPT_ID = -2;
 
 const filterTerritoryOptions = createFilterOptions<TerritoryOption>();
 
@@ -106,6 +110,11 @@ function UsersPageInner() {
   const [knownTerritories, setKnownTerritories] = useState<
     Array<{ id: number; name: string }>
   >([]);
+  const [createTerritoryOpen, setCreateTerritoryOpen] = useState(false);
+  const [createTerritoryName, setCreateTerritoryName] = useState("");
+  const [createTerritoryError, setCreateTerritoryError] = useState<
+    string | null
+  >(null);
 
   const cursor = cursors[paginationModel.page];
   const queryParams = useMemo(
@@ -199,6 +208,12 @@ function UsersPageInner() {
     return territoryOptions.find((tr) => territoryMatchKey(tr.name) === key);
   };
 
+  const openCreateTerritoryDialog = (seed = "") => {
+    setCreateTerritoryName(seed);
+    setCreateTerritoryError(null);
+    setCreateTerritoryOpen(true);
+  };
+
   const createTerritoryMutation = useMutation({
     mutationFn: async (rawName: string) => {
       const name = normalizeTerritoryName(rawName);
@@ -232,17 +247,31 @@ function UsersPageInner() {
           ? d
           : { ...d, territory_ids: [...d.territory_ids, row.id] },
       );
+      setCreateTerritoryOpen(false);
+      setCreateTerritoryName("");
+      setCreateTerritoryError(null);
       await queryClient.invalidateQueries({ queryKey: ["territories"] });
       await refetchLocations();
     },
     onError: (err) => {
-      if (err instanceof Error && err.message === "empty") return;
+      if (err instanceof Error && err.message === "empty") {
+        setCreateTerritoryError(t("users.form.create_territory_name_required"));
+        return;
+      }
       if (err instanceof ApiClientError) {
-        setError(
+        const message =
           err.code === "DUPLICATE_TERRITORY"
             ? t("errors.duplicate_location")
-            : err.message,
-        );
+            : err.message;
+        if (createTerritoryOpen) {
+          setCreateTerritoryError(message);
+          return;
+        }
+        setError(message);
+        return;
+      }
+      if (createTerritoryOpen) {
+        setCreateTerritoryError(t("errors.generic"));
         return;
       }
       setError(t("errors.generic"));
@@ -553,31 +582,50 @@ function UsersPageInner() {
             loading={createTerritoryMutation.isPending}
             disabled={createTerritoryMutation.isPending}
             isOptionEqualToValue={(a, b) => a.id === b.id}
-            getOptionLabel={(option) => option.name}
+            getOptionLabel={(option) => {
+              if (option.action === "prompt") {
+                return t("users.form.create_territory_option");
+              }
+              return option.name;
+            }}
             filterOptions={(options, params) => {
               const filtered = filterTerritoryOptions(options, params);
               const normalized = normalizeTerritoryName(params.inputValue);
-              if (!normalized) return filtered;
-              const exists = options.some(
-                (opt) =>
-                  territoryMatchKey(opt.name) === territoryMatchKey(normalized),
-              );
-              if (!exists) {
-                filtered.push({
-                  id: -1,
-                  name: normalized,
-                  inputValue: normalized,
-                });
+              if (normalized) {
+                const exists = options.some(
+                  (opt) =>
+                    territoryMatchKey(opt.name) ===
+                    territoryMatchKey(normalized),
+                );
+                if (!exists) {
+                  filtered.push({
+                    id: -1,
+                    name: normalized,
+                    inputValue: normalized,
+                  });
+                }
               }
+              filtered.push({
+                id: CREATE_PROMPT_ID,
+                name: t("users.form.create_territory_option"),
+                action: "prompt",
+              });
               return filtered;
             }}
             onChange={(_event, next) => {
+              const prompt = next.find((opt) => opt.action === "prompt");
               const pendingCreate = next.find((opt) => opt.inputValue);
-              const kept = next.filter((opt) => !opt.inputValue && opt.id > 0);
+              const kept = next.filter(
+                (opt) => !opt.inputValue && !opt.action && opt.id > 0,
+              );
               setDraft((d) => ({
                 ...d,
                 territory_ids: kept.map((opt) => opt.id),
               }));
+              if (prompt) {
+                openCreateTerritoryDialog();
+                return;
+              }
               if (pendingCreate?.inputValue) {
                 const existing = findExistingTerritory(
                   pendingCreate.inputValue,
@@ -599,6 +647,14 @@ function UsersPageInner() {
             }}
             renderOption={(props, option) => {
               const { key, ...rest } = props;
+              if (option.action === "prompt") {
+                return (
+                  <li key={key} {...rest}>
+                    <AddIcon fontSize="small" sx={{ mr: 1, opacity: 0.8 }} />
+                    {t("users.form.create_territory_option")}
+                  </li>
+                );
+              }
               return (
                 <li key={key} {...rest}>
                   {option.inputValue
@@ -671,6 +727,55 @@ function UsersPageInner() {
           </Stack>
         </Stack>
       </Drawer>
+
+      <Dialog
+        open={createTerritoryOpen}
+        onClose={() => {
+          if (createTerritoryMutation.isPending) return;
+          setCreateTerritoryOpen(false);
+        }}
+        // Above the user form drawer.
+        sx={{ zIndex: (theme) => theme.zIndex.modal + 1 }}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>{t("users.form.create_territory_title")}</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            {createTerritoryError && (
+              <Alert severity="error">{createTerritoryError}</Alert>
+            )}
+            <TextField
+              autoFocus
+              label={t("users.form.create_territory_name")}
+              value={createTerritoryName}
+              onChange={(e) => setCreateTerritoryName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  createTerritoryMutation.mutate(createTerritoryName);
+                }
+              }}
+              fullWidth
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setCreateTerritoryOpen(false)}
+            disabled={createTerritoryMutation.isPending}
+          >
+            {t("actions.cancel")}
+          </Button>
+          <Button
+            variant="contained"
+            disabled={createTerritoryMutation.isPending}
+            onClick={() => createTerritoryMutation.mutate(createTerritoryName)}
+          >
+            {t("actions.save")}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog
         open={Boolean(removeTarget)}
