@@ -24,8 +24,7 @@ BEGIN
 END;
 $$;
 
--- ---- fixtures (SELF party is seeded by schema.sql) ----
-INSERT INTO locality(name, territory_id) VALUES ('Chacabuco', 2);
+-- ---- fixtures (SELF party + localities are seeded by schema.sql) ----
 INSERT INTO party(party_type, display_name) VALUES ('CUSTOMER','TORRES AMERICANAS');
 INSERT INTO client(party_id, cuit, cuit_valid, territory_id, coverage)
   SELECT id,'30-64401913-2',true,2,'PRIVATE' FROM party WHERE display_name='TORRES AMERICANAS';
