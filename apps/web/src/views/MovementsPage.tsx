@@ -3,6 +3,7 @@
 import AddIcon from "@mui/icons-material/Add";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import Alert from "@mui/material/Alert";
+import Autocomplete from "@mui/material/Autocomplete";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
@@ -13,6 +14,7 @@ import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import Stack from "@mui/material/Stack";
 import Switch from "@mui/material/Switch";
+import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import {
   DataGrid,
@@ -23,6 +25,7 @@ import {
 } from "@mui/x-data-grid";
 import { enUS, esES } from "@mui/x-data-grid/locales";
 import type {
+  Client,
   MovementEvent,
   MovementKind,
   MovementListQuery,
@@ -38,6 +41,7 @@ import { ReturnDialog } from "../features/movements/ReturnDialog";
 import { SwapDialog } from "../features/movements/SwapDialog";
 import { SwapPickDialog } from "../features/movements/SwapPickDialog";
 import { VoidDialog } from "../features/movements/VoidDialog";
+import { useLocations } from "../hooks/useLocations";
 import { useSessionStore } from "../store/sessionStore";
 import { useUiStore } from "../store/uiStore";
 
@@ -58,10 +62,19 @@ export default function MovementsPage() {
   const locale = useUiStore((s) => s.locale);
   const canWrite = useSessionStore((s) => s.hasCapability("movements:write"));
   const canVoid = useSessionStore((s) => s.hasCapability("movements:void"));
+  const { localities } = useLocations();
+
+  const cityOptions = useMemo(
+    () => localities.filter((locality) => (locality.client_count ?? 0) > 0),
+    [localities],
+  );
 
   const [openOnly, setOpenOnly] = useState(false);
   const [kindFilter, setKindFilter] = useState<MovementKind | "">("");
   const [stateFilter, setStateFilter] = useState<MovementState | "">("");
+  const [cityFilter, setCityFilter] = useState<number | "">("");
+  const [client, setClient] = useState<Client | null>(null);
+  const [clientQuery, setClientQuery] = useState("");
   const [sortModel, setSortModel] = useState<GridSortModel>([
     { field: "delivery_date", sort: "desc" },
   ]);
@@ -78,6 +91,16 @@ export default function MovementsPage() {
 
   const cursor = cursors[paginationModel.page];
 
+  const clientsSearch = useQuery({
+    queryKey: ["clients", "picker", "movements", clientQuery, cityFilter],
+    queryFn: () =>
+      api.listClients({
+        q: clientQuery || undefined,
+        limit: 20,
+        ...(cityFilter !== "" ? { "filter[locality_id]": cityFilter } : {}),
+      }),
+  });
+
   const queryParams = useMemo(
     () => ({
       limit: paginationModel.pageSize,
@@ -90,6 +113,11 @@ export default function MovementsPage() {
           ? { "filter[movement_kind]": kindFilter }
           : {}),
       ...(stateFilter ? { "filter[state]": stateFilter } : {}),
+      ...(client
+        ? { "filter[holder_party_id]": client.id }
+        : cityFilter !== ""
+          ? { "filter[locality_id]": cityFilter }
+          : {}),
     }),
     [
       paginationModel.pageSize,
@@ -98,6 +126,8 @@ export default function MovementsPage() {
       openOnly,
       kindFilter,
       stateFilter,
+      client,
+      cityFilter,
     ],
   );
 
@@ -367,6 +397,61 @@ export default function MovementsPage() {
             ))}
           </Select>
         </FormControl>
+        <FormControl
+          size="small"
+          sx={{ minWidth: 180 }}
+          disabled={client != null}
+        >
+          <InputLabel>{t("movements.filters.locality")}</InputLabel>
+          <Select
+            label={t("movements.filters.locality")}
+            value={cityFilter}
+            onChange={(e) => {
+              const value = e.target.value;
+              setCityFilter(value === "" ? "" : Number(value));
+              setClient(null);
+              resetPaging();
+            }}
+          >
+            <MenuItem value="">{t("clients.filters.all")}</MenuItem>
+            {cityOptions.map((locality) => (
+              <MenuItem key={locality.id} value={locality.id}>
+                {locality.name}
+                {locality.client_count != null
+                  ? ` (${locality.client_count})`
+                  : ""}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <Autocomplete
+          size="small"
+          sx={{ minWidth: 220 }}
+          options={
+            client
+              ? [
+                  client,
+                  ...(clientsSearch.data?.data ?? []).filter(
+                    (c) => c.id !== client.id,
+                  ),
+                ]
+              : (clientsSearch.data?.data ?? [])
+          }
+          getOptionLabel={(option: Client) => option.name}
+          isOptionEqualToValue={(a, b) => a.id === b.id}
+          loading={clientsSearch.isFetching}
+          value={client}
+          onChange={(_, value) => {
+            setClient(value);
+            resetPaging();
+          }}
+          onInputChange={(_, value, reason) => {
+            if (reason !== "reset") setClientQuery(value);
+          }}
+          renderInput={(params) => (
+            <TextField {...params} label={t("movements.filters.client")} />
+          )}
+        />
       </Stack>
 
       {movementsQuery.isError && (

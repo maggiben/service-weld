@@ -16,12 +16,17 @@ async function bootstrap(): Promise<void> {
   const prefix = config.get("API_GLOBAL_PREFIX", { infer: true });
   app.setGlobalPrefix(prefix);
 
+  const extraOrigins = (config.get("CORS_ORIGINS", { infer: true }) ?? "")
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean);
   app.enableCors({
     origin: [
       "http://localhost:3001",
       "http://127.0.0.1:3001",
       "http://localhost:3002",
       "http://127.0.0.1:3002",
+      ...extraOrigins,
     ],
     credentials: true,
   });

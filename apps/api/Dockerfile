@@ -3,7 +3,7 @@
 FROM node:24.18-alpine AS deps
 WORKDIR /app
 RUN corepack enable
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.base.json ./
 COPY apps/api/package.json apps/api/
 COPY packages/domain/package.json packages/domain/
 COPY packages/schemas/package.json packages/schemas/
@@ -17,12 +17,16 @@ RUN pnpm --filter @weld/schemas build \
  && pnpm --filter @weld/domain build \
  && pnpm --filter @weld/api build
 
+# Keep the pnpm workspace layout so package symlinks resolve at runtime.
 FROM node:24.18-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
-COPY --from=build /app/apps/api/dist ./dist
-COPY --from=build /app/apps/api/package.json ./
+COPY --from=build /app/package.json /app/pnpm-workspace.yaml ./
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/packages ./packages
+COPY --from=build /app/apps/api/package.json ./apps/api/package.json
+COPY --from=build /app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=build /app/apps/api/dist ./apps/api/dist
+WORKDIR /app/apps/api
 EXPOSE 3000
 CMD ["node", "dist/apps/api/src/main.js"]

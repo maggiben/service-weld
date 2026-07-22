@@ -19,7 +19,8 @@ Each spec has the same seven sections: **Purpose · Requirements · Constraints 
 | 010 | `010-testing.md`          | Unit/integration/contract/E2E/offline/migration tests; **≥80% coverage gate**; git hook policy |
 | 011 | `011-migrations.md`       | Legacy `.xls` import, normalization, exceptions                                                |
 | 012 | `012-deployment.md`       | Topology, jobs, backups, observability, CI/CD, **local hooks**                                 |
+| 013 | `013-landing-page.md`     | Public marketing site `@weld/www` (`serviceweld.com`); app on `app.serviceweld.com`            |
 
-**Recommended build order:** 002 → 003 (+011 scaffolding) → 005 → 004 → 009 + 008 → 007 → 006 → 010 (continuous) → 011 (run) → 012.
+**Recommended build order:** 002 → 003 (+011 scaffolding) → 005 → 004 → 009 + 008 → 007 → 006 → 010 (continuous) → 011 (run) → 012. Landing (`013`) can follow once `006` routing/theme/i18n exist.
 
 **Rule of precedence:** if a spec and a root analysis doc disagree, the spec wins — flag the discrepancy.

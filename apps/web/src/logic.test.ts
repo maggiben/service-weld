@@ -8,6 +8,16 @@ import {
 } from "./features/alerts/alertDisplay";
 import { applyServerErrors } from "./hooks/useServerErrors";
 import { useNotificationStore } from "./store/notificationStore";
+import { selectThemeMode, useUiStore } from "./store/uiStore";
+import {
+  buildTheme,
+  DEFAULT_DARK_THEME_ID,
+  DEFAULT_LIGHT_THEME_ID,
+  isThemeId,
+  listThemePresets,
+  preferredThemeForMode,
+  resolveThemeId,
+} from "./theme";
 import {
   dashIfEmpty,
   formatPartyLabel,
@@ -259,5 +269,63 @@ describe("stores", () => {
     assert.equal(useNotificationStore.getState().toast, "hola");
     useNotificationStore.getState().clearToast();
     assert.equal(useNotificationStore.getState().toast, null);
+  });
+});
+
+describe("theme presets", () => {
+  it("exposes at least 4 light and 2 dark themes", () => {
+    assert.ok(listThemePresets("light").length >= 4);
+    assert.ok(listThemePresets("dark").length >= 2);
+  });
+
+  it("resolves ids and builds themes with readable text tokens", () => {
+    assert.equal(resolveThemeId("nope"), DEFAULT_LIGHT_THEME_ID);
+    assert.equal(isThemeId("weld-light"), true);
+    assert.equal(isThemeId("nope"), false);
+    assert.equal(
+      preferredThemeForMode("dark", "weld-light", "midnight-dark"),
+      "midnight-dark",
+    );
+    assert.equal(
+      preferredThemeForMode("light", "slate-light", "charcoal-dark"),
+      "slate-light",
+    );
+
+    for (const preset of listThemePresets()) {
+      const theme = buildTheme(preset.id);
+      assert.equal(theme.palette.mode, preset.mode);
+      assert.ok(theme.palette.text.primary);
+      assert.ok(theme.palette.background.default);
+      assert.ok(theme.palette.background.paper);
+      assert.notEqual(
+        theme.palette.text.primary.toLowerCase(),
+        theme.palette.background.default.toLowerCase(),
+      );
+      assert.equal(preset.preview.text.length > 0, true);
+    }
+  });
+});
+
+describe("uiStore theme", () => {
+  beforeEach(() => {
+    useUiStore.setState({
+      themeId: DEFAULT_LIGHT_THEME_ID,
+      lastLightThemeId: DEFAULT_LIGHT_THEME_ID,
+      lastDarkThemeId: DEFAULT_DARK_THEME_ID,
+    });
+  });
+
+  it("remembers last light/dark picks when toggling mode", () => {
+    useUiStore.getState().setThemeId("mist-light");
+    useUiStore.getState().setThemeId("midnight-dark");
+    assert.equal(useUiStore.getState().themeId, "midnight-dark");
+    assert.equal(useUiStore.getState().lastLightThemeId, "mist-light");
+    assert.equal(useUiStore.getState().lastDarkThemeId, "midnight-dark");
+
+    useUiStore.getState().setMode("light");
+    assert.equal(useUiStore.getState().themeId, "mist-light");
+    useUiStore.getState().setMode("dark");
+    assert.equal(useUiStore.getState().themeId, "midnight-dark");
+    assert.equal(selectThemeMode(useUiStore.getState()), "dark");
   });
 });

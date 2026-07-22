@@ -10,7 +10,7 @@ import { useTranslation } from "react-i18next";
 import "dayjs/locale/es";
 import "dayjs/locale/en";
 import "@/i18n";
-import { buildTheme } from "@/theme";
+import { buildTheme, resolveThemeId } from "@/theme";
 import { useUiStore } from "@/store/uiStore";
 
 /**
@@ -28,10 +28,10 @@ export function AppProviders({ children }: PropsWithChildren) {
         },
       }),
   );
-  const mode = useUiStore((s) => s.mode);
+  const themeId = useUiStore((s) => s.themeId);
   const locale = useUiStore((s) => s.locale);
   const { i18n } = useTranslation();
-  const theme = useMemo(() => buildTheme(mode), [mode]);
+  const theme = useMemo(() => buildTheme(resolveThemeId(themeId)), [themeId]);
 
   useEffect(() => {
     if (i18n.language !== locale) void i18n.changeLanguage(locale);

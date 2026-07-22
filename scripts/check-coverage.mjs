@@ -39,6 +39,7 @@ const PACKAGES = [
   { name: "@weld/api", dir: "apps/api", kind: "jest" },
   { name: "@weld/web", dir: "apps/web", kind: "node" },
   { name: "@weld/field", dir: "apps/field", kind: "node" },
+  { name: "@weld/www", dir: "apps/www", kind: "node" },
   { name: "@weld/domain", dir: "packages/domain", kind: "node" },
   { name: "@weld/schemas", dir: "packages/schemas", kind: "node" },
   { name: "@weld/api-client", dir: "packages/api-client", kind: "node" },

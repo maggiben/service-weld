@@ -3,8 +3,11 @@ import { EmotionCacheProvider } from "@/emotion-cache";
 import { AppProviders } from "@/providers";
 
 export const metadata: Metadata = {
-  title: "Gestión de Cilindros",
-  description: "Custodia, circulación y alquiler",
+  title: {
+    default: "Gestión de Cilindros",
+    template: "%s · Service Weld",
+  },
+  description: "Custodia, circulación y alquiler — Service Weld S.R.L.",
 };
 
 export default function RootLayout({

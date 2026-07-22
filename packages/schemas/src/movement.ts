@@ -64,6 +64,8 @@ export const MovementListQuery = PaginationQuery.extend({
     .transform((value) => value === "true"),
   "filter[cylinder_id]": z.coerce.number().int().optional(),
   "filter[holder_party_id]": z.coerce.number().int().optional(),
+  /** Holder client's locality (ignored when filter[holder_party_id] is set). */
+  "filter[locality_id]": z.coerce.number().int().optional(),
   "filter[state]": MovementState.optional(),
   "filter[movement_kind]": MovementKind.optional(),
   "filter[gas_code]": GasCode.optional(),

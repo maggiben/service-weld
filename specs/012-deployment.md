@@ -8,7 +8,7 @@ Define the deployment topology, configuration, scheduled jobs, observability, an
 
 ## Requirements
 
-- R1. Deploy components: **API service** (NestJS on Node LTS; serves REST + Swagger UI at `/api/docs`), **web app** (Next.js App Router), **field app** (Next.js App Router PWA), **PostgreSQL 15+**, **scheduler/worker** (NestJS scheduler or separate worker), **object store** (exports/backups), **notification gateway** (email/SMS/push). Reverse proxy with TLS in front.
+- R1. Deploy components: **API service** (NestJS on Node LTS; serves REST + Swagger UI at `/api/docs`), **web app** (Next.js App Router — `app.serviceweld.com`), **marketing site** (`@weld/www` — `serviceweld.com`), **field app** (Next.js App Router PWA), **PostgreSQL 15+**, **scheduler/worker** (NestJS scheduler or separate worker), **object store** (exports/backups), **notification gateway** (email/SMS/push). Reverse proxy / Cloudflare with TLS in front (apex → www, `app.` → web).
 - R2. Provide environment configuration for: DB connection/pool, identity provider/secrets, business timezone, rental rounding/min-day policy, alert thresholds (long-outstanding days, supplier-overdue days), export/accounting endpoint.
 - R3. Implement **scheduled jobs** (worker): pre-create next month's `audit_log` partition; nightly aging + accrual snapshots for `007`; alert generation (long-outstanding, supplier-overdue, medical replenishment-due, pending owner returns); export retries.
 - R4. Implement **backups**: daily base backup + WAL for point-in-time recovery; periodic restore drills; export artifacts retained per fiscal policy.

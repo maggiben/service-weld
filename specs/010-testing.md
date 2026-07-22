@@ -16,7 +16,7 @@ Guarantee that the implementation enforces the domain rules, that the API honors
 - R6. **Migration tests**: run the importer on representative legacy fixtures; assert clean vs flagged counts, dual-book merge, no dropped movements, correct exception classification (`011`).
 - R7. **Reporting reconciliation tests**: revenue report equals billing charge lines; float/aging equals open-movement counts.
 - R8. **Auth tests**: RBAC denials, territory scoping, MFA gating, medical-data hiding.
-- R9. **Global coverage gate ≥80%**: every workspace package (`apps/api`, `apps/web`, `apps/field`, `packages/domain`, `packages/schemas`, `packages/api-client`) MUST meet **≥80%** coverage on **lines, branches, functions, and statements**. Enforced by `pnpm run test:coverage` (`scripts/check-coverage.mjs`; override only via `COVERAGE_THRESHOLD`, default `80`). This is a hard gate — not aspirational.
+- R9. **Global coverage gate ≥80%**: every workspace package (`apps/api`, `apps/web`, `apps/field`, `apps/www`, `packages/domain`, `packages/schemas`, `packages/api-client`) MUST meet **≥80%** coverage on **lines, branches, functions, and statements**. Enforced by `pnpm run test:coverage` (`scripts/check-coverage.mjs`; override only via `COVERAGE_THRESHOLD`, default `80`). This is a hard gate — not aspirational.
 - R10. **Local git quality gates** (see `012` R8 / `docs/DEVELOPMENT.md`):
   - **pre-commit** (`.husky/pre-commit`): `check:secrets` → lint-staged (Prettier on staged files) → `typecheck`.
   - **pre-push** (`.husky/pre-push`): `test:coverage` (≥80% global gate).

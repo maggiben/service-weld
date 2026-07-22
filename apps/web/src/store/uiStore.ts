@@ -1,5 +1,14 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import {
+  DEFAULT_DARK_THEME_ID,
+  DEFAULT_LIGHT_THEME_ID,
+  getThemePreset,
+  preferredThemeForMode,
+  resolveThemeId,
+  type ThemeId,
+  type ThemeMode,
+} from "@/theme";
 
 /**
  * uiStore (006 R9): client UI state only — theme + language, persisted to
@@ -7,27 +16,96 @@ import { persist } from "zustand/middleware";
  * TanStack Query; form state in react-hook-form — never here.
  */
 export type Locale = "es" | "en";
-export type Mode = "light" | "dark";
+/** @deprecated Prefer ThemeMode from theme.ts — kept for existing imports. */
+export type Mode = ThemeMode;
+
+interface UiPersistedV0 {
+  locale?: Locale;
+  mode?: ThemeMode;
+  themeId?: ThemeId;
+  lastLightThemeId?: ThemeId;
+  lastDarkThemeId?: ThemeId;
+  sidebarOpen?: boolean;
+}
 
 interface UiState {
   locale: Locale;
-  mode: Mode;
+  themeId: ThemeId;
+  lastLightThemeId: ThemeId;
+  lastDarkThemeId: ThemeId;
   sidebarOpen: boolean;
   setLocale: (locale: Locale) => void;
-  setMode: (mode: Mode) => void;
+  setThemeId: (themeId: ThemeId) => void;
+  /** Flip light ↔ dark using the last chosen preset of that mode. */
+  setMode: (mode: ThemeMode) => void;
   toggleSidebar: () => void;
+}
+
+function themeIdFromLegacyMode(mode: ThemeMode | undefined): ThemeId {
+  return mode === "dark" ? DEFAULT_DARK_THEME_ID : DEFAULT_LIGHT_THEME_ID;
 }
 
 export const useUiStore = create<UiState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       locale: "es",
-      mode: "light",
+      themeId: DEFAULT_LIGHT_THEME_ID,
+      lastLightThemeId: DEFAULT_LIGHT_THEME_ID,
+      lastDarkThemeId: DEFAULT_DARK_THEME_ID,
       sidebarOpen: true,
       setLocale: (locale) => set({ locale }),
-      setMode: (mode) => set({ mode }),
+      setThemeId: (themeId) => {
+        const id = resolveThemeId(themeId);
+        const preset = getThemePreset(id);
+        set(
+          preset.mode === "light"
+            ? { themeId: id, lastLightThemeId: id }
+            : { themeId: id, lastDarkThemeId: id },
+        );
+      },
+      setMode: (mode) => {
+        const { lastLightThemeId, lastDarkThemeId } = get();
+        set({
+          themeId: preferredThemeForMode(
+            mode,
+            lastLightThemeId,
+            lastDarkThemeId,
+          ),
+        });
+      },
       toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
     }),
-    { name: "weld.ui" },
+    {
+      name: "weld.ui",
+      version: 1,
+      migrate: (persisted, version) => {
+        const state = (persisted ?? {}) as UiPersistedV0;
+        const themeId = resolveThemeId(
+          state.themeId ??
+            (version < 1 ? themeIdFromLegacyMode(state.mode) : undefined),
+        );
+        const preset = getThemePreset(themeId);
+        return {
+          locale: state.locale ?? "es",
+          themeId,
+          lastLightThemeId:
+            preset.mode === "light"
+              ? themeId
+              : resolveThemeId(
+                  state.lastLightThemeId ?? DEFAULT_LIGHT_THEME_ID,
+                ),
+          lastDarkThemeId:
+            preset.mode === "dark"
+              ? themeId
+              : resolveThemeId(state.lastDarkThemeId ?? DEFAULT_DARK_THEME_ID),
+          sidebarOpen: state.sidebarOpen ?? true,
+        };
+      },
+    },
   ),
 );
+
+/** Derived mode for the active theme (AppBar toggle, etc.). */
+export function selectThemeMode(state: Pick<UiState, "themeId">): ThemeMode {
+  return getThemePreset(resolveThemeId(state.themeId)).mode;
+}

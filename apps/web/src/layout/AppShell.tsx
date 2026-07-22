@@ -48,6 +48,7 @@ import { useSessionStore } from "@/store/sessionStore";
 import { useUiStore } from "@/store/uiStore";
 import { useNotificationStore } from "@/store/notificationStore";
 import { ToastHost } from "@/layout/ToastHost";
+import { getThemePreset, resolveThemeId } from "@/theme";
 import { AlertsBellMenu } from "@/features/alerts/AlertsBellMenu";
 import { useAlertsInbox } from "@/features/alerts/useAlertsInbox";
 import { userInitials } from "@/lib/userInitials";
@@ -165,8 +166,14 @@ export default function AppShell({ children }: PropsWithChildren) {
   const user = useSessionStore((s) => s.user);
   const hasCapability = useSessionStore((s) => s.hasCapability);
   const clearSession = useSessionStore((s) => s.clearSession);
-  const { locale, setLocale, mode, setMode, sidebarOpen, toggleSidebar } =
-    useUiStore();
+  const locale = useUiStore((s) => s.locale);
+  const setLocale = useUiStore((s) => s.setLocale);
+  const themeId = useUiStore((s) => s.themeId);
+  const setMode = useUiStore((s) => s.setMode);
+  const sidebarOpen = useUiStore((s) => s.sidebarOpen);
+  const toggleSidebar = useUiStore((s) => s.toggleSidebar);
+  const themePreset = getThemePreset(resolveThemeId(themeId));
+  const mode = themePreset.mode;
   const unreadCount = useNotificationStore((s) => s.unreadCount);
   useAlertsInbox();
 
@@ -256,6 +263,22 @@ export default function AppShell({ children }: PropsWithChildren) {
               <MenuIcon />
             </IconButton>
           )}
+          <Box
+            component="img"
+            src={
+              themePreset.appBar.tone === "dark"
+                ? "/service-weld-remove-bg-bw.webp"
+                : "/service-weld-remove-bg-wb.webp"
+            }
+            alt="Service Weld"
+            sx={{
+              height: 36,
+              width: "auto",
+              display: "block",
+              mr: 1.5,
+              flexShrink: 0,
+            }}
+          />
           <Typography variant="h6" sx={{ flexGrow: 1 }} noWrap>
             {t("app.title")}
           </Typography>
@@ -315,14 +338,12 @@ export default function AppShell({ children }: PropsWithChildren) {
               </Box>
             )}
             <Divider />
-            {hasCapability("admin:write") && (
-              <MenuItem onClick={() => go("/settings")}>
-                <ListItemIcon>
-                  <SettingsIcon fontSize="small" />
-                </ListItemIcon>
-                {t("shell.menu.settings")}
-              </MenuItem>
-            )}
+            <MenuItem onClick={() => go("/settings")}>
+              <ListItemIcon>
+                <SettingsIcon fontSize="small" />
+              </ListItemIcon>
+              {t("shell.menu.settings")}
+            </MenuItem>
             {hasCapability("admin:write") && (
               <MenuItem onClick={() => go("/admin/users")}>
                 <ListItemIcon>

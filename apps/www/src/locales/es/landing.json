@@ -1,0 +1,129 @@
+{
+  "meta": {
+    "title": "Service Weld S.R.L. | Gases industriales y cilindros",
+    "description": "Service Weld S.R.L. — proveedor de gases industriales, alquiler, recarga y canje de cilindros, e insumos de soldadura en Chacabuco y la región."
+  },
+  "nav": {
+    "about": "Empresa",
+    "services": "Servicios",
+    "why": "Por qué elegirnos",
+    "contact": "Contacto",
+    "login": "Ingresar",
+    "skip": "Saltar al contenido"
+  },
+  "hero": {
+    "headline": "Gases industriales y servicio de cilindros para la industria",
+    "description": "Alquiler, recarga y canje de cilindros, gases de soldadura e insumos. Atención seria y continua para talleres, obras y empresas de la región.",
+    "ctaLogin": "Ingresar",
+    "ctaContact": "Contactanos"
+  },
+  "about": {
+    "eyebrow": "La empresa",
+    "title": "Proveedor industrial de gases y cilindros",
+    "body": "Service Weld S.R.L. se dedica a la comercialización de gases industriales, el alquiler y la recarga de cilindros, el canje de envases y la provisión de insumos de soldadura. Atendemos talleres, obras y empresas que necesitan suministro confiable y trato directo.",
+    "bullets": {
+      "gases": "Gases industriales (oxígeno, argón, CO₂, nitrógeno, acetileno y mezclas de protección)",
+      "rental": "Alquiler de cilindros",
+      "exchange": "Canje de cilindros",
+      "refill": "Recarga de cilindros",
+      "supplies": "Insumos de soldadura, reguladores, mangueras y elementos de seguridad"
+    },
+    "imageAlt": "Local de Service Weld en Chacabuco"
+  },
+  "services": {
+    "eyebrow": "Productos y servicios",
+    "title": "Lo que ofrecemos",
+    "subtitle": "Servicio operativo para quien trabaja con gases y soldadura todos los días.",
+    "items": {
+      "refill": {
+        "title": "Recarga de cilindros",
+        "body": "Recarga de cilindros de gases industriales según disponibilidad y tipo de gas."
+      },
+      "exchange": {
+        "title": "Canje de cilindros",
+        "body": "Canje ágil de envases para mantener el trabajo en marcha sin demoras innecesarias."
+      },
+      "rental": {
+        "title": "Alquiler de cilindros",
+        "body": "Alquiler de cilindros para uso temporal o continuo, con seguimiento de custodia."
+      },
+      "gases": {
+        "title": "Gases industriales",
+        "body": "Oxígeno, argón, CO₂, nitrógeno, acetileno y mezclas de protección para soldadura."
+      },
+      "accessories": {
+        "title": "Accesorios de soldadura",
+        "body": "Reguladores, mangueras e insumos de soldadura para el taller y la obra."
+      },
+      "safety": {
+        "title": "Equipamiento de seguridad",
+        "body": "Elementos de protección y seguridad asociados al manejo de gases y soldadura."
+      }
+    }
+  },
+  "why": {
+    "eyebrow": "Por qué elegirnos",
+    "title": "Experiencia industrial y atención cercana",
+    "subtitle": "Fortalezas reales del negocio — sin cifras inventadas.",
+    "items": {
+      "experience": {
+        "title": "Experiencia en el rubro",
+        "body": "Años de trabajo con gases industriales y cilindros en la región."
+      },
+      "customers": {
+        "title": "Base de clientes consolidada",
+        "body": "Atendemos a una cartera amplia de talleres, obras y empresas locales."
+      },
+      "supply": {
+        "title": "Suministro confiable",
+        "body": "Priorizamos disponibilidad y continuidad para no interrumpir la producción."
+      },
+      "service": {
+        "title": "Respuesta ágil",
+        "body": "Operación pensada para resolver recargas, canjes y entregas con rapidez."
+      },
+      "expertise": {
+        "title": "Conocimiento técnico",
+        "body": "Asesoramiento práctico sobre gases, envases e insumos de soldadura."
+      },
+      "attention": {
+        "title": "Trato personalizado",
+        "body": "Contacto directo con el equipo, sin intermediarios innecesarios."
+      }
+    }
+  },
+  "testimonials": {
+    "eyebrow": "Testimonios",
+    "title": "Opiniones de clientes",
+    "placeholder": "Aún no publicamos reseñas de clientes en este sitio. Cuando dispongamos de opiniones verificables de fuentes públicas, las incluiremos aquí con su referencia."
+  },
+  "contact": {
+    "eyebrow": "Contacto",
+    "title": "Cómo encontrarnos",
+    "subtitle": "Visitanos en Chacabuco o escribinos para consultas comerciales y de suministro.",
+    "addressLabel": "Dirección",
+    "phoneLabel": "Teléfono",
+    "emailLabel": "Correo",
+    "hoursLabel": "Horario",
+    "phonePending": "Teléfono a confirmar",
+    "emailPending": "Correo a confirmar",
+    "hoursPending": "Horario a confirmar",
+    "verifyNote": "Algunos datos de contacto aún no fueron verificados públicamente y se muestran como pendiente."
+  },
+  "map": {
+    "eyebrow": "Ubicación",
+    "title": "Cómo llegar",
+    "directions": "Cómo llegar",
+    "iframeTitle": "Mapa de la ubicación de Service Weld S.R.L."
+  },
+  "footer": {
+    "tagline": "Gases industriales · Cilindros · Insumos de soldadura",
+    "rights": "Todos los derechos reservados.",
+    "instagram": "Instagram",
+    "login": "Acceso empleados"
+  },
+  "a11y": {
+    "toggleLanguage": "Cambiar idioma",
+    "toggleTheme": "Cambiar tema"
+  }
+}

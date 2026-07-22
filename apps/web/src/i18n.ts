@@ -6,7 +6,7 @@ import enCommon from "./locales/en/common.json";
 /**
  * react-i18next (006 R7). Spanish is the default and fallback; English is
  * available. Namespaced resources; enum/domain labels get their own `enums`
- * namespace in Phase 1/2.
+ * namespace in Phase 1/2. Marketing copy lives in @weld/www (spec 013).
  */
 void i18n.use(initReactI18next).init({
   resources: {

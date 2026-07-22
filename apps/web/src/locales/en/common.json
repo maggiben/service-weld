@@ -237,7 +237,9 @@
     "filters": {
       "open_only": "Open only",
       "kind": "Kind",
-      "state": "State"
+      "state": "State",
+      "client": "Client",
+      "locality": "Locality"
     },
     "form": {
       "title_deliver": "New delivery / refill",
@@ -799,10 +801,30 @@
   },
   "settings": {
     "title": "Configuration",
-    "subtitle": "System thresholds and operational settings",
+    "subtitle": "Appearance and operational settings",
     "saved": "Settings saved",
+    "operational_title": "Operational thresholds",
+    "operational_subtitle": "System thresholds used by alerts and loan workflows",
     "supplier_loan_overdue_days": "Supplier loan overdue (days)",
-    "supplier_loan_overdue_days_help": "Open supplier loan loops older than this are marked overdue"
+    "supplier_loan_overdue_days_help": "Open supplier loan loops older than this are marked overdue",
+    "themes": {
+      "title": "Appearance",
+      "subtitle": "Choose a light or dark theme. The toolbar button switches between your last light and dark picks.",
+      "light": "Light themes",
+      "dark": "Dark themes",
+      "weld_light": "Weld",
+      "weld_light_hint": "Brand green on warm neutral surfaces",
+      "slate_light": "Slate",
+      "slate_light_hint": "Cool gray surfaces with a dark app bar",
+      "paper_light": "Paper",
+      "paper_light_hint": "High-contrast white workspace",
+      "mist_light": "Mist",
+      "mist_light_hint": "Soft blue-gray with deep green accents",
+      "charcoal_dark": "Charcoal",
+      "charcoal_dark_hint": "Muted charcoal with readable body text",
+      "midnight_dark": "Midnight",
+      "midnight_dark_hint": "Blue-tinted dark surfaces like GitHub"
+    }
   },
   "users": {
     "title": "Users & permissions",

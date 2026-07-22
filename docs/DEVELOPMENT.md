@@ -12,7 +12,8 @@ Specs live in `/specs` (authoritative); architecture decisions in `/specs/DECISI
 
 ```
 apps/api          NestJS API + worker (004/005/007)
-apps/web          Back-office — Next.js 16 App Router + React 19 + MUI (006, D-12)
+apps/web          Back-office — Next.js 16 App Router + React 19 + MUI (006, D-12) → app.serviceweld.com
+apps/www          Public marketing / landing (013) → serviceweld.com (decoupled from web)
 apps/field        Field PWA shell — Next.js 16 App Router + React 19 + MUI (006, D-12)
 packages/schemas  Shared Zod schemas (API DTOs + UI resolvers)
 packages/domain   Framework-light domain model (002)
@@ -80,8 +81,9 @@ pnpm db:up
 pnpm --filter @weld/schemas build && pnpm --filter @weld/domain build
 pnpm --filter @weld/api bootstrap:admin   # once
 pnpm --filter @weld/api dev               # :3000 — loads ../../.env; Swagger /api/docs
-pnpm --filter @weld/web dev               # :3001 — back-office (HMR)
+pnpm --filter @weld/web dev               # :3001 — back-office → app.serviceweld.com
 pnpm --filter @weld/field dev             # :3002 — field shell (HMR)
+pnpm --filter @weld/www dev               # :3003 — marketing → serviceweld.com
 ```
 
 API reads the repo-root `.env` even when started from `apps/api` via pnpm.
@@ -107,7 +109,7 @@ Local hooks and CI enforce the same intent. **Never commit without the pre-commi
 | pre-push      | every `git push`          | `pnpm run test:coverage` — **≥80%** lines / branches / functions / statements on **every** package |
 | CI (`ci.yml`) | every PR / push to `main` | format check, typecheck, unit tests, coverage ≥80%, build + DB schema/invariants                   |
 
-Coverage is global per workspace package (`apps/api`, `apps/web`, `apps/field`, `packages/domain`, `packages/schemas`, `packages/api-client`), enforced by `scripts/check-coverage.mjs` (default threshold `80`, overridable only via `COVERAGE_THRESHOLD`). Specs: `010` R9–R10 / AC7–AC8, `012` R8 / AC6–AC7, `000` commit policy.
+Coverage is global per workspace package (`apps/api`, `apps/web`, `apps/field`, `apps/www`, `packages/domain`, `packages/schemas`, `packages/api-client`), enforced by `scripts/check-coverage.mjs` (default threshold `80`, overridable only via `COVERAGE_THRESHOLD`). Specs: `010` R9–R10 / AC7–AC8, `012` R8 / AC6–AC7, `000` commit policy.
 
 Hooks live in `.husky/` (`core.hooksPath=.husky`, installed on `pnpm install` via Husky `prepare`). Manual reinstall: `node scripts/install-hooks.mjs`.
 

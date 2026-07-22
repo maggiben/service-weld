@@ -99,6 +99,7 @@ export class MovementsRepository {
       .selectFrom("movement_event")
       .innerJoin("party", "party.id", "movement_event.holder_party_id")
       .innerJoin("cylinder", "cylinder.id", "movement_event.cylinder_id")
+      .leftJoin("client", "client.party_id", "movement_event.holder_party_id")
       .select([
         "movement_event.id",
         "movement_event.request_id",
@@ -139,6 +140,8 @@ export class MovementsRepository {
         "=",
         query["filter[holder_party_id]"],
       );
+    } else if (query["filter[locality_id]"] != null) {
+      qb = qb.where("client.locality_id", "=", query["filter[locality_id]"]);
     }
     if (query["filter[state]"]) {
       qb = qb.where("movement_event.state", "=", query["filter[state]"]);

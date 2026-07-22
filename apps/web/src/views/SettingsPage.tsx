@@ -3,6 +3,7 @@
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Divider from "@mui/material/Divider";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
@@ -11,9 +12,10 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ApiClientError } from "@weld/api-client";
 import { api } from "../api/client";
-import { RequireCapability } from "../auth/RequireAuth";
+import { ThemePicker } from "../features/settings/ThemePicker";
+import { useSessionStore } from "../store/sessionStore";
 
-function SettingsPageInner() {
+function OperationalSettings() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [days, setDays] = useState("120");
@@ -59,11 +61,11 @@ function SettingsPageInner() {
 
   return (
     <Box>
-      <Typography variant="h5" gutterBottom>
-        {t("settings.title")}
+      <Typography variant="h6" gutterBottom>
+        {t("settings.operational_title")}
       </Typography>
-      <Typography color="text.secondary" sx={{ mb: 3 }}>
-        {t("settings.subtitle")}
+      <Typography color="text.secondary" sx={{ mb: 2 }}>
+        {t("settings.operational_subtitle")}
       </Typography>
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
@@ -106,9 +108,26 @@ function SettingsPageInner() {
 }
 
 export default function SettingsPage() {
+  const { t } = useTranslation();
+  const canAdmin = useSessionStore((s) => s.hasCapability("admin:write"));
+
   return (
-    <RequireCapability capability="admin:write">
-      <SettingsPageInner />
-    </RequireCapability>
+    <Box>
+      <Typography variant="h5" gutterBottom>
+        {t("settings.title")}
+      </Typography>
+      <Typography color="text.secondary" sx={{ mb: 3 }}>
+        {t("settings.subtitle")}
+      </Typography>
+
+      <ThemePicker />
+
+      {canAdmin && (
+        <>
+          <Divider sx={{ my: 4 }} />
+          <OperationalSettings />
+        </>
+      )}
+    </Box>
   );
 }

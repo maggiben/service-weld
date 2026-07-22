@@ -10,6 +10,8 @@ export const EnvSchema = z.object({
     .default("development"),
   API_PORT: z.coerce.number().int().default(3000),
   API_GLOBAL_PREFIX: z.string().default("/api/v1"),
+  /** Comma-separated extra CORS origins (production web/field URLs). */
+  CORS_ORIGINS: z.string().optional(),
 
   DATABASE_URL: z.string().url(),
   DB_POOL_MAX: z.coerce.number().int().default(10),

@@ -1,0 +1,129 @@
+{
+  "meta": {
+    "title": "Service Weld S.R.L. | Industrial gases & cylinders",
+    "description": "Service Weld S.R.L. — industrial gases, cylinder rental, refill and exchange, and welding supplies in Chacabuco and the surrounding region."
+  },
+  "nav": {
+    "about": "Company",
+    "services": "Services",
+    "why": "Why us",
+    "contact": "Contact",
+    "login": "Log in",
+    "skip": "Skip to content"
+  },
+  "hero": {
+    "headline": "Industrial gases and cylinder service for industry",
+    "description": "Cylinder rental, refill and exchange, shielding gases, and welding supplies. Straightforward, dependable service for workshops, job sites, and regional businesses.",
+    "ctaLogin": "Log in",
+    "ctaContact": "Contact us"
+  },
+  "about": {
+    "eyebrow": "The company",
+    "title": "An industrial gas and cylinder supplier",
+    "body": "Service Weld S.R.L. supplies industrial gases, rents and refills cylinders, exchanges containers, and provides welding supplies. We serve workshops, job sites, and companies that need reliable supply and direct service.",
+    "bullets": {
+      "gases": "Industrial gases (oxygen, argon, CO₂, nitrogen, acetylene, and shielding mixes)",
+      "rental": "Cylinder rental",
+      "exchange": "Cylinder exchange",
+      "refill": "Cylinder refills",
+      "supplies": "Welding supplies, regulators, hoses, and safety equipment"
+    },
+    "imageAlt": "Service Weld storefront in Chacabuco"
+  },
+  "services": {
+    "eyebrow": "Products & services",
+    "title": "What we offer",
+    "subtitle": "Practical service for teams that work with gases and welding every day.",
+    "items": {
+      "refill": {
+        "title": "Cylinder refills",
+        "body": "Refilling of industrial gas cylinders according to availability and gas type."
+      },
+      "exchange": {
+        "title": "Cylinder exchange",
+        "body": "Fast container exchange so work can continue without unnecessary delay."
+      },
+      "rental": {
+        "title": "Cylinder rental",
+        "body": "Cylinder rental for temporary or ongoing use, with custody tracking."
+      },
+      "gases": {
+        "title": "Industrial gases",
+        "body": "Oxygen, argon, CO₂, nitrogen, acetylene, and shielding mixes for welding."
+      },
+      "accessories": {
+        "title": "Welding accessories",
+        "body": "Regulators, hoses, and welding consumables for the shop and the job site."
+      },
+      "safety": {
+        "title": "Safety equipment",
+        "body": "Protection and safety gear related to gas handling and welding work."
+      }
+    }
+  },
+  "why": {
+    "eyebrow": "Why choose us",
+    "title": "Industrial experience and close attention",
+    "subtitle": "Real business strengths — no invented figures.",
+    "items": {
+      "experience": {
+        "title": "Industry experience",
+        "body": "Years working with industrial gases and cylinders across the region."
+      },
+      "customers": {
+        "title": "Established customer base",
+        "body": "We serve a broad base of local workshops, job sites, and companies."
+      },
+      "supply": {
+        "title": "Reliable supply",
+        "body": "We prioritize availability and continuity so production is not interrupted."
+      },
+      "service": {
+        "title": "Responsive service",
+        "body": "Operations designed to handle refills, exchanges, and deliveries promptly."
+      },
+      "expertise": {
+        "title": "Technical expertise",
+        "body": "Practical guidance on gases, containers, and welding supplies."
+      },
+      "attention": {
+        "title": "Personalized attention",
+        "body": "Direct contact with the team — no unnecessary middle layers."
+      }
+    }
+  },
+  "testimonials": {
+    "eyebrow": "Testimonials",
+    "title": "Customer feedback",
+    "placeholder": "We are not publishing customer reviews on this site yet. When verifiable public reviews are available, we will include them here with their source."
+  },
+  "contact": {
+    "eyebrow": "Contact",
+    "title": "How to reach us",
+    "subtitle": "Visit us in Chacabuco or get in touch for commercial and supply inquiries.",
+    "addressLabel": "Address",
+    "phoneLabel": "Phone",
+    "emailLabel": "Email",
+    "hoursLabel": "Hours",
+    "phonePending": "Phone to be confirmed",
+    "emailPending": "Email to be confirmed",
+    "hoursPending": "Hours to be confirmed",
+    "verifyNote": "Some contact details have not been publicly verified yet and are shown as pending."
+  },
+  "map": {
+    "eyebrow": "Location",
+    "title": "Find us",
+    "directions": "Get directions",
+    "iframeTitle": "Map of Service Weld S.R.L. location"
+  },
+  "footer": {
+    "tagline": "Industrial gases · Cylinders · Welding supplies",
+    "rights": "All rights reserved.",
+    "instagram": "Instagram",
+    "login": "Employee access"
+  },
+  "a11y": {
+    "toggleLanguage": "Toggle language",
+    "toggleTheme": "Toggle theme"
+  }
+}

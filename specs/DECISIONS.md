@@ -77,10 +77,11 @@ Legend: **D-n** decision · resolves inconsistency **I-n** / missing **M-n** fro
 ### D-12 — Front-end apps are Next.js App Router _(product owner)_
 
 - **`apps/web` and `apps/field` are Next.js 16+ with the App Router** — **not** Vite SPAs / React Router client apps.
+- Public marketing lives in a separate **`apps/www`** (`@weld/www`) so designers can change the landing without the back-office (013). Production: **`serviceweld.com`** → www; **`app.serviceweld.com`** → web.
 - Stack: **Next.js 16.x** (App Router only; no Pages Router), **React 19.x** (latest peer-compatible with that Next major), Turbopack for dev/build defaults.
 - Interactive screens remain Client Components (`'use client'`) with MUI (and on web: TanStack Query / Zustand / RHF) as before (`006`); route segments, layouts, and future server-friendly boundaries live under `app/`.
 - Field remains an **offline-first PWA** product (006 R3); service worker / outbox land in Phase 6 on the Next build — same App Router shell as web.
-- Dev ports: API `:3000`, web `:3001`, field `:3002`.
+- Dev ports: API `:3000`, web `:3001`, field `:3002`, www `:3003`.
 - Do **not** use root `pnpm.overrides` to force React/`@types/react` — align versions per app `package.json` and rely on hoist patterns in `.npmrc`.
 - Specs `000` / `006` / `DEVELOPMENT.md` updated to match; any prior Vite SPA wording is superseded by this decision.
 

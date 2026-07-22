@@ -237,7 +237,9 @@
     "filters": {
       "open_only": "Solo abiertos",
       "kind": "Tipo",
-      "state": "Estado"
+      "state": "Estado",
+      "client": "Cliente",
+      "locality": "Localidad"
     },
     "form": {
       "title_deliver": "Nueva entrega / recarga",
@@ -799,10 +801,30 @@
   },
   "settings": {
     "title": "Configuración",
-    "subtitle": "Umbrales del sistema y ajustes operativos",
+    "subtitle": "Apariencia y ajustes operativos",
     "saved": "Configuración guardada",
+    "operational_title": "Umbrales operativos",
+    "operational_subtitle": "Umbrales del sistema usados por alertas y préstamos",
     "supplier_loan_overdue_days": "Préstamo proveedor vencido (días)",
-    "supplier_loan_overdue_days_help": "Los ciclos abiertos más antiguos que esto se marcan como vencidos"
+    "supplier_loan_overdue_days_help": "Los ciclos abiertos más antiguos que esto se marcan como vencidos",
+    "themes": {
+      "title": "Apariencia",
+      "subtitle": "Elegí un tema claro u oscuro. El botón de la barra alterna entre tu último claro y oscuro.",
+      "light": "Temas claros",
+      "dark": "Temas oscuros",
+      "weld_light": "Weld",
+      "weld_light_hint": "Verde de marca sobre superficies neutras cálidas",
+      "slate_light": "Pizarra",
+      "slate_light_hint": "Grises fríos con barra oscura",
+      "paper_light": "Papel",
+      "paper_light_hint": "Espacio blanco de alto contraste",
+      "mist_light": "Niebla",
+      "mist_light_hint": "Azul-gris suave con acentos verdes",
+      "charcoal_dark": "Carbón",
+      "charcoal_dark_hint": "Carbón atenuado con texto legible",
+      "midnight_dark": "Medianoche",
+      "midnight_dark_hint": "Oscuro azulado al estilo GitHub"
+    }
   },
   "users": {
     "title": "Usuarios y permisos",
