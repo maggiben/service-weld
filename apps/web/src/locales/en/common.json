@@ -999,6 +999,16 @@
     "rollback": "Rollback",
     "rollback_ok": "Database restored from snapshot",
     "rollback_confirm_title": "Restore snapshot?",
-    "rollback_confirm_body": "This replaces the current database state with the chosen snapshot. Changes after that snapshot are lost."
+    "rollback_confirm_body": "This replaces the current database state with the chosen snapshot. Changes after that snapshot are lost.",
+    "danger_zone": "Danger zone",
+    "purge_warning": "This permanently deletes business data. It cannot be undone unless you already have a snapshot.",
+    "purge_keeps": "Kept: users, roles, permissions, sessions, system settings, gas catalog, territories and localities.",
+    "purge_deletes": "Deleted: clients, cylinders, batteries, movements, loans, transfers, accessories, rates, billing, alerts, migration exceptions, audit log, and business parties (SELF and user-linked parties are kept).",
+    "purge_button": "Wipe business data",
+    "purge_confirm_title": "Wipe all business data?",
+    "purge_confirm_body": "You will delete clients, cylinders, movements and the rest of operations. Users and system settings are NOT touched. Use this only before re-importing clean Excel workbooks.",
+    "purge_type_prompt": "To confirm, type exactly: {{phrase}}",
+    "purge_type_label": "Confirmation phrase",
+    "purge_ok": "Business data wiped"
   }
 }

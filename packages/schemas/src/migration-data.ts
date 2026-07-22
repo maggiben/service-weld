@@ -76,3 +76,23 @@ export const MigrationMarkGoodRequest = z.object({
   good: z.boolean().default(true),
 });
 export type MigrationMarkGoodRequest = z.infer<typeof MigrationMarkGoodRequest>;
+
+/** Exact phrase the admin must type to wipe business data. */
+export const MIGRATION_PURGE_CONFIRMATION = "VACIAR DATOS" as const;
+
+export const MigrationPurgeBusinessRequest = z.object({
+  confirmation: z.literal(MIGRATION_PURGE_CONFIRMATION),
+});
+export type MigrationPurgeBusinessRequest = z.infer<
+  typeof MigrationPurgeBusinessRequest
+>;
+
+export const MigrationPurgeBusinessResult = z.object({
+  ok: z.literal(true),
+  truncated_tables: z.array(z.string()),
+  parties_removed: z.number().int().nonnegative(),
+  preserved: z.array(z.string()),
+});
+export type MigrationPurgeBusinessResult = z.infer<
+  typeof MigrationPurgeBusinessResult
+>;

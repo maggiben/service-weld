@@ -999,6 +999,16 @@
     "rollback": "Rollback",
     "rollback_ok": "Base restaurada desde el snapshot",
     "rollback_confirm_title": "¿Restaurar snapshot?",
-    "rollback_confirm_body": "Esto reemplaza el estado actual de la base con el snapshot elegido. Los cambios posteriores a ese snapshot se pierden."
+    "rollback_confirm_body": "Esto reemplaza el estado actual de la base con el snapshot elegido. Los cambios posteriores a ese snapshot se pierden.",
+    "danger_zone": "Zona de peligro",
+    "purge_warning": "Esta acción borra de forma irreversible los datos de negocio. No se puede deshacer salvo que tengas un snapshot previo.",
+    "purge_keeps": "Se conservan: usuarios, roles, permisos, sesiones, settings del sistema, catálogo de gases, ciudades y localidades.",
+    "purge_deletes": "Se eliminan: clientes, cilindros, baterías, movimientos, préstamos, transferencias, accesorios, tarifas, facturación, alertas, excepciones de migración, auditoría y parties de negocio (se mantiene SELF y parties ligados a usuarios).",
+    "purge_button": "Vaciar datos de negocio",
+    "purge_confirm_title": "¿Vaciar toda la data de negocio?",
+    "purge_confirm_body": "Vas a borrar clientes, cilindros, movimientos y el resto de la operatoria. Los usuarios y la configuración del sistema NO se tocan. Usá esto solo antes de reimportar Excel limpios.",
+    "purge_type_prompt": "Para confirmar, escribí exactamente: {{phrase}}",
+    "purge_type_label": "Frase de confirmación",
+    "purge_ok": "Datos de negocio vaciados"
   }
 }

@@ -22,6 +22,8 @@ import {
   MigrationDataStatus,
   MigrationExportDataset,
   MigrationMarkGoodRequest,
+  MIGRATION_PURGE_CONFIRMATION,
+  MigrationPurgeBusinessRequest,
   MigrationRollbackRequest,
   MigrationRunRequest,
   MigrationRunResult,
@@ -248,5 +250,20 @@ describe("migration-data schemas", () => {
     );
     assert.throws(() => MigrationWorkbookSlot.parse("other"));
     assert.throws(() => MigrationRunRequest.parse({ label: "x".repeat(200) }));
+  });
+
+  it("requires exact purge confirmation phrase", () => {
+    assert.equal(
+      MigrationPurgeBusinessRequest.parse({
+        confirmation: MIGRATION_PURGE_CONFIRMATION,
+      }).confirmation,
+      "VACIAR DATOS",
+    );
+    assert.throws(() =>
+      MigrationPurgeBusinessRequest.parse({ confirmation: "vaciar datos" }),
+    );
+    assert.throws(() =>
+      MigrationPurgeBusinessRequest.parse({ confirmation: "DELETE" }),
+    );
   });
 });

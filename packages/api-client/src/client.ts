@@ -103,6 +103,8 @@ import type {
   MigrationDataStatus,
   MigrationExportDataset,
   MigrationMarkGoodRequest,
+  MigrationPurgeBusinessRequest,
+  MigrationPurgeBusinessResult,
   MigrationRollbackRequest,
   MigrationRunRequest,
   MigrationRunResult,
@@ -837,6 +839,16 @@ export class WeldApiClient {
     return this.request<MigrationSnapshot>(
       "POST",
       "/admin/migration-data/snapshots/mark-good",
+      { body: input },
+    );
+  }
+
+  purgeBusinessData(
+    input: MigrationPurgeBusinessRequest,
+  ): Promise<MigrationPurgeBusinessResult> {
+    return this.request<MigrationPurgeBusinessResult>(
+      "POST",
+      "/admin/migration-data/purge-business",
       { body: input },
     );
   }

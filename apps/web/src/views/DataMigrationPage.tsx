@@ -2,6 +2,7 @@
 
 import CloudDownloadIcon from "@mui/icons-material/CloudDownload";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
+import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 import HistoryIcon from "@mui/icons-material/History";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import SyncIcon from "@mui/icons-material/Sync";
@@ -27,9 +28,10 @@ import Typography from "@mui/material/Typography";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type {
-  MigrationExportDataset,
-  MigrationWorkbookSlot,
+import {
+  MIGRATION_PURGE_CONFIRMATION,
+  type MigrationExportDataset,
+  type MigrationWorkbookSlot,
 } from "@weld/schemas";
 import { ApiClientError } from "@weld/api-client";
 import { api } from "../api/client";
@@ -65,6 +67,8 @@ function DataMigrationPageInner() {
   const [label, setLabel] = useState("");
   const [confirmSync, setConfirmSync] = useState(false);
   const [rollbackId, setRollbackId] = useState<string | null>(null);
+  const [purgeOpen, setPurgeOpen] = useState(false);
+  const [purgeConfirm, setPurgeConfirm] = useState("");
   const [uploadingSlot, setUploadingSlot] =
     useState<MigrationWorkbookSlot | null>(null);
   const fileRefs = useRef<
@@ -160,13 +164,27 @@ function DataMigrationPageInner() {
     onError: (err) => pushToast(errorMessage(err)),
   });
 
+  const purgeMut = useMutation({
+    mutationFn: () =>
+      api.purgeBusinessData({ confirmation: MIGRATION_PURGE_CONFIRMATION }),
+    onSuccess: () => {
+      pushToast(t("migration_data.purge_ok"));
+      setPurgeOpen(false);
+      setPurgeConfirm("");
+      void invalidate();
+    },
+    onError: (err) => pushToast(errorMessage(err)),
+  });
+
   const status = statusQuery.data;
   const busy =
     status?.busy ||
     dryRunMut.isPending ||
     syncMut.isPending ||
     rollbackMut.isPending ||
-    exportMut.isPending;
+    exportMut.isPending ||
+    purgeMut.isPending;
+  const purgePhraseOk = purgeConfirm.trim() === MIGRATION_PURGE_CONFIRMATION;
   const guideBySlot = new Map(
     (status?.workbook_guide ?? []).map((g) => [g.slot, g]),
   );
@@ -502,6 +520,48 @@ function DataMigrationPageInner() {
               </Stack>
             </Paper>
           ))}
+
+          <Paper
+            variant="outlined"
+            sx={{
+              p: 2,
+              borderColor: "error.main",
+              bgcolor: (theme) =>
+                theme.palette.mode === "dark"
+                  ? "rgba(211, 47, 47, 0.08)"
+                  : "rgba(211, 47, 47, 0.04)",
+            }}
+          >
+            <Typography
+              variant="subtitle1"
+              fontWeight={700}
+              color="error"
+              gutterBottom
+            >
+              {t("migration_data.danger_zone")}
+            </Typography>
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {t("migration_data.purge_warning")}
+            </Alert>
+            <Typography variant="body2" color="text.secondary" paragraph>
+              {t("migration_data.purge_keeps")}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" paragraph>
+              {t("migration_data.purge_deletes")}
+            </Typography>
+            <Button
+              variant="contained"
+              color="error"
+              startIcon={<DeleteForeverIcon />}
+              disabled={busy}
+              onClick={() => {
+                setPurgeConfirm("");
+                setPurgeOpen(true);
+              }}
+            >
+              {t("migration_data.purge_button")}
+            </Button>
+          </Paper>
         </Stack>
       )}
 
@@ -562,6 +622,69 @@ function DataMigrationPageInner() {
             }
           >
             {t("migration_data.rollback")}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={purgeOpen}
+        onClose={() => {
+          if (busy) return;
+          setPurgeOpen(false);
+          setPurgeConfirm("");
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle color="error.main">
+          {t("migration_data.purge_confirm_title")}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText component="div">
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {t("migration_data.purge_confirm_body")}
+            </Alert>
+            <Typography variant="body2" paragraph>
+              {t("migration_data.purge_type_prompt", {
+                phrase: MIGRATION_PURGE_CONFIRMATION,
+              })}
+            </Typography>
+          </DialogContentText>
+          <TextField
+            autoFocus
+            fullWidth
+            label={t("migration_data.purge_type_label")}
+            value={purgeConfirm}
+            onChange={(e) => setPurgeConfirm(e.target.value)}
+            disabled={busy}
+            placeholder={MIGRATION_PURGE_CONFIRMATION}
+            inputProps={{ autoComplete: "off", spellCheck: false }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setPurgeOpen(false);
+              setPurgeConfirm("");
+            }}
+            disabled={busy}
+          >
+            {t("actions.cancel")}
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            disabled={busy || !purgePhraseOk}
+            onClick={() => purgeMut.mutate()}
+            startIcon={
+              purgeMut.isPending ? (
+                <CircularProgress size={16} color="inherit" />
+              ) : (
+                <DeleteForeverIcon />
+              )
+            }
+          >
+            {t("migration_data.purge_button")}
           </Button>
         </DialogActions>
       </Dialog>

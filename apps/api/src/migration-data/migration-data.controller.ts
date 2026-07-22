@@ -30,10 +30,12 @@ import {
 import { RequireCapabilities } from "../common/decorators/require-capabilities.decorator";
 import {
   MigrationMarkGoodRequestDto,
+  MigrationPurgeBusinessRequestDto,
   MigrationRollbackRequestDto,
   MigrationRunRequestDto,
 } from "./dto/migration-data.dto";
 import { MigrationDataService } from "./migration-data.service";
+import type { MigrationPurgeBusinessResult } from "@weld/schemas";
 
 function parseSlot(raw: string): MigrationWorkbookSlot {
   const parsed = MigrationWorkbookSlot.safeParse(raw);
@@ -122,6 +124,19 @@ export class MigrationDataController {
   @ApiOkResponse({ description: "Mark snapshot as known-good version" })
   markGood(@Body() body: MigrationMarkGoodRequestDto): MigrationSnapshot {
     return this.migrationData.markGood(body.snapshot_id, body.good);
+  }
+
+  @Post("purge-business")
+  @RequireCapabilities("admin:write")
+  @ApiOkResponse({
+    description:
+      "Danger zone: wipe clients/cylinders/movements/billing/etc. Keeps users + settings",
+  })
+  purgeBusiness(
+    @Body() _body: MigrationPurgeBusinessRequestDto,
+  ): Promise<MigrationPurgeBusinessResult> {
+    // Zod already enforced confirmation === "VACIAR DATOS"
+    return this.migrationData.purgeBusinessData();
   }
 
   @Get("export/:dataset")

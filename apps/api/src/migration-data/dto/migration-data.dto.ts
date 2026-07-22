@@ -1,6 +1,7 @@
 import { createZodDto } from "nestjs-zod";
 import {
   MigrationMarkGoodRequest,
+  MigrationPurgeBusinessRequest,
   MigrationRollbackRequest,
   MigrationRunRequest,
 } from "@weld/schemas";
@@ -11,4 +12,7 @@ export class MigrationRollbackRequestDto extends createZodDto(
 ) {}
 export class MigrationMarkGoodRequestDto extends createZodDto(
   MigrationMarkGoodRequest,
+) {}
+export class MigrationPurgeBusinessRequestDto extends createZodDto(
+  MigrationPurgeBusinessRequest,
 ) {}

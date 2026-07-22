@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
   OnModuleInit,
@@ -18,9 +19,11 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join, resolve } from "node:path";
+import { sql } from "kysely";
 import type {
   MigrationDataStatus,
   MigrationExportDataset,
+  MigrationPurgeBusinessResult,
   MigrationRunRequest,
   MigrationRunResult,
   MigrationSnapshot,
@@ -28,6 +31,46 @@ import type {
   MigrationWorkbookSlot,
 } from "@weld/schemas";
 import type { Env } from "../config/config.schema";
+import { KYSELY, type DB } from "../database/database.module";
+
+/** Business tables wiped by danger-zone purge (users/settings/geo/gas catalog kept). */
+const BUSINESS_TABLES = [
+  "charge_line",
+  "invoice",
+  "billing_run",
+  "accessory_rental",
+  "accessory",
+  "stock_transfer",
+  "supplier_loan_cycle",
+  "cylinder_sale",
+  "movement_event",
+  "delivery_note",
+  "battery_member",
+  "cylinder",
+  "cylinder_battery",
+  "rental_rate",
+  "client_contact",
+  "client",
+  "client_history",
+  "cylinder_history",
+  "migration_exception",
+  "alert",
+  "audit_log",
+  "gas_alias",
+] as const;
+
+const PRESERVED = [
+  "app_user",
+  "role",
+  "user_role",
+  "user_territory_scope",
+  "refresh_token",
+  "system_setting",
+  "gas_type",
+  "dispatch_territory",
+  "locality",
+  "party (SELF + linked to users)",
+] as const;
 
 const SLOTS: MigrationWorkbookSlot[] = ["junin", "chacabuco", "propios"];
 
@@ -84,7 +127,10 @@ export class MigrationDataService implements OnModuleInit {
   private readonly pythonBin: string;
   private readonly migrationRoot: string;
 
-  constructor(private readonly config: ConfigService<Env, true>) {
+  constructor(
+    private readonly config: ConfigService<Env, true>,
+    @Inject(KYSELY) private readonly db: DB,
+  ) {
     const configured =
       process.env.MIGRATION_DATA_DIR?.trim() ||
       join(process.cwd(), "../../migration/data");
@@ -282,6 +328,64 @@ export class MigrationDataService implements OnModuleInit {
     meta.marked_good = good;
     writeFileSync(metaPath, JSON.stringify(meta, null, 2));
     return meta;
+  }
+
+  /**
+   * Wipe business/domain data for a clean re-import. Keeps users, roles,
+   * settings, gas catalog, and territories/localities.
+   */
+  async purgeBusinessData(): Promise<MigrationPurgeBusinessResult> {
+    this.assertIdle();
+    this.busy = true;
+    try {
+      const truncated = [...BUSINESS_TABLES];
+      await sql
+        .raw(
+          `TRUNCATE TABLE ${truncated.map((t) => `"${t}"`).join(", ")} RESTART IDENTITY CASCADE`,
+        )
+        .execute(this.db);
+
+      const deleted = await sql<{ count: string }>`
+        WITH doomed AS (
+          DELETE FROM party p
+          WHERE NOT p.is_self
+            AND NOT EXISTS (
+              SELECT 1 FROM app_user u
+              WHERE u.party_id = p.id
+            )
+          RETURNING 1
+        )
+        SELECT count(*)::text AS count FROM doomed
+      `.execute(this.db);
+      const partiesRemoved = Number(deleted.rows[0]?.count ?? 0);
+
+      if (existsSync(this.reportPath)) {
+        try {
+          writeFileSync(
+            this.reportPath,
+            JSON.stringify(
+              {
+                purged_at: new Date().toISOString(),
+                note: "Business data wiped via admin danger zone",
+              },
+              null,
+              2,
+            ),
+          );
+        } catch {
+          // non-fatal
+        }
+      }
+
+      return {
+        ok: true,
+        truncated_tables: truncated,
+        parties_removed: partiesRemoved,
+        preserved: [...PRESERVED],
+      };
+    } finally {
+      this.busy = false;
+    }
   }
 
   async exportDataset(
