@@ -265,6 +265,21 @@ export class CylindersRepository {
         ),
       );
     }
+    if (query["filter[holder_party_id]"] != null) {
+      const holderPartyId = query["filter[holder_party_id]"];
+      qb = qb.where((eb) =>
+        eb(
+          "cylinder.id",
+          "in",
+          eb
+            .selectFrom("movement_event as holder_move")
+            .select("holder_move.cylinder_id")
+            .where("holder_move.state", "=", "OPEN")
+            .where("holder_move.return_date", "is", null)
+            .where("holder_move.holder_party_id", "=", holderPartyId),
+        ),
+      );
+    }
     if (query["filter[packaging]"]) {
       qb = qb.where("cylinder.packaging", "=", query["filter[packaging]"]);
     }

@@ -2,6 +2,7 @@
 
 import AddIcon from "@mui/icons-material/Add";
 import Alert from "@mui/material/Alert";
+import Autocomplete from "@mui/material/Autocomplete";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
@@ -22,6 +23,7 @@ import {
 } from "@mui/x-data-grid";
 import { enUS, esES } from "@mui/x-data-grid/locales";
 import type {
+  Client,
   Cylinder,
   CylinderListQuery,
   CylinderState,
@@ -85,6 +87,8 @@ export default function CylindersPage() {
   const [stateFilter, setStateFilter] = useState<CylinderState | "">("");
   const [basisFilter, setBasisFilter] = useState<OwnershipBasis | "">("");
   const [locationFilter, setLocationFilter] = useState("");
+  const [client, setClient] = useState<Client | null>(null);
+  const [clientQuery, setClientQuery] = useState("");
   const [sortModel, setSortModel] = useState<GridSortModel>([
     { field: "serial_number", sort: "asc" },
   ]);
@@ -96,6 +100,21 @@ export default function CylindersPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [lossTarget, setLossTarget] = useState<Cylinder | null>(null);
   const [replaceTarget, setReplaceTarget] = useState<Cylinder | null>(null);
+
+  const location = decodeFilter(locationFilter);
+  const cityFilterId = location?.kind === "locality" ? location.id : undefined;
+
+  const clientsSearch = useQuery({
+    queryKey: ["clients", "picker", "cylinders", clientQuery, cityFilterId],
+    queryFn: () =>
+      api.listClients({
+        q: clientQuery || undefined,
+        limit: 20,
+        ...(cityFilterId != null
+          ? { "filter[locality_id]": cityFilterId }
+          : {}),
+      }),
+  });
 
   const handleSearchChange = (value: string) => {
     setSearch(value);
@@ -110,7 +129,7 @@ export default function CylindersPage() {
   const cursor = cursors[paginationModel.page];
 
   const queryParams = useMemo(() => {
-    const location = decodeFilter(locationFilter);
+    const locationDecoded = decodeFilter(locationFilter);
     return {
       limit: paginationModel.pageSize,
       cursor,
@@ -118,12 +137,13 @@ export default function CylindersPage() {
       sort: sortToApiParam(sortModel),
       ...(stateFilter ? { "filter[state]": stateFilter } : {}),
       ...(basisFilter ? { "filter[ownership_basis]": basisFilter } : {}),
-      ...(location?.kind === "territory"
-        ? { "filter[territory_id]": location.id }
+      ...(locationDecoded?.kind === "territory"
+        ? { "filter[territory_id]": locationDecoded.id }
         : {}),
-      ...(location?.kind === "locality"
-        ? { "filter[locality_id]": location.id }
+      ...(locationDecoded?.kind === "locality"
+        ? { "filter[locality_id]": locationDecoded.id }
         : {}),
+      ...(client ? { "filter[holder_party_id]": client.id } : {}),
     };
   }, [
     paginationModel.pageSize,
@@ -133,6 +153,7 @@ export default function CylindersPage() {
     stateFilter,
     basisFilter,
     locationFilter,
+    client,
     decodeFilter,
   ]);
 
@@ -328,6 +349,7 @@ export default function CylindersPage() {
             value={locationFilter}
             onChange={(e) => {
               setLocationFilter(e.target.value);
+              setClient(null);
               resetPaging();
             }}
           >
@@ -349,10 +371,45 @@ export default function CylindersPage() {
               >
                 {locality.name}
                 {locality.territory_name ? ` · ${locality.territory_name}` : ""}
+                {locality.cylinder_count != null
+                  ? ` (${locality.cylinder_count})`
+                  : ""}
               </MenuItem>
             ))}
           </Select>
         </FormControl>
+        <Autocomplete
+          size="small"
+          sx={{ minWidth: 220 }}
+          options={
+            client
+              ? [
+                  client,
+                  ...(clientsSearch.data?.data ?? []).filter(
+                    (c) => c.id !== client.id,
+                  ),
+                ]
+              : (clientsSearch.data?.data ?? [])
+          }
+          getOptionLabel={(option: Client) =>
+            option.outstanding_count != null && option.outstanding_count > 0
+              ? `${option.name} (${option.outstanding_count})`
+              : option.name
+          }
+          isOptionEqualToValue={(a, b) => a.id === b.id}
+          loading={clientsSearch.isFetching}
+          value={client}
+          onChange={(_, value) => {
+            setClient(value);
+            resetPaging();
+          }}
+          onInputChange={(_, value, reason) => {
+            if (reason !== "reset") setClientQuery(value);
+          }}
+          renderInput={(params) => (
+            <TextField {...params} label={t("cylinders.filters.client")} />
+          )}
+        />
         <TextField
           size="small"
           label={t("cylinders.filters.serial")}

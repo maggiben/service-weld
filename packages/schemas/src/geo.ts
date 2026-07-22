@@ -29,6 +29,8 @@ export const Locality = z.object({
   territory_id: z.number().int().nullable(),
   territory_name: z.string().nullable().optional(),
   client_count: z.number().int().optional(),
+  /** Open holdings at clients in this locality (current float). */
+  cylinder_count: z.number().int().optional(),
 });
 export type Locality = z.infer<typeof Locality>;
 

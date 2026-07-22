@@ -120,8 +120,9 @@ function AuditLogsPageInner() {
       {
         field: "actor_role",
         headerName: t("audit.columns.role"),
-        width: 110,
-        valueFormatter: (value: string | null) => value ?? "—",
+        width: 140,
+        valueFormatter: (value: string | null) =>
+          value ? t(`enums.role.${value}`, { defaultValue: value }) : "—",
       },
       {
         field: "action",
@@ -298,7 +299,9 @@ function AuditLogsPageInner() {
               <Typography variant="body2">
                 <strong>{t("audit.columns.actor")}:</strong>{" "}
                 {formatActorLabel(selected, t)}
-                {selected.actor_role ? ` (${selected.actor_role})` : ""}
+                {selected.actor_role
+                  ? ` (${t(`enums.role.${selected.actor_role}`, { defaultValue: selected.actor_role })})`
+                  : ""}
                 {selected.source ? ` · ${selected.source}` : ""}
               </Typography>
               <Box>

@@ -218,7 +218,7 @@ function UsersPageInner() {
         renderCell: (params) => (
           <Stack direction="row" spacing={0.5} sx={{ flexWrap: "wrap", py: 1 }}>
             {params.row.roles.map((role) => (
-              <Chip key={role} size="small" label={role} />
+              <Chip key={role} size="small" label={t(`enums.role.${role}`)} />
             ))}
           </Stack>
         ),
@@ -311,7 +311,7 @@ function UsersPageInner() {
             <MenuItem value="">{t("users.filters.all")}</MenuItem>
             {ASSIGNABLE_ROLES.map((role) => (
               <MenuItem key={role} value={role}>
-                {role}
+                {t(`enums.role.${role}`)}
               </MenuItem>
             ))}
           </Select>
@@ -426,12 +426,14 @@ function UsersPageInner() {
                 }))
               }
               input={<OutlinedInput label={t("users.form.roles")} />}
-              renderValue={(selected) => selected.join(", ")}
+              renderValue={(selected) =>
+                selected.map((role) => t(`enums.role.${role}`)).join(", ")
+              }
             >
               {ASSIGNABLE_ROLES.map((role) => (
                 <MenuItem key={role} value={role}>
                   <Checkbox checked={draft.roles.includes(role)} />
-                  {role}
+                  {t(`enums.role.${role}`)}
                 </MenuItem>
               ))}
             </Select>

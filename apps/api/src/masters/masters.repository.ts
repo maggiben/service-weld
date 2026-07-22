@@ -134,6 +134,21 @@ export class MastersRepository {
           .where("client.deleted_at", "is", null)
           .as("client_count"),
       )
+      .select((eb) =>
+        eb
+          .selectFrom("movement_event")
+          .innerJoin(
+            "client",
+            "client.party_id",
+            "movement_event.holder_party_id",
+          )
+          .select((eb2) => eb2.fn.countAll<string>().as("cnt"))
+          .whereRef("client.locality_id", "=", "locality.id")
+          .where("movement_event.state", "=", "OPEN")
+          .where("movement_event.return_date", "is", null)
+          .where("client.deleted_at", "is", null)
+          .as("cylinder_count"),
+      )
       .orderBy("locality.name", "asc")
       .orderBy("locality.id", "asc");
 
@@ -187,6 +202,8 @@ export class MastersRepository {
           row.territory_id == null ? null : Number(row.territory_id),
         territory_name: row.territory_name ?? null,
         client_count: row.client_count == null ? 0 : Number(row.client_count),
+        cylinder_count:
+          row.cylinder_count == null ? 0 : Number(row.cylinder_count),
       })),
       page: buildPageMeta({
         limit,
@@ -243,6 +260,7 @@ export class MastersRepository {
           row.territory_id == null ? null : Number(row.territory_id),
         territory_name: territoryName,
         client_count: 0,
+        cylinder_count: 0,
       };
     } catch (error) {
       if (isUniqueViolation(error)) {

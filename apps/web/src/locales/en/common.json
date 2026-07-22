@@ -149,7 +149,8 @@
       "territory": "Location (territory)",
       "location": "Location",
       "depots": "Depots / origins",
-      "cities": "Cities"
+      "cities": "Cities",
+      "client": "Client"
     },
     "detail": {
       "back": "Back to cylinders",
@@ -421,6 +422,18 @@
       "ACET": "Acetylene",
       "HELIUM": "Helium",
       "THERMOLENE": "Thermolene"
+    },
+    "role": {
+      "CLERK": "Clerk",
+      "DRIVER": "Driver",
+      "PLANT": "Plant",
+      "INVENTORY": "Inventory",
+      "BILLING": "Billing",
+      "MANAGER": "Manager",
+      "SUBDIST": "Subdistributor",
+      "ADMIN": "Admin",
+      "MEDICAL": "Medical",
+      "CLIENT": "Client"
     }
   },
   "validation": {

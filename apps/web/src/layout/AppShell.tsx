@@ -333,7 +333,7 @@ export default function AppShell({ children }: PropsWithChildren) {
                   {user.username}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" noWrap>
-                  {user.roles.join(", ")}
+                  {user.roles.map((role) => t(`enums.role.${role}`)).join(", ")}
                 </Typography>
               </Box>
             )}

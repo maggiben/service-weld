@@ -15,12 +15,18 @@ export const FleetRow = z.object({
   gas_code: GasCode.nullable().optional(),
   owner_party_id: z.number().int().optional(),
   owner_name: z.string().optional(),
+  locality_id: z.number().int().nullable().optional(),
+  locality_name: z.string().nullable().optional(),
+  client_party_id: z.number().int().optional(),
+  client_name: z.string().optional(),
   count: z.number().int(),
 });
 export type FleetRow = z.infer<typeof FleetRow>;
 
 export const FleetQuery = z.object({
-  group_by: z.enum(["state", "gas_code", "owner"]).default("state"),
+  group_by: z
+    .enum(["state", "gas_code", "owner", "locality", "client"])
+    .default("state"),
   "filter[owner_party_id]": z.coerce.number().int().optional(),
   "filter[gas_code]": GasCode.optional(),
 });

@@ -95,6 +95,81 @@ export class ReportsRepository {
       }));
     }
 
+    if (query.group_by === "locality") {
+      // Current float by client city (open holdings only).
+      let qb = db
+        .selectFrom("movement_event")
+        .innerJoin("cylinder", "cylinder.id", "movement_event.cylinder_id")
+        .innerJoin(
+          "client",
+          "client.party_id",
+          "movement_event.holder_party_id",
+        )
+        .leftJoin("locality", "locality.id", "client.locality_id")
+        .select(["client.locality_id", "locality.name as locality_name"])
+        .select((eb) => eb.fn.countAll<string>().as("count"))
+        .where("movement_event.state", "=", "OPEN")
+        .where("movement_event.return_date", "is", null)
+        .where("cylinder.deleted_at", "is", null)
+        .where("client.deleted_at", "is", null);
+      if (query["filter[owner_party_id]"] != null) {
+        qb = qb.where(
+          "cylinder.owner_party_id",
+          "=",
+          query["filter[owner_party_id]"],
+        );
+      }
+      if (query["filter[gas_code]"]) {
+        qb = qb.where("cylinder.gas_code", "=", query["filter[gas_code]"]);
+      }
+      const rows = await qb
+        .groupBy(["client.locality_id", "locality.name"])
+        .orderBy("count", "desc")
+        .execute();
+      return rows.map((r) => ({
+        group_key: r.locality_id != null ? String(r.locality_id) : "UNASSIGNED",
+        locality_id: r.locality_id == null ? null : Number(r.locality_id),
+        locality_name: r.locality_name ?? null,
+        count: Number(r.count),
+      }));
+    }
+
+    if (query.group_by === "client") {
+      // Current float by holding client (open holdings only).
+      let qb = db
+        .selectFrom("movement_event")
+        .innerJoin("cylinder", "cylinder.id", "movement_event.cylinder_id")
+        .innerJoin("party", "party.id", "movement_event.holder_party_id")
+        .select([
+          "movement_event.holder_party_id as client_party_id",
+          "party.display_name as client_name",
+        ])
+        .select((eb) => eb.fn.countAll<string>().as("count"))
+        .where("movement_event.state", "=", "OPEN")
+        .where("movement_event.return_date", "is", null)
+        .where("cylinder.deleted_at", "is", null);
+      if (query["filter[owner_party_id]"] != null) {
+        qb = qb.where(
+          "cylinder.owner_party_id",
+          "=",
+          query["filter[owner_party_id]"],
+        );
+      }
+      if (query["filter[gas_code]"]) {
+        qb = qb.where("cylinder.gas_code", "=", query["filter[gas_code]"]);
+      }
+      const rows = await qb
+        .groupBy(["movement_event.holder_party_id", "party.display_name"])
+        .orderBy("count", "desc")
+        .execute();
+      return rows.map((r) => ({
+        group_key: String(r.client_party_id),
+        client_party_id: Number(r.client_party_id),
+        client_name: r.client_name,
+        count: Number(r.count),
+      }));
+    }
+
     let qb = db
       .selectFrom("cylinder")
       .innerJoin("party", "party.id", "cylinder.owner_party_id")

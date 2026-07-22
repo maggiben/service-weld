@@ -66,6 +66,8 @@ export const CylinderListQuery = PaginationQuery.extend({
   "filter[territory_id]": z.coerce.number().int().optional(),
   /** Current city: open movement at a client with this locality. */
   "filter[locality_id]": z.coerce.number().int().optional(),
+  /** Current holder: open movement at this client party. */
+  "filter[holder_party_id]": z.coerce.number().int().optional(),
   "filter[packaging]": PackagingKind.optional(),
   /**
    * Rentable stock only: IN_STOCK_EMPTY/FULL, ownership OURS|SUPPLIER,
