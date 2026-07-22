@@ -279,13 +279,15 @@ CREATE TABLE rental_rate (                         -- effective-dated rates (rat
     id            bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     client_party_id bigint REFERENCES client(party_id),  -- NULL = default rate
     gas_code      text REFERENCES gas_type(code),        -- NULL = any gas
+    capacity_m3   numeric(5,2),                          -- NULL = any size; e.g. 2,3,4,6,7,10,20
     period        rate_period NOT NULL DEFAULT 'DAILY',
     amount        numeric(14,2) NOT NULL CHECK (amount >= 0),
     effective_from date NOT NULL,
     effective_to   date,
-    CONSTRAINT ck_rate_range CHECK (effective_to IS NULL OR effective_to >= effective_from)
+    CONSTRAINT ck_rate_range CHECK (effective_to IS NULL OR effective_to >= effective_from),
+    CONSTRAINT ck_rate_capacity CHECK (capacity_m3 IS NULL OR capacity_m3 > 0)
 );
-CREATE INDEX ix_rate_lookup ON rental_rate (client_party_id, gas_code, effective_from DESC);
+CREATE INDEX ix_rate_lookup ON rental_rate (client_party_id, gas_code, capacity_m3, effective_from DESC);
 ```
 
 **Why `rental_rate` is effective-dated:** rates change (`$85/día`, `ALQ $333,33` `» observed`) and past invoices must reprice at the **rate that was in force**; storing `effective_from/to` gives correct back-dated billing without mutating history.
@@ -623,7 +625,7 @@ CREATE INDEX ix_alert_open ON alert (alert_type) WHERE resolved_at IS NULL;
 - **Partial indexes for "open/outstanding"** (`WHERE return_date IS NULL AND state='OPEN'`). **Why:** the hottest operational queries are "what's still out per client" and "aging float" `» observed`; a partial index is tiny (only open rows) and extremely fast.
 - **Composite `(entity, date)` indexes** for the two dominant read paths: cylinder history `(cylinder_id, delivery_date)` and client account `(holder_party_id, delivery_date)` — mirroring the two legacy books.
 - **Trigram GIN** on `party.display_name` and `cylinder.serial_number`. **Why:** fuzzy client-name search (near-duplicates) and partial-serial lookup.
-- **Covering/lookup index** on `rental_rate (client, gas, effective_from DESC)` for point-in-time rate resolution.
+- **Covering/lookup index** on `rental_rate (client, gas, capacity, effective_from DESC)` for point-in-time rate resolution.
 - Index every **FK column** used in joins/filters (done above). Avoid over-indexing write-hot tables beyond these.
 
 ### 9.3 Audit tables

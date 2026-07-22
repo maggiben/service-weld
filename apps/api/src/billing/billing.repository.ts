@@ -2,8 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import {
   billableDaysInPeriod,
   businessTodayIso,
-  dailyUnitPrice,
-  resolveEffectiveRate,
+  resolveBillingUnitPrice,
   rentalChargeAmount,
 } from "@weld/domain";
 import type {
@@ -23,7 +22,9 @@ interface BillableMovement {
   holder_name: string;
   holder_locality_id: number | null;
   holder_locality_name: string | null;
+  daily_rate_default: string | number | null;
   gas_code: string | null;
+  capacity_m3: string | number | null;
   delivery_date: string | Date;
   return_date: string | Date | null;
   cylinder_serial: string;
@@ -55,7 +56,9 @@ export class BillingRepository {
     let periodEnd: string;
 
     if (isHistory) {
-      // Ignore picker dates: from the oldest still-open rental through today.
+      // Ignore any client-supplied dates: from the oldest still-open rental
+      // delivery in scope through today. Each charge line still accrues from
+      // that movement's own delivery_date (not the UI From/To pickers).
       let oldestQb = db
         .selectFrom("movement_event")
         .innerJoin(
@@ -278,7 +281,9 @@ export class BillingRepository {
         "party.display_name as holder_name",
         "client.locality_id as holder_locality_id",
         "locality.name as holder_locality_name",
+        "client.daily_rate_default",
         "movement_event.gas_code",
+        "cylinder.capacity_m3",
         "movement_event.delivery_date",
         "movement_event.return_date",
         "cylinder.serial_number as cylinder_serial",
@@ -293,21 +298,17 @@ export class BillingRepository {
         .where("movement_event.return_date", "is", null)
         .where("movement_event.delivery_date", "<=", periodEnd);
     } else {
-      // Period mode: only movements with activity inside the selected window
-      // (delivered or returned in range) — excludes long-open float with no event.
-      movementsQb = movementsQb.where((eb) =>
-        eb.or([
-          eb.and([
-            eb("movement_event.delivery_date", ">=", periodStart),
-            eb("movement_event.delivery_date", "<=", periodEnd),
-          ]),
-          eb.and([
-            eb("movement_event.return_date", "is not", null),
+      // Period mode: movements that overlap the window (closed + open-accrued).
+      // Same rule as the rental report — a cylinder out since 2020 still bills
+      // the days that fall inside [periodStart, periodEnd] (009 AC4 / W20).
+      movementsQb = movementsQb
+        .where("movement_event.delivery_date", "<=", periodEnd)
+        .where((eb) =>
+          eb.or([
+            eb("movement_event.return_date", "is", null),
             eb("movement_event.return_date", ">=", periodStart),
-            eb("movement_event.return_date", "<=", periodEnd),
           ]),
-        ]),
-      );
+        );
     }
 
     if (input.client_party_id != null) {
@@ -349,24 +350,35 @@ export class BillingRepository {
 
       const delivery = toIsoDate(movement.delivery_date)!;
       const ret = toIsoDate(movement.return_date);
+      // Open rentals accrue only through business today (009 AC4), not the
+      // future end of a mid-month period window (e.g. 323214 billed 10 phantom days).
       const days = billableDaysInPeriod({
         deliveryDate: delivery,
         returnDate: ret,
         periodStart,
         periodEnd,
+        asOfDate: today,
       });
       if (days <= 0) continue;
 
-      const rateOn = delivery < periodStart ? periodStart : delivery;
-      const rate = resolveEffectiveRate(
+      const capacityM3 =
+        movement.capacity_m3 == null ? null : Number(movement.capacity_m3);
+      const unit = resolveBillingUnitPrice({
         rates,
-        holderId,
-        movement.gas_code,
-        rateOn,
-      );
-      if (!rate) continue;
+        clientPartyId: holderId,
+        gasCode: movement.gas_code,
+        capacityM3,
+        mode: isHistory ? "history" : "period",
+        deliveryDate: delivery,
+        periodStart,
+        periodEnd,
+        dailyRateDefault:
+          movement.daily_rate_default == null
+            ? null
+            : Number(movement.daily_rate_default),
+      });
+      if (!unit) continue;
 
-      const unit = dailyUnitPrice(rate);
       const amount = rentalChargeAmount(days, unit);
       const bucket = byClient.get(holderId) ?? {
         name: movement.holder_name,
@@ -378,15 +390,22 @@ export class BillingRepository {
         lines: [],
       };
       const gasLabel = movement.gas_code ? ` · ${movement.gas_code}` : "";
-      const rangeLabel = isHistory
-        ? `${delivery}→${periodEnd}`
-        : `${periodStart}→${periodEnd}`;
+      const sizeLabel = capacityM3 != null ? ` · ${capacityM3} m³` : "";
+      const billStart = delivery > periodStart ? delivery : periodStart;
+      const billEnd = ret
+        ? ret < periodEnd
+          ? ret
+          : periodEnd
+        : today < periodEnd
+          ? today
+          : periodEnd;
+      const rangeLabel = `${billStart}→${billEnd}`;
       bucket.lines.push({
         source_table: "movement_event",
         source_id: Number(movement.id),
         description: isHistory
-          ? `Alquiler abierto ${movement.cylinder_serial}${gasLabel} (${days} d desde ${delivery})`
-          : `Alquiler ${movement.cylinder_serial}${gasLabel} (${days} d · ${rangeLabel})`,
+          ? `Alquiler abierto ${movement.cylinder_serial}${gasLabel}${sizeLabel} (${days} d desde ${delivery})`
+          : `Alquiler ${movement.cylinder_serial}${gasLabel}${sizeLabel} (${days} d · ${rangeLabel})`,
         quantity: days,
         unit: "day",
         unit_price: unit.amount,
@@ -399,6 +418,10 @@ export class BillingRepository {
 
     for (const [clientId, bucket] of byClient) {
       const total = bucket.lines.reduce((sum, line) => sum + line.amount, 0);
+      const totalDays = bucket.lines.reduce(
+        (sum, line) => sum + line.quantity,
+        0,
+      );
       const inv = await db
         .insertInto("invoice")
         .values({
@@ -462,6 +485,7 @@ export class BillingRepository {
         period_end: toIsoDate(inv.period_end as string | Date)!,
         status: inv.status,
         total: Number(inv.total),
+        total_days: totalDays,
         created_at: (inv.created_at as Date).toISOString(),
         version: Number(inv.version),
         charge_lines: chargeLines,
@@ -469,6 +493,10 @@ export class BillingRepository {
     }
 
     const runTotal = invoices.reduce((sum, inv) => sum + inv.total, 0);
+    const runTotalDays = invoices.reduce(
+      (sum, inv) => sum + (inv.total_days ?? 0),
+      0,
+    );
 
     return {
       id: Number(run.id),
@@ -480,6 +508,7 @@ export class BillingRepository {
       created_at: (run.created_at as Date).toISOString(),
       invoice_count: invoices.length,
       total: Math.round(runTotal * 100) / 100,
+      total_days: runTotalDays,
       invoices,
     };
   }
@@ -522,6 +551,21 @@ export class BillingRepository {
         .selectAll()
         .where("invoice_id", "=", inv.id)
         .execute();
+      const chargeLines = lines.map((line) => ({
+        id: Number(line.id),
+        invoice_id: Number(line.invoice_id),
+        source_table: line.source_table,
+        source_id: Number(line.source_id),
+        description: line.description,
+        quantity: Number(line.quantity),
+        unit: line.unit,
+        unit_price: Number(line.unit_price),
+        amount: Number(line.amount),
+      }));
+      const totalDays = chargeLines.reduce(
+        (sum, line) => sum + line.quantity,
+        0,
+      );
       mapped.push({
         id: Number(inv.id),
         billing_run_id:
@@ -538,23 +582,18 @@ export class BillingRepository {
         period_end: toIsoDate(inv.period_end as string | Date)!,
         status: inv.status,
         total: Number(inv.total),
+        total_days: totalDays,
         created_at: (inv.created_at as Date).toISOString(),
         version: Number(inv.version),
-        charge_lines: lines.map((line) => ({
-          id: Number(line.id),
-          invoice_id: Number(line.invoice_id),
-          source_table: line.source_table,
-          source_id: Number(line.source_id),
-          description: line.description,
-          quantity: Number(line.quantity),
-          unit: line.unit,
-          unit_price: Number(line.unit_price),
-          amount: Number(line.amount),
-        })),
+        charge_lines: chargeLines,
       });
     }
 
     const total = mapped.reduce((sum, inv) => sum + inv.total, 0);
+    const totalDays = mapped.reduce(
+      (sum, inv) => sum + (inv.total_days ?? 0),
+      0,
+    );
     return {
       id: Number(run.id),
       period_start: toIsoDate(run.period_start as string | Date)!,
@@ -565,6 +604,7 @@ export class BillingRepository {
       created_at: (run.created_at as Date).toISOString(),
       invoice_count: mapped.length,
       total: Math.round(total * 100) / 100,
+      total_days: totalDays,
       invoices: mapped,
     };
   }

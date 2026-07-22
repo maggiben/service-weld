@@ -22,6 +22,7 @@ interface RateRow {
   client_party_id: number | null;
   client_name: string | null;
   gas_code: string | null;
+  capacity_m3: string | number | null;
   period: RatePeriod;
   amount: string;
   effective_from: string | Date;
@@ -34,6 +35,11 @@ function toIsoDate(value: string | Date | null): string | null {
   return value.toISOString().slice(0, 10);
 }
 
+function toCapacity(value: string | number | null): number | null {
+  if (value == null) return null;
+  return Number(value);
+}
+
 function mapRate(row: RateRow): RentalRate {
   return {
     id: Number(row.id),
@@ -41,12 +47,25 @@ function mapRate(row: RateRow): RentalRate {
       row.client_party_id == null ? null : Number(row.client_party_id),
     client_name: row.client_name,
     gas_code: row.gas_code as RentalRate["gas_code"],
+    capacity_m3: toCapacity(row.capacity_m3),
     period: row.period,
     amount: Number(row.amount),
     effective_from: toIsoDate(row.effective_from)!,
     effective_to: toIsoDate(row.effective_to),
   };
 }
+
+const RATE_SELECT = [
+  "rental_rate.id",
+  "rental_rate.client_party_id",
+  "party.display_name as client_name",
+  "rental_rate.gas_code",
+  "rental_rate.capacity_m3",
+  "rental_rate.period",
+  "rental_rate.amount",
+  "rental_rate.effective_from",
+  "rental_rate.effective_to",
+] as const;
 
 @Injectable()
 export class RatesRepository {
@@ -63,16 +82,7 @@ export class RatesRepository {
     let qb = db
       .selectFrom("rental_rate")
       .leftJoin("party", "party.id", "rental_rate.client_party_id")
-      .select([
-        "rental_rate.id",
-        "rental_rate.client_party_id",
-        "party.display_name as client_name",
-        "rental_rate.gas_code",
-        "rental_rate.period",
-        "rental_rate.amount",
-        "rental_rate.effective_from",
-        "rental_rate.effective_to",
-      ]);
+      .select([...RATE_SELECT]);
 
     if (query["filter[client_party_id]"] != null) {
       qb = qb.where(
@@ -83,6 +93,13 @@ export class RatesRepository {
     }
     if (query["filter[gas_code]"]) {
       qb = qb.where("rental_rate.gas_code", "=", query["filter[gas_code]"]);
+    }
+    if (query["filter[capacity_m3]"] != null) {
+      qb = qb.where(
+        "rental_rate.capacity_m3",
+        "=",
+        String(query["filter[capacity_m3]"]),
+      );
     }
 
     if (query.cursor) {
@@ -148,6 +165,7 @@ export class RatesRepository {
       id: number;
       client_party_id: number | null;
       gas_code: string | null;
+      capacity_m3: number | null;
       period: RatePeriod;
       amount: number;
       effective_from: string;
@@ -161,6 +179,7 @@ export class RatesRepository {
       client_party_id:
         row.client_party_id == null ? null : Number(row.client_party_id),
       gas_code: row.gas_code,
+      capacity_m3: toCapacity(row.capacity_m3),
       period: row.period,
       amount: Number(row.amount),
       effective_from: toIsoDate(row.effective_from as string | Date)!,
@@ -172,12 +191,14 @@ export class RatesRepository {
     const db = resolveDb(this.db);
     const clientId = input.client_party_id ?? null;
     const gasCode = input.gas_code ?? null;
+    const capacityM3 = input.capacity_m3 ?? null;
     const effectiveTo = input.effective_to ?? null;
 
     await this.assertNoOverlap({
       excludeId: null,
       clientId,
       gasCode,
+      capacityM3,
       effectiveFrom: input.effective_from,
       effectiveTo,
     });
@@ -187,6 +208,7 @@ export class RatesRepository {
       .values({
         client_party_id: clientId,
         gas_code: gasCode,
+        capacity_m3: capacityM3 == null ? null : String(capacityM3),
         period: input.period,
         amount: String(input.amount),
         effective_from: input.effective_from,
@@ -208,6 +230,10 @@ export class RatesRepository {
         : existing.client_party_id;
     const gasCode =
       input.gas_code !== undefined ? input.gas_code : existing.gas_code;
+    const capacityM3 =
+      input.capacity_m3 !== undefined
+        ? input.capacity_m3
+        : existing.capacity_m3;
     const effectiveFrom = input.effective_from ?? existing.effective_from;
     const effectiveTo =
       input.effective_to !== undefined
@@ -220,6 +246,7 @@ export class RatesRepository {
       excludeId: id,
       clientId,
       gasCode,
+      capacityM3,
       effectiveFrom,
       effectiveTo,
     });
@@ -229,6 +256,7 @@ export class RatesRepository {
       .set({
         client_party_id: clientId,
         gas_code: gasCode,
+        capacity_m3: capacityM3 == null ? null : String(capacityM3),
         period,
         amount: String(amount),
         effective_from: effectiveFrom,
@@ -246,6 +274,7 @@ export class RatesRepository {
     excludeId: number | null;
     clientId: number | null;
     gasCode: string | null;
+    capacityM3: number | null;
     effectiveFrom: string;
     effectiveTo: string | null;
   }): Promise<void> {
@@ -262,6 +291,11 @@ export class RatesRepository {
         params.gasCode == null
           ? eb("gas_code", "is", null)
           : eb("gas_code", "=", params.gasCode),
+      )
+      .where((eb) =>
+        params.capacityM3 == null
+          ? eb("capacity_m3", "is", null)
+          : eb("capacity_m3", "=", String(params.capacityM3)),
       );
 
     if (params.excludeId != null) {
@@ -282,7 +316,7 @@ export class RatesRepository {
       ) {
         throw ApiErrors.conflict(
           "RATE_OVERLAP",
-          "Overlapping rate for the same client/gas",
+          "Overlapping rate for the same client/gas/capacity",
         );
       }
     }
@@ -293,16 +327,7 @@ export class RatesRepository {
     const row = (await db
       .selectFrom("rental_rate")
       .leftJoin("party", "party.id", "rental_rate.client_party_id")
-      .select([
-        "rental_rate.id",
-        "rental_rate.client_party_id",
-        "party.display_name as client_name",
-        "rental_rate.gas_code",
-        "rental_rate.period",
-        "rental_rate.amount",
-        "rental_rate.effective_from",
-        "rental_rate.effective_to",
-      ])
+      .select([...RATE_SELECT])
       .where("rental_rate.id", "=", id)
       .executeTakeFirst()) as RateRow | undefined;
 

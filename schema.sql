@@ -263,13 +263,15 @@ CREATE TABLE rental_rate (
     id              bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     client_party_id bigint REFERENCES client(party_id),
     gas_code        text REFERENCES gas_type(code),
+    capacity_m3     numeric(5,2),                   -- null = any size; e.g. 2,3,4,6,7,10,20
     period          rate_period NOT NULL DEFAULT 'DAILY',
     amount          numeric(14,2) NOT NULL CHECK (amount >= 0),
     effective_from  date NOT NULL,
     effective_to    date,
-    CONSTRAINT ck_rate_range CHECK (effective_to IS NULL OR effective_to >= effective_from)
+    CONSTRAINT ck_rate_range CHECK (effective_to IS NULL OR effective_to >= effective_from),
+    CONSTRAINT ck_rate_capacity CHECK (capacity_m3 IS NULL OR capacity_m3 > 0)
 );
-CREATE INDEX ix_rate_lookup ON rental_rate (client_party_id, gas_code, effective_from DESC);
+CREATE INDEX ix_rate_lookup ON rental_rate (client_party_id, gas_code, capacity_m3, effective_from DESC);
 
 -- ---------------------------------------------------------------------
 -- 7. Transactional core

@@ -76,11 +76,17 @@
         "serial": "Serie",
         "gas": "Gas",
         "kind": "Tipo",
-        "delivery": "Entrada",
-        "return": "Salida",
+        "delivery": "Fecha de entrega",
+        "return": "Fecha de devolución",
         "accrued_days": "Días acumulados",
         "rental_days": "Días alquiler",
         "state": "Estado"
+      },
+      "custody": {
+        "on_loan": "En préstamo",
+        "returned": "Devuelto",
+        "refill_open": "En curso",
+        "refill_closed": "Cerrado"
       },
       "locality": "Localidad"
     },
@@ -662,11 +668,13 @@
     "title": "Tarifas de alquiler",
     "global": "Global",
     "any_gas": "Cualquier gas",
+    "any_capacity": "Cualquier tamaño",
     "columns": {
       "from": "Desde",
       "to": "Hasta",
       "client": "Cliente",
       "gas": "Gas",
+      "capacity": "Tamaño",
       "period": "Período",
       "amount": "Monto"
     },
@@ -677,19 +685,25 @@
       "period": "Período",
       "client": "Cliente",
       "gas": "Gas",
+      "capacity": "Tamaño del cilindro",
+      "capacity_hint": "Dejá en Cualquier tamaño para aplicar a todas las capacidades",
       "effective_from": "Vigente desde",
       "effective_to": "Vigente hasta",
       "effective_to_hint": "Vacío = sin fecha de fin",
-      "precedence_hint": "Precedencia: cliente+gas → cliente → gas → global (BR-19 / D-14)."
+      "precedence_hint": "Gana la más específica: cliente+gas+tamaño → cliente+gas → cliente → gas → tamaño → global (BR-19)."
     }
   },
   "billing": {
     "title": "Facturación",
-    "subtitle": "Borrador → aprobar → exportar. Generar borrador usa Desde/Hasta (entregas o devoluciones en ese rango). Histórico ignora esas fechas y lista todo el stock nuestro aún no devuelto, desde la entrega más antigua hasta hoy.",
-    "period_start": "Desde",
-    "period_end": "Hasta",
+    "subtitle": "Borrador → aprobar → exportar. Desde/Hasta aplican solo a Generar borrador. Histórico ignora esos filtros y cobra cada alquiler abierto desde su fecha de entrega hasta hoy, a la tarifa vigente.",
+    "period_start": "Desde (borrador)",
+    "period_end": "Hasta (borrador)",
+    "period_hint": "Estas fechas aplican solo a Generar borrador.",
+    "history_hint": "Ignora Desde/Hasta. Usa la fecha de entrega de cada préstamo abierto → hoy.",
     "empty": "Todavía no hay borrador para este período",
-    "run_summary": "Corrida #{{id}} ({{status}}): {{invoices}} facturas · total {{total}} ARS · {{from}} → {{to}}",
+    "run_summary": "Borrador #{{id}} ({{status}}): {{invoices}} facturas · {{lines}} cilindros · {{days}} días-cilindro · total {{total}} ARS · período {{from}} → {{to}}",
+    "run_summary_history": "Histórico #{{id}} ({{status}}): {{invoices}} facturas · {{lines}} cilindros · {{days}} días-cilindro · total {{total}} ARS · desde entrega más antigua {{from}} → {{to}} (no usa el filtro de fechas)",
+    "days_hint": "Días-cilindro = suma de días de cada cilindro en el período (ej. 22 cilindros × 30 d = 660), no los días calendario del mes.",
     "export_ready": "Export listo: {{count}} facturas · {{at}}",
     "filters": {
       "client": "Cliente (opcional)",
@@ -699,11 +713,13 @@
       "cities": "Localidades"
     },
     "lines": {
-      "title": "Líneas · {{client}} ({{count}})",
+      "title": "Líneas · {{client}} ({{count}} cilindros) · {{days}} días-cilindro · {{total}} ARS",
       "description": "Descripción",
       "days": "Días",
-      "unit_price": "Precio/día",
-      "amount": "Importe",
+      "unit_price": "Precio/día (ARS)",
+      "calc": "Cálculo",
+      "calc_value": "{{days}} d × {{price}} ARS",
+      "amount": "Importe (ARS)",
       "empty": "Sin líneas de cargo"
     },
     "ledger": {
@@ -713,9 +729,13 @@
     "columns": {
       "client": "Cliente",
       "locality": "Localidad",
-      "total": "Total",
-      "status": "Estado",
-      "lines": "Líneas"
+      "lines": "Cilindros",
+      "days_breakdown": "Cálculo (cil. × días)",
+      "days_breakdown_uniform": "{{cylinders}} cil. × {{days}} d = {{total}}",
+      "days_breakdown_mixed": "{{cylinders}} cil. · Σ {{total}} d (días distintos)",
+      "total_days": "Días-cilindro",
+      "total": "Total (ARS)",
+      "status": "Estado"
     }
   },
   "reports": {

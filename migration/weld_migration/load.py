@@ -19,6 +19,7 @@ from .normalize import (
     person_token_set,
     request_id_for,
     resolve_gas,
+    sanitize_capacity_m3,
 )
 from .parse import ExtractResult, StagedClient, StagedCylinder, StagedMovement
 
@@ -352,8 +353,10 @@ class Loader:
 
             owner_id = self._owner_id(cyl.owner_hint)
             key = (owner_id, cyl.serial_number)
+            capacity = sanitize_capacity_m3(cyl.capacity_m3)
             if key in self.cylinder_id:
                 self.stats["cylinder_exists"] += 1
+                self._maybe_backfill_capacity(conn, self.cylinder_id[key], capacity)
                 continue
 
             gas_code, provisional, gas_reason = resolve_gas(cyl.gas_raw, self.gas_alias)
@@ -416,7 +419,7 @@ class Loader:
                             owner_id,
                             cyl.serial_number,
                             gas_code,
-                            cyl.capacity_m3 if cyl.capacity_m3 is not None and 0 < cyl.capacity_m3 < 1000 else None,
+                            capacity,
                             cyl.ownership_basis,
                             packaging,
                             battery_id,
@@ -433,6 +436,7 @@ class Loader:
                 if existing:
                     row = existing
                     self.stats["cylinder_exists"] += 1
+                    self._maybe_backfill_capacity(conn, existing["id"], capacity)
                 else:
                     self._flag(
                         conn,
@@ -486,6 +490,121 @@ class Loader:
                                 """,
                                 (battery_id, mid),
                             )
+
+    def _maybe_backfill_capacity(
+        self, conn: psycopg.Connection, cylinder_id: int, capacity: float | None
+    ) -> None:
+        """Write capacity when missing, or replace prior garbage (non-known sizes)."""
+        row = conn.execute(
+            "SELECT capacity_m3 FROM cylinder WHERE id = %s AND deleted_at IS NULL",
+            (cylinder_id,),
+        ).fetchone()
+        if not row:
+            return
+        raw_current = float(row["capacity_m3"]) if row["capacity_m3"] is not None else None
+        current = sanitize_capacity_m3(raw_current)
+        garbage = raw_current is not None and current is None
+
+        if capacity is not None:
+            if current == capacity:
+                return
+            conn.execute(
+                "UPDATE cylinder SET capacity_m3 = %s, updated_at = now() WHERE id = %s",
+                (capacity, cylinder_id),
+            )
+            self.stats["cylinder_capacity_backfilled"] += 1
+            return
+
+        if garbage:
+            conn.execute(
+                "UPDATE cylinder SET capacity_m3 = NULL, updated_at = now() WHERE id = %s",
+                (cylinder_id,),
+            )
+            self.stats["cylinder_capacity_cleared"] += 1
+
+    def backfill_capacities(self, cylinders: list[StagedCylinder]) -> dict[str, Any]:
+        """Re-parse PROPIOS capacities into an already-loaded DB (no truncate / movements)."""
+        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
+            self._bootstrap(conn)
+            if self.dry_run:
+                would = 0
+                for cyl in cylinders:
+                    capacity = sanitize_capacity_m3(cyl.capacity_m3)
+                    if capacity is None:
+                        continue
+                    owner_id = self._owner_id(cyl.owner_hint)
+                    cid = self.cylinder_id.get((owner_id, cyl.serial_number))
+                    if cid is None:
+                        matches = [
+                            id_
+                            for (_oid, s), id_ in self.cylinder_id.items()
+                            if s == cyl.serial_number
+                        ]
+                        cid = matches[0] if len(matches) == 1 else None
+                    if cid is not None:
+                        would += 1
+                self.stats["cylinder_capacity_backfilled"] = would
+            else:
+                with conn.transaction():
+                    conn.execute("SELECT set_config('app.source', 'migration', true)")
+                    for cyl in cylinders:
+                        capacity = sanitize_capacity_m3(cyl.capacity_m3)
+                        owner_id = self._owner_id(cyl.owner_hint)
+                        cid = self.cylinder_id.get((owner_id, cyl.serial_number))
+                        if cid is None:
+                            matches = [
+                                id_
+                                for (_oid, s), id_ in self.cylinder_id.items()
+                                if s == cyl.serial_number
+                            ]
+                            cid = matches[0] if len(matches) == 1 else None
+                        if cid is None:
+                            self.stats["cylinder_capacity_unmatched"] += 1
+                            continue
+                        self._maybe_backfill_capacity(conn, cid, capacity)
+
+                    # Sales sheet METROS column → cylinder master when still null.
+                    sale_rows = conn.execute(
+                        """
+                        UPDATE cylinder c
+                        SET capacity_m3 = s.capacity_m3
+                        FROM cylinder_sale s
+                        WHERE s.cylinder_id = c.id
+                          AND c.deleted_at IS NULL
+                          AND c.capacity_m3 IS NULL
+                          AND s.capacity_m3 IS NOT NULL
+                          AND s.capacity_m3::float IN (
+                              1, 2, 3, 4, 4.5, 5, 6, 7, 8, 10, 20, 40
+                          )
+                        RETURNING c.id
+                        """
+                    ).fetchall()
+                    self.stats["cylinder_capacity_from_sale"] += len(sale_rows)
+
+                    # Sweep leftover garbage from the old parser (serials stored as m³).
+                    cleared = conn.execute(
+                        """
+                        UPDATE cylinder
+                        SET capacity_m3 = NULL
+                        WHERE deleted_at IS NULL
+                          AND capacity_m3 IS NOT NULL
+                          AND capacity_m3::float NOT IN (
+                              1, 2, 3, 4, 4.5, 5, 6, 7, 8, 10, 20, 40
+                          )
+                        RETURNING id
+                        """
+                    ).fetchall()
+                    self.stats["cylinder_capacity_cleared"] += len(cleared)
+
+        return {
+            "dry_run": self.dry_run,
+            "mode": "backfill_capacity",
+            "counts": dict(self.stats),
+            "cylinders_parsed": len(cylinders),
+            "with_capacity": sum(
+                1 for c in cylinders if sanitize_capacity_m3(c.capacity_m3) is not None
+            ),
+        }
 
     def _load_clients(self, conn: psycopg.Connection, clients: list[StagedClient]) -> None:
         for cl in clients:
@@ -1262,9 +1381,8 @@ class Loader:
             )
             return
         holder_id = self._resolve_holder(mv.holder_name)
-        capacity = mv.capacity_m3
-        if capacity is not None and capacity >= 1000:
-            capacity = None  # numeric(5,2) overflow — flag but still import sale
+        capacity = sanitize_capacity_m3(mv.capacity_m3)
+        if mv.capacity_m3 is not None and capacity is None and mv.capacity_m3 >= 1000:
             self._flag(
                 conn,
                 mv.workbook,
@@ -1295,6 +1413,8 @@ class Loader:
                     ),
                 )
                 conn.execute("UPDATE cylinder SET state='SOLD' WHERE id=%s", (cyl_id,))
+                if capacity is not None:
+                    self._maybe_backfill_capacity(conn, cyl_id, capacity)
             self.stats["sale_inserted"] += 1
             self.stats["imported_clean"] += 1
         except psycopg.Error as e:

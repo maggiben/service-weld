@@ -10,6 +10,7 @@ This note explains what the legacy Excel → Weld import could and could not rec
 | Same sheet name in Junín **and** Chacabuco (`BASILE`, `LOPEZ`) | Second territory’s client “missing”                                     | Second book is imported as **`Name (Territory)`** (e.g. `BASILE (Chacabuco)`). Flagged as `CROSS_TERRITORY_NAME_COLLISION` for merge/rename review.                                                                                                                  |
 | Hospital / municipal patients                                  | Missing for Billing users                                               | Billing can now see `MUNICIPAL_HOSPITAL` clients (per product rule D-3). Medical/Admin already could.                                                                                                                                                                |
 | Industrial “municipal” names (e.g. corralón)                   | Wrongly treated as hospital patients and hidden from non-medical roles  | Coverage detection no longer treats bare “municipal” as hospital; requires an explicit hospital cue (`Hosp.Munic.`, etc.).                                                                                                                                           |
+| Cylinder capacity (m³) missing or wrong                        | Almost no cylinders showed size in the Cylinders list (~1–2%)           | Improved PROPIOS/header parser (see below) + safe DB backfill. Own cylinders with a clear size in the sheet now carry `capacity_m3`; garbage values from the first import were cleared.                                                                              |
 
 Provisional clients and collision renames should be reviewed in **Admin → Migration exceptions** / data-quality and merged or corrected in master data.
 
@@ -63,12 +64,39 @@ Please set expectations with the customer on these **unfixable / partial** cases
 5. **Workbook-specific cleanups**  
    Full production cutover still expects ops follow-up on the exception queue and provisional clients; the automated importer is best-effort over dirty source data.
 
+6. **Cylinder capacity in m³ (incomplete in source Excel)**  
+   Capacity is an attribute of the cylinder master (`capacity_m3`). It is **not** on every sheet, and when present it is written inconsistently. This is a source-data limitation first; the importer can only recover what the workbooks actually say.
+
+   | Source / situation                           | What the sheets usually contain                                                                                    | Import outcome                                                |
+   | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
+   | `CILINDROS PROPIOS` header                   | Sometimes `6 mt` / `10 mts` / `6 m` / bare `6` or `10`; often **blank** or only weight (`10 KG`, `25 k`, `20 kgr`) | Recovered when volume is clear; weight is never treated as m³ |
+   | Header layout `gas \| serial \| capacity`    | Serial echoed next to size (e.g. `atal \| 14 \| 6 mt`)                                                             | Size taken from the volume cell, not from the serial echo     |
+   | Client route books (Junín / Chacabuco)       | `METROS` column is usually **rental days**, not cylinder size (ambiguous in legacy)                                | **Not** used to set cylinder capacity                         |
+   | Customer-owned cylinders (`Su Propiedad`)    | Serial appears on the client ledger only — no size master                                                          | Created without capacity (0% unless filled later in Weld)     |
+   | Supplier stock lists (e.g. Intergas N-PROPI) | Serial + gas; rarely size                                                                                          | Usually no capacity                                           |
+   | `CILINDROS VENDIDOS` (`METROS` column)       | Often a real size for that sale                                                                                    | Used to enrich the cylinder master when still blank           |
+
+   **What we already automated (ops):** re-run capacity backfill after parser fixes without reloading all movements:
+
+   ```bash
+   pnpm migrate:xls:backfill-capacity
+   ```
+
+   After that pass on a typical loaded DB: on the order of **~25–30% of own (`OURS`) cylinders** have a reliable size; overall still a minority of all cylinders because customer/supplier masters seldom carry size in Excel. Values outside known sizes (2, 3, 4, 5, 6, 7, 10, 20, 40 m³, plus a few observed variants) are discarded so serials are not stored as m³.
+
+   **Customer conversation points**
+
+   - Ask whether size should be mandatory going forward in Weld for new cylinders / rates by size.
+   - For historical gaps: ops can complete capacity on high-value cylinders in the UI, or the customer can provide a size list (serial → m³) for a second load.
+   - Do not expect the Excel import to invent capacity where the sheet only has weight, days, or a blank header.
+
 ## Suggested customer message (short)
 
-> We imported both route books and the cylinder workbook. Clients that only appeared as free-text on cylinder sheets are now in the system as **provisional** records so their history is not lost — please review and merge those. Two names that existed in both Junín and Chacabuco were imported with a territory suffix. Rows with impossible dates, overlapping cylinder custody, or unreadable serials/gas codes remain in the **migration exceptions** queue for manual correction; the system will not silently invent history that would break custody or billing rules.
+> We imported both route books and the cylinder workbook. Clients that only appeared as free-text on cylinder sheets are now in the system as **provisional** records so their history is not lost — please review and merge those. Two names that existed in both Junín and Chacabuco were imported with a territory suffix. Rows with impossible dates, overlapping cylinder custody, or unreadable serials/gas codes remain in the **migration exceptions** queue for manual correction; the system will not silently invent history that would break custody or billing rules. Cylinder **capacity (m³)** was recovered only where `CILINDROS PROPIOS` (or the sales sheet) clearly stated a volume; many headers omit size or only list weight (kg). Customer-owned and most supplier cylinders have no size in Excel — those masters stay blank until completed in Weld or via a serial→m³ list you provide.
 
 ## Pointers for ops
 
 - Reconciliation report: `migration/reconciliation_report.json`
 - Exception table: `migration_exception` (reason + workbook/sheet/row)
+- Capacity re-parse (safe on a loaded DB): `pnpm migrate:xls:backfill-capacity`
 - Specs: `specs/011-migrations.md`, medical visibility `specs/DECISIONS.md` (D-3)

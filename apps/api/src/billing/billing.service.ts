@@ -16,7 +16,17 @@ export class BillingService {
     principal: AuthPrincipal,
     input: CreateBillingRunInput,
   ): Promise<BillingRunDetail> {
-    return this.repository.createDraftRun(input, principal.id);
+    // History never uses the UI date pickers — only each open loan's delivery → today.
+    const normalized: CreateBillingRunInput =
+      input.mode === "history"
+        ? {
+            mode: "history",
+            client_party_id: input.client_party_id ?? null,
+            locality_id: input.locality_id ?? null,
+            territory_id: input.territory_id ?? null,
+          }
+        : input;
+    return this.repository.createDraftRun(normalized, principal.id);
   }
 
   async getRun(id: number): Promise<BillingRunDetail> {

@@ -54,6 +54,7 @@ export default function BillingPage() {
   const [locationFilter, setLocationFilter] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [run, setRun] = useState<BillingRunDetail | null>(null);
+  const [runMode, setRunMode] = useState<"period" | "history" | null>(null);
   const [exportPayload, setExportPayload] =
     useState<BillingExportPayload | null>(null);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
@@ -102,8 +103,9 @@ export default function BillingPage() {
                 client || location?.kind !== "territory" ? null : location.id,
             },
       ),
-    onSuccess: (result) => {
+    onSuccess: (result, mode) => {
       setRun(result);
+      setRunMode(mode);
       setExportPayload(null);
       setSelectedInvoice(null);
       setError(null);
@@ -198,26 +200,70 @@ export default function BillingPage() {
       {
         field: "client_locality_name",
         headerName: t("billing.columns.locality"),
-        width: 160,
+        width: 140,
         valueGetter: (_v, row) => row.client_locality_name ?? "—",
+      },
+      {
+        field: "lines",
+        headerName: t("billing.columns.lines"),
+        width: 100,
+        type: "number",
+        valueGetter: (_v, row) => row.charge_lines?.length ?? 0,
+      },
+      {
+        field: "days_breakdown",
+        headerName: t("billing.columns.days_breakdown"),
+        flex: 1,
+        minWidth: 200,
+        sortable: false,
+        valueGetter: (_v, row) => {
+          const lines = row.charge_lines ?? [];
+          const cylinders = lines.length;
+          const totalDays =
+            row.total_days ??
+            lines.reduce((sum, line) => sum + line.quantity, 0);
+          if (cylinders === 0) return "—";
+          const quantities = lines.map((line) => line.quantity);
+          const allSame = quantities.every((q) => q === quantities[0]);
+          if (allSame) {
+            return t("billing.columns.days_breakdown_uniform", {
+              cylinders,
+              days: quantities[0],
+              total: totalDays,
+            });
+          }
+          return t("billing.columns.days_breakdown_mixed", {
+            cylinders,
+            total: totalDays,
+          });
+        },
+      },
+      {
+        field: "total_days",
+        headerName: t("billing.columns.total_days"),
+        width: 130,
+        type: "number",
+        valueGetter: (_v, row) =>
+          row.total_days ??
+          row.charge_lines?.reduce((sum, line) => sum + line.quantity, 0) ??
+          0,
       },
       {
         field: "total",
         headerName: t("billing.columns.total"),
-        width: 120,
+        width: 140,
         type: "number",
+        valueFormatter: (value: number) =>
+          `${Number(value).toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })} ARS`,
       },
       {
         field: "status",
         headerName: t("billing.columns.status"),
         width: 120,
         valueFormatter: (value: string) => t(`enums.invoice_status.${value}`),
-      },
-      {
-        field: "lines",
-        headerName: t("billing.columns.lines"),
-        width: 100,
-        valueGetter: (_v, row) => row.charge_lines?.length ?? 0,
       },
     ],
     [t],
@@ -240,14 +286,38 @@ export default function BillingPage() {
       {
         field: "unit_price",
         headerName: t("billing.lines.unit_price"),
-        width: 110,
+        width: 130,
         type: "number",
+        valueFormatter: (value: number) =>
+          `${Number(value).toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })} ARS`,
+      },
+      {
+        field: "calc",
+        headerName: t("billing.lines.calc"),
+        width: 160,
+        sortable: false,
+        valueGetter: (_v, row) =>
+          t("billing.lines.calc_value", {
+            days: row.quantity,
+            price: Number(row.unit_price).toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            }),
+          }),
       },
       {
         field: "amount",
         headerName: t("billing.lines.amount"),
-        width: 110,
+        width: 130,
         type: "number",
+        valueFormatter: (value: number) =>
+          `${Number(value).toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })} ARS`,
       },
     ],
     [t],
@@ -267,141 +337,186 @@ export default function BillingPage() {
         {t("billing.subtitle")}
       </Typography>
 
-      <Stack
-        direction={{ xs: "column", md: "row" }}
-        spacing={2}
-        alignItems={{ md: "center" }}
-        flexWrap="wrap"
-        useFlexGap
-      >
-        <DatePicker
-          label={t("billing.period_start")}
-          value={dayjs(periodStart)}
-          onChange={(v: Dayjs | null) => {
-            if (v) setPeriodStart(v.format("YYYY-MM-DD"));
-          }}
-        />
-        <DatePicker
-          label={t("billing.period_end")}
-          value={dayjs(periodEnd)}
-          onChange={(v: Dayjs | null) => {
-            if (v) setPeriodEnd(v.format("YYYY-MM-DD"));
-          }}
-        />
-        <FormControl size="small" sx={{ minWidth: 220 }}>
-          <InputLabel id="billing-location-label">
-            {t("billing.filters.location")}
-          </InputLabel>
-          <Select
-            labelId="billing-location-label"
-            label={t("billing.filters.location")}
-            value={locationFilter}
-            disabled={client != null}
-            onChange={(e) => {
-              setLocationFilter(e.target.value);
-              setClient(null);
+      <Stack spacing={0.5}>
+        <Stack
+          direction="row"
+          spacing={2}
+          alignItems="center"
+          flexWrap="wrap"
+          useFlexGap
+        >
+          <DatePicker
+            label={t("billing.period_start")}
+            value={dayjs(periodStart)}
+            onChange={(v: Dayjs | null) => {
+              if (v) setPeriodStart(v.format("YYYY-MM-DD"));
             }}
-          >
-            <MenuItem value="">
-              <em>{t("billing.filters.all_locations")}</em>
-            </MenuItem>
-            <ListSubheader>{t("billing.filters.territories")}</ListSubheader>
-            {territories.map((tr) => (
-              <MenuItem
-                key={`territory-${tr.id}`}
-                value={encodeFilter({ kind: "territory", id: tr.id })}
-              >
-                {tr.name}
-              </MenuItem>
-            ))}
-            <ListSubheader>{t("billing.filters.cities")}</ListSubheader>
-            {localities.map((loc) => (
-              <MenuItem
-                key={`locality-${loc.id}`}
-                value={encodeFilter({ kind: "locality", id: loc.id })}
-              >
-                {loc.name}
-                {loc.territory_name ? ` · ${loc.territory_name}` : ""}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        <Autocomplete
-          size="small"
-          sx={{ minWidth: 240 }}
-          options={
-            client
-              ? [
-                  client,
-                  ...(clientsSearch.data?.data ?? []).filter(
-                    (c) => c.id !== client.id,
-                  ),
-                ]
-              : (clientsSearch.data?.data ?? [])
-          }
-          getOptionLabel={(option: Client) => option.name}
-          isOptionEqualToValue={(a, b) => a.id === b.id}
-          loading={clientsSearch.isFetching}
-          value={client}
-          onChange={(_, value) => setClient(value)}
-          onInputChange={(_, value, reason) => {
-            if (reason !== "reset") setClientQuery(value);
-          }}
-          renderInput={(params) => (
-            <TextField {...params} label={t("billing.filters.client")} />
-          )}
-        />
-        {canWrite && (
-          <Button
-            variant="contained"
-            disabled={busy}
-            onClick={() => draftMutation.mutate("period")}
-          >
-            {t("actions.run_billing")}
-          </Button>
-        )}
-        {canWrite && (
-          <Button
-            variant="outlined"
-            disabled={busy}
-            onClick={() => draftMutation.mutate("history")}
-          >
-            {t("actions.run_billing_history")}
-          </Button>
-        )}
-        {canApprove && run?.status === "DRAFT" && (
-          <Button
-            variant="outlined"
-            disabled={busy || (run.invoice_count ?? 0) === 0}
-            onClick={() => approveMutation.mutate()}
-          >
-            {t("actions.approve_billing")}
-          </Button>
-        )}
-        {canWrite &&
-          (run?.status === "APPROVED" || run?.status === "EXPORTED") && (
+            slotProps={{ textField: { size: "small", sx: { width: 180 } } }}
+          />
+          <DatePicker
+            label={t("billing.period_end")}
+            value={dayjs(periodEnd)}
+            onChange={(v: Dayjs | null) => {
+              if (v) setPeriodEnd(v.format("YYYY-MM-DD"));
+            }}
+            slotProps={{ textField: { size: "small", sx: { width: 180 } } }}
+          />
+          {canWrite && (
             <Button
-              variant="outlined"
+              size="small"
+              variant="contained"
               disabled={busy}
-              onClick={() => exportMutation.mutate()}
+              onClick={() => draftMutation.mutate("period")}
+              sx={{ height: 40 }}
             >
-              {t("actions.export_billing")}
+              {t("actions.run_billing")}
             </Button>
           )}
+          <FormControl size="small" sx={{ minWidth: 220 }}>
+            <InputLabel id="billing-location-label">
+              {t("billing.filters.location")}
+            </InputLabel>
+            <Select
+              labelId="billing-location-label"
+              label={t("billing.filters.location")}
+              value={locationFilter}
+              disabled={client != null}
+              onChange={(e) => {
+                setLocationFilter(e.target.value);
+                setClient(null);
+              }}
+            >
+              <MenuItem value="">
+                <em>{t("billing.filters.all_locations")}</em>
+              </MenuItem>
+              <ListSubheader>{t("billing.filters.territories")}</ListSubheader>
+              {territories.map((tr) => (
+                <MenuItem
+                  key={`territory-${tr.id}`}
+                  value={encodeFilter({ kind: "territory", id: tr.id })}
+                >
+                  {tr.name}
+                </MenuItem>
+              ))}
+              <ListSubheader>{t("billing.filters.cities")}</ListSubheader>
+              {localities.map((loc) => (
+                <MenuItem
+                  key={`locality-${loc.id}`}
+                  value={encodeFilter({ kind: "locality", id: loc.id })}
+                >
+                  {loc.name}
+                  {loc.territory_name ? ` · ${loc.territory_name}` : ""}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <Autocomplete
+            size="small"
+            sx={{ minWidth: 240 }}
+            options={
+              client
+                ? [
+                    client,
+                    ...(clientsSearch.data?.data ?? []).filter(
+                      (c) => c.id !== client.id,
+                    ),
+                  ]
+                : (clientsSearch.data?.data ?? [])
+            }
+            getOptionLabel={(option: Client) => option.name}
+            isOptionEqualToValue={(a, b) => a.id === b.id}
+            loading={clientsSearch.isFetching}
+            value={client}
+            onChange={(_, value) => setClient(value)}
+            onInputChange={(_, value, reason) => {
+              if (reason !== "reset") setClientQuery(value);
+            }}
+            renderInput={(params) => (
+              <TextField {...params} label={t("billing.filters.client")} />
+            )}
+          />
+          {canWrite && (
+            <Button
+              size="small"
+              variant="outlined"
+              disabled={busy}
+              onClick={() => draftMutation.mutate("history")}
+              sx={{ height: 40 }}
+            >
+              {t("actions.run_billing_history")}
+            </Button>
+          )}
+          {canApprove && run?.status === "DRAFT" && (
+            <Button
+              size="small"
+              variant="outlined"
+              disabled={busy || (run.invoice_count ?? 0) === 0}
+              onClick={() => approveMutation.mutate()}
+              sx={{ height: 40 }}
+            >
+              {t("actions.approve_billing")}
+            </Button>
+          )}
+          {canWrite &&
+            (run?.status === "APPROVED" || run?.status === "EXPORTED") && (
+              <Button
+                size="small"
+                variant="outlined"
+                disabled={busy}
+                onClick={() => exportMutation.mutate()}
+                sx={{ height: 40 }}
+              >
+                {t("actions.export_billing")}
+              </Button>
+            )}
+        </Stack>
+        <Stack spacing={0.25}>
+          <Typography variant="caption" color="text.secondary">
+            {t("billing.period_hint")}
+          </Typography>
+          {canWrite && (
+            <Typography variant="caption" color="text.secondary">
+              {t("billing.history_hint")}
+            </Typography>
+          )}
+        </Stack>
       </Stack>
 
       {error && <Alert severity="error">{error}</Alert>}
 
       {run && (
         <Alert severity={run.invoice_count ? "success" : "warning"}>
-          {t("billing.run_summary", {
-            id: run.id,
-            invoices: run.invoice_count,
-            total: run.total,
-            status: t(`enums.invoice_status.${run.status}`),
-            from: run.period_start,
-            to: run.period_end,
-          })}
+          <Typography variant="body2" component="div">
+            {t(
+              runMode === "history"
+                ? "billing.run_summary_history"
+                : "billing.run_summary",
+              {
+                id: run.id,
+                invoices: run.invoice_count,
+                lines: run.invoices.reduce(
+                  (sum, inv) => sum + (inv.charge_lines?.length ?? 0),
+                  0,
+                ),
+                days: run.total_days ?? 0,
+                total: Number(run.total ?? 0).toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                }),
+                status: t(`enums.invoice_status.${run.status}`),
+                from: run.period_start,
+                to: run.period_end,
+              },
+            )}
+          </Typography>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            display="block"
+            sx={{ mt: 0.5 }}
+          >
+            {t("billing.days_hint")}
+          </Typography>
         </Alert>
       )}
 
@@ -447,6 +562,13 @@ export default function BillingPage() {
               client:
                 selectedInvoice.client_name ?? selectedInvoice.client_party_id,
               count: selectedLines.length,
+              days:
+                selectedInvoice.total_days ??
+                selectedLines.reduce((sum, line) => sum + line.quantity, 0),
+              total: Number(selectedInvoice.total).toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              }),
             })}
           </Typography>
           <DataGrid

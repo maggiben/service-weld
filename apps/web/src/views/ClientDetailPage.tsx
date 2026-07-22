@@ -15,24 +15,21 @@ import Tabs from "@mui/material/Tabs";
 import Typography from "@mui/material/Typography";
 import {
   DataGrid,
-  type GridColDef,
   type GridPaginationModel,
   gridClasses,
 } from "@mui/x-data-grid";
 import { enUS, esES } from "@mui/x-data-grid/locales";
-import type {
-  ClientAccountOutstandingRow,
-  MovementEvent,
-  MovementKind,
-} from "@weld/schemas";
+import type { MovementKind } from "@weld/schemas";
 import { useQuery } from "@tanstack/react-query";
-import NextLink from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
+import {
+  buildHistoryColumns,
+  buildOutstandingColumns,
+} from "../features/clients/clientLedgerColumns";
 import { CreateClientDrawer } from "../features/clients/CreateClientDrawer";
-import { displayRentalDays } from "../features/movements/displayRentalDays";
 import { useLocations } from "../hooks/useLocations";
 import { useSessionStore } from "../store/sessionStore";
 import { useUiStore } from "../store/uiStore";
@@ -40,13 +37,6 @@ import { useUiStore } from "../store/uiStore";
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 
 type LedgerTab = "outstanding" | "history" | "rentals" | "refills";
-
-function formatDate(value: string | null | undefined): string {
-  if (!value) return "—";
-  const [y, m, d] = value.split("-");
-  if (!y || !m || !d) return value;
-  return `${d}/${m}/${y}`;
-}
 
 export default function ClientDetailPage() {
   const { t } = useTranslation();
@@ -128,126 +118,12 @@ export default function ClientDetailPage() {
   const summary = accountQuery.data?.rental_summary;
   const outstanding = accountQuery.data?.outstanding ?? [];
 
-  const outstandingColumns: GridColDef<ClientAccountOutstandingRow>[] = useMemo(
-    () => [
-      {
-        field: "serial",
-        headerName: t("clients.detail.columns.serial"),
-        flex: 1,
-        minWidth: 120,
-        renderCell: (params) => (
-          <Link
-            component={NextLink}
-            href={`/cylinders/${params.row.cylinder_id}`}
-            underline="hover"
-          >
-            {params.value}
-          </Link>
-        ),
-      },
-      {
-        field: "gas_code",
-        headerName: t("clients.detail.columns.gas"),
-        width: 100,
-        valueFormatter: (value: string | null) => value ?? "—",
-      },
-      {
-        field: "movement_kind",
-        headerName: t("clients.detail.columns.kind"),
-        width: 120,
-        valueFormatter: (value: string) => t(`enums.movement_kind.${value}`),
-      },
-      {
-        field: "delivery_date",
-        headerName: t("clients.detail.columns.delivery"),
-        width: 130,
-        valueFormatter: (value: string) => formatDate(value),
-      },
-      {
-        field: "accrued_days",
-        headerName: t("clients.detail.columns.accrued_days"),
-        width: 130,
-        type: "number",
-        renderCell: (params) => (
-          <Chip
-            size="small"
-            label={params.value}
-            color={
-              params.value >= 90
-                ? "error"
-                : params.value >= 30
-                  ? "warning"
-                  : "default"
-            }
-          />
-        ),
-      },
-    ],
-    [t],
-  );
+  const outstandingColumns = useMemo(() => buildOutstandingColumns(t), [t]);
 
-  const historyColumns: GridColDef<MovementEvent>[] = useMemo(() => {
-    const cols: GridColDef<MovementEvent>[] = [
-      {
-        field: "cylinder_serial",
-        headerName: t("clients.detail.columns.serial"),
-        flex: 1,
-        minWidth: 120,
-        renderCell: (params) => (
-          <Link
-            component={NextLink}
-            href={`/cylinders/${params.row.cylinder_id}`}
-            underline="hover"
-          >
-            {params.value ?? params.row.cylinder_id}
-          </Link>
-        ),
-      },
-      {
-        field: "gas_code",
-        headerName: t("clients.detail.columns.gas"),
-        width: 100,
-        valueFormatter: (value: string | null) => value ?? "—",
-      },
-      {
-        field: "movement_kind",
-        headerName: t("clients.detail.columns.kind"),
-        width: 120,
-        valueFormatter: (value: string) => t(`enums.movement_kind.${value}`),
-      },
-      {
-        field: "delivery_date",
-        headerName: t("clients.detail.columns.delivery"),
-        width: 130,
-        valueFormatter: (value: string) => formatDate(value),
-      },
-      {
-        field: "return_date",
-        headerName: t("clients.detail.columns.return"),
-        width: 130,
-        valueFormatter: (value: string | null) => formatDate(value),
-      },
-    ];
-    // REFILL = client-owned refill cycle — rental days do not apply.
-    if (tab !== "refills") {
-      cols.push({
-        field: "rental_days",
-        headerName: t("clients.detail.columns.rental_days"),
-        width: 120,
-        type: "number",
-        valueGetter: (_v, row) => displayRentalDays(row),
-      });
-    }
-    cols.push({
-      field: "state",
-      headerName: t("clients.detail.columns.state"),
-      width: 120,
-      renderCell: (params) => (
-        <Chip size="small" label={t(`enums.movement_state.${params.value}`)} />
-      ),
-    });
-    return cols;
-  }, [t, tab]);
+  const historyColumns = useMemo(
+    () => buildHistoryColumns(t, tab === "refills" ? "refills" : "history"),
+    [t, tab],
+  );
 
   const client = clientQuery.data;
   const isOutstandingTab = tab === "outstanding";

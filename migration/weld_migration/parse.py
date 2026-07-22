@@ -11,11 +11,13 @@ import xlrd
 from .normalize import (
     cell_to_date,
     coverage_from_sheet,
+    extract_cylinder_capacity,
     infer_ownership,
     norm_text,
     parse_capacity,
     parse_cuit,
     parse_serial_cell,
+    sanitize_capacity_m3,
     validate_date_range,
 )
 
@@ -475,15 +477,17 @@ def parse_propios_workbook(path: str, workbook_label: str = "PROPIOS") -> Extrac
         basis, owner_hint = infer_ownership(blob, sheet_name)
         serial = _serial_from_sheet_name(sheet_name)
         gas_raw = None
-        capacity = None
         packaging = "SINGLE"
         battery_code = None
         members: list[str] = []
+        header_cells: list[Any] = []
 
-        # Header scan
+        # Header scan — capacity is resolved from the full header (serial-aware).
         for r in range(min(4, sh.nrows)):
             for c in range(min(12, sh.ncols)):
                 v = norm_text(sh.cell_value(r, c))
+                if v:
+                    header_cells.append(sh.cell_value(r, c))
                 low = v.casefold()
                 if not gas_raw and any(
                     g in low
@@ -505,10 +509,10 @@ def parse_propios_workbook(path: str, workbook_label: str = "PROPIOS") -> Extrac
                     # avoid mistaking sheet labels
                     if "fecha" not in low and "salida" not in low:
                         gas_raw = v
-                if capacity is None:
-                    capacity = parse_capacity(v) if ("mt" in low or "metro" in low or low.replace(".", "").isdigit()) else None
                 if "bat" in low:
                     packaging = "BATTERY"
+
+        capacity = extract_cylinder_capacity(header_cells, serial)
 
         if "bat" in sheet_name.casefold():
             packaging = "BATTERY"
@@ -644,7 +648,11 @@ def _parse_sales(book: xlrd.Book, sh: xlrd.sheet.Sheet, workbook_label: str, res
         serial_info = parse_serial_cell(sh.cell_value(r, 1))
         client = norm_text(sh.cell_value(r, 2))
         gas_raw = norm_text(sh.cell_value(r, 3)) if sh.ncols > 3 else None
-        cap = parse_capacity(sh.cell_value(r, 4)) if sh.ncols > 4 else None
+        cap = (
+            sanitize_capacity_m3(parse_capacity(sh.cell_value(r, 4)))
+            if sh.ncols > 4
+            else None
+        )
         addr = norm_text(sh.cell_value(r, 5)) if sh.ncols > 5 else None
         loc = norm_text(sh.cell_value(r, 6)) if sh.ncols > 6 else None
         phone = norm_text(sh.cell_value(r, 7)) if sh.ncols > 7 else None

@@ -21,6 +21,7 @@ import dayjs, { type Dayjs } from "dayjs";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { GasCode, RatePeriod, RentalRate } from "@weld/schemas";
+import { CYLINDER_CAPACITY_OPTIONS } from "@weld/schemas";
 import { ApiClientError } from "@weld/api-client";
 import { api } from "../api/client";
 import { useSessionStore } from "../store/sessionStore";
@@ -41,6 +42,7 @@ export default function RatesPage() {
   const [amount, setAmount] = useState("85");
   const [period, setPeriod] = useState<RatePeriod>("DAILY");
   const [gas, setGas] = useState<GasCode | "">("");
+  const [capacity, setCapacity] = useState<number | "">("");
   const [clientId, setClientId] = useState<number | "">("");
   const [effectiveFrom, setEffectiveFrom] = useState(
     dayjs().format("YYYY-MM-DD"),
@@ -88,6 +90,7 @@ export default function RatesPage() {
       setAmount(String(rate.amount));
       setPeriod(rate.period);
       setGas(rate.gas_code ?? "");
+      setCapacity(rate.capacity_m3 ?? "");
       setClientId(rate.client_party_id ?? "");
       setEffectiveFrom(rate.effective_from);
       setEffectiveTo(rate.effective_to);
@@ -97,6 +100,7 @@ export default function RatesPage() {
     setAmount("85");
     setPeriod("DAILY");
     setGas("");
+    setCapacity("");
     setClientId("");
     setEffectiveFrom(dayjs().format("YYYY-MM-DD"));
     setEffectiveTo(null);
@@ -125,6 +129,7 @@ export default function RatesPage() {
         amount: Number(amount),
         period,
         gas_code: gas || null,
+        capacity_m3: capacity === "" ? null : Number(capacity),
         client_party_id: clientId === "" ? null : Number(clientId),
         effective_from: effectiveFrom,
         effective_to: effectiveTo,
@@ -176,6 +181,15 @@ export default function RatesPage() {
         headerName: t("rates.columns.gas"),
         width: 100,
         valueGetter: (_v, row) => row.gas_code ?? t("rates.any_gas"),
+      },
+      {
+        field: "capacity_m3",
+        headerName: t("rates.columns.capacity"),
+        width: 110,
+        valueGetter: (_v, row) =>
+          row.capacity_m3 != null
+            ? `${row.capacity_m3} m³`
+            : t("rates.any_capacity"),
       },
       {
         field: "period",
@@ -300,6 +314,23 @@ export default function RatesPage() {
             {GASES.map((code) => (
               <MenuItem key={code} value={code}>
                 {code}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select
+            label={t("rates.form.capacity")}
+            value={capacity}
+            onChange={(e) =>
+              setCapacity(e.target.value === "" ? "" : Number(e.target.value))
+            }
+            fullWidth
+            helperText={t("rates.form.capacity_hint")}
+          >
+            <MenuItem value="">{t("rates.any_capacity")}</MenuItem>
+            {CYLINDER_CAPACITY_OPTIONS.map((m3) => (
+              <MenuItem key={m3} value={m3}>
+                {m3} m³
               </MenuItem>
             ))}
           </TextField>

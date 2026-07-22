@@ -26,7 +26,10 @@ export const Invoice = z.object({
   period_start: IsoDate,
   period_end: IsoDate,
   status: InvoiceStatus,
+  /** Sum of charge-line amounts in ARS (not days). */
   total: z.number(),
+  /** Sum of billable days (charge-line quantities) for this invoice. */
+  total_days: z.number().optional(),
   created_at: z.string().datetime(),
   version: z.number().int(),
   charge_lines: z.array(ChargeLine).optional(),
@@ -41,7 +44,10 @@ export const BillingRun = z.object({
   status: InvoiceStatus,
   created_at: z.string().datetime(),
   invoice_count: z.number().int().optional(),
+  /** Sum of invoice totals in ARS. */
   total: z.number().optional(),
+  /** Sum of billable days across all invoices in the run. */
+  total_days: z.number().optional(),
 });
 export type BillingRun = z.infer<typeof BillingRun>;
 
@@ -53,7 +59,9 @@ export const CreateBillingRunInput = z
     period_start: IsoDate.optional(),
     period_end: IsoDate.optional(),
     /**
-     * `period` (default): rentals with delivery/return inside [period_start, period_end].
+     * `period` (default): rentals that overlap [period_start, period_end]
+     * (delivered on/before end and still open or returned on/after start);
+     * days are clipped to the window.
      * `history`: all still-open rentals from the oldest delivery in scope through today
      * (picker dates ignored; period_start is resolved from the first open movement).
      */

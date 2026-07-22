@@ -10,7 +10,7 @@ Compute rental duration and charges deterministically for cylinders on hire and 
 
 - R1. Compute **rental days** = `return_date − delivery_date` (calendar days) for `RENTAL` movements; for open rentals expose **accrued days** = `as_of − delivery_date` (BR-03).
 - R2. Accrue rental **only** for `property_basis ∈ {OURS, SUPPLIER}`; `REFILL` (CUSTOMER-owned) accrues **no rental**, only a gas charge (BR-08/BR-02).
-- R3. Resolve the **effective rate** for a movement/period from `rental_rate` by precedence: client+gas → client → gas default → global default; honor `effective_from/to` (rate history, BR-19).
+- R3. Resolve the **effective rate** for a movement/period from `rental_rate` by most-specific match among active rows: null `gas_code` / `capacity_m3` act as wildcards (“any gas” / “any size”); prefer client over gas over capacity; honor `effective_from/to` (rate history, BR-19).
 - R4. Compute **rental charge** = accrued/closed days × effective daily rate; support monthly rates prorated to days.
 - R5. Compute **accessory rental charges** (regulator/adapter/mochila) in parallel; `FREE_LOAN` accrues none (W11).
 - R6. Implement **billing runs** (W20): for a period and optional client, produce invoices with charge lines traced to source movements/accessory rentals; support **draft → approve → export** with statuses.
@@ -38,7 +38,7 @@ Compute rental duration and charges deterministically for cylinders on hire and 
 
 - Same-day deliver+return → `rental_days = 0`; apply configured min-day rule if any.
 - Long-open rental (years) → accrues to as-of date; flagged by reports; still billable.
-- Overlapping rate rows for same (client, gas) → rejected at rate creation (`409 RATE_OVERLAP`).
+- Overlapping rate rows for same (client, gas, capacity) → rejected at rate creation (`409 RATE_OVERLAP`).
 - Laser-O2 flagged for rental (`COBRAR ALQUILER OXIGENO LASER`) → normal rental accrual applies.
 - Voiding a movement that fed a not-yet-exported draft → charge line removed on re-run; exported → blocked.
 
@@ -48,7 +48,7 @@ Compute rental duration and charges deterministically for cylinders on hire and 
 
 ## Implementation Notes
 
-- Keep rate resolution in one pure function (inputs: client, gas, date) with unit tests over the precedence matrix.
+- Keep rate resolution in one pure function (inputs: client, gas, capacity m³, date) with unit tests over the precedence matrix.
 - Compute billing from a period query over movements (closed + open-accrued) + accessory rentals; attach `source_table/source_id` to every charge line for traceability.
 - Define the "as-of" date and rounding policy in configuration; document defaults; test both same-day and multi-year rentals.
 - Reconcile billing output against the rental report (`007`) in an integration test to prevent divergence.

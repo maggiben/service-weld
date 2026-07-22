@@ -205,10 +205,12 @@ export class ReportsRepository {
       .selectFrom("movement_event")
       .innerJoin("party", "party.id", "movement_event.holder_party_id")
       .leftJoin("client", "client.party_id", "movement_event.holder_party_id")
+      .innerJoin("cylinder", "cylinder.id", "movement_event.cylinder_id")
       .select([
         "movement_event.holder_party_id",
         "party.display_name as client_name",
         "movement_event.gas_code",
+        "cylinder.capacity_m3",
         "movement_event.delivery_date",
         "movement_event.return_date",
         "movement_event.rental_days",
@@ -253,6 +255,7 @@ export class ReportsRepository {
       client_party_id:
         r.client_party_id == null ? null : Number(r.client_party_id),
       gas_code: r.gas_code,
+      capacity_m3: r.capacity_m3 == null ? null : Number(r.capacity_m3),
       period: r.period as "DAILY" | "MONTHLY",
       amount: Number(r.amount),
       effective_from: isoDate(r.effective_from)!,
@@ -279,6 +282,7 @@ export class ReportsRepository {
         returnDate: ret,
         periodStart: query.period_start,
         periodEnd: query.period_end,
+        asOfDate: businessTodayIso(),
       });
       if (days === 0) continue;
 
@@ -287,6 +291,7 @@ export class ReportsRepository {
         Number(row.holder_party_id),
         row.gas_code,
         delivery,
+        row.capacity_m3 == null ? null : Number(row.capacity_m3),
       );
       const fallback = row.daily_rate_default
         ? Number(row.daily_rate_default)

@@ -22,8 +22,9 @@
     "db:load": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f schema.sql",
     "db:migrate": "node-pg-migrate up -m db/migrations",
     "db:invariants": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f db/tests/invariants.sql",
-    "migrate:xls": "PYTHONPATH=migration python3 -m weld_migration --database-url \"$DATABASE_URL\"",
-    "migrate:xls:dry": "PYTHONPATH=migration python3 -m weld_migration --dry-run --database-url \"$DATABASE_URL\""
+    "migrate:xls": "PYTHONPATH=migration python3 -m weld_migration",
+    "migrate:xls:dry": "PYTHONPATH=migration python3 -m weld_migration --dry-run",
+    "migrate:xls:backfill-capacity": "PYTHONPATH=migration python3 -m weld_migration --backfill-capacity"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,mjs,cjs,json,md,yml,yaml,css,html}": "prettier --check"

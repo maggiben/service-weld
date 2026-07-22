@@ -26,6 +26,8 @@ export {
 export type { PartyType } from "./ownership";
 export {
   resolveEffectiveRate,
+  billingRateOnDate,
+  resolveBillingUnitPrice,
   dailyUnitPrice,
   billableDaysInPeriod,
   rentalChargeAmount,

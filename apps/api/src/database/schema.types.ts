@@ -234,6 +234,8 @@ export interface RentalRateTable {
   id: Generated<number>;
   client_party_id: number | null;
   gas_code: string | null;
+  /** Null = any cylinder size (m³). */
+  capacity_m3: string | null;
   period: RatePeriod;
   amount: string;
   effective_from: string;

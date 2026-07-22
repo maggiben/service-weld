@@ -76,11 +76,17 @@
         "serial": "Serial",
         "gas": "Gas",
         "kind": "Kind",
-        "delivery": "Delivery",
-        "return": "Return",
+        "delivery": "Delivery date",
+        "return": "Return date",
         "accrued_days": "Accrued days",
         "rental_days": "Rental days",
-        "state": "State"
+        "state": "Status"
+      },
+      "custody": {
+        "on_loan": "On loan",
+        "returned": "Returned",
+        "refill_open": "In progress",
+        "refill_closed": "Closed"
       },
       "locality": "Locality"
     },
@@ -662,11 +668,13 @@
     "title": "Rental rates",
     "global": "Global",
     "any_gas": "Any gas",
+    "any_capacity": "Any size",
     "columns": {
       "from": "From",
       "to": "To",
       "client": "Client",
       "gas": "Gas",
+      "capacity": "Size",
       "period": "Period",
       "amount": "Amount"
     },
@@ -677,19 +685,25 @@
       "period": "Period",
       "client": "Client",
       "gas": "Gas",
+      "capacity": "Cylinder size",
+      "capacity_hint": "Leave as Any size to apply to all capacities",
       "effective_from": "Effective from",
       "effective_to": "Effective to",
       "effective_to_hint": "Empty = no end date",
-      "precedence_hint": "Precedence: client+gas → client → gas → global (BR-19 / D-14)."
+      "precedence_hint": "Most specific wins: client+gas+size → client+gas → client → gas → size → global (BR-19)."
     }
   },
   "billing": {
     "title": "Billing",
-    "subtitle": "Draft → approve → export. Generate draft uses From/To (deliveries or returns in that range). History ignores those dates and lists all of our stock still not returned, from the oldest delivery through today.",
-    "period_start": "From",
-    "period_end": "To",
+    "subtitle": "Draft → approve → export. From/To apply only to Generate draft. History ignores those filters and bills each open rental from its delivery date through today, at the effective rate.",
+    "period_start": "From (draft)",
+    "period_end": "To (draft)",
+    "period_hint": "These dates apply only to Generate draft.",
+    "history_hint": "Ignores From/To. Uses each open loan’s delivery date → today.",
     "empty": "No draft for this period yet",
-    "run_summary": "Run #{{id}} ({{status}}): {{invoices}} invoices · total {{total}} ARS · {{from}} → {{to}}",
+    "run_summary": "Draft #{{id}} ({{status}}): {{invoices}} invoices · {{lines}} cylinders · {{days}} cylinder-days · total {{total}} ARS · period {{from}} → {{to}}",
+    "run_summary_history": "History #{{id}} ({{status}}): {{invoices}} invoices · {{lines}} cylinders · {{days}} cylinder-days · total {{total}} ARS · from oldest delivery {{from}} → {{to}} (date filter not used)",
+    "days_hint": "Cylinder-days = sum of each cylinder’s days in the period (e.g. 22 cylinders × 30 d = 660), not calendar days in the month.",
     "export_ready": "Export ready: {{count}} invoices · {{at}}",
     "filters": {
       "client": "Client (optional)",
@@ -699,11 +713,13 @@
       "cities": "Localities"
     },
     "lines": {
-      "title": "Lines · {{client}} ({{count}})",
+      "title": "Lines · {{client}} ({{count}} cylinders) · {{days}} cylinder-days · {{total}} ARS",
       "description": "Description",
       "days": "Days",
-      "unit_price": "Price/day",
-      "amount": "Amount",
+      "unit_price": "Price/day (ARS)",
+      "calc": "Calculation",
+      "calc_value": "{{days}} d × {{price}} ARS",
+      "amount": "Amount (ARS)",
       "empty": "No charge lines"
     },
     "ledger": {
@@ -713,9 +729,13 @@
     "columns": {
       "client": "Client",
       "locality": "Locality",
-      "total": "Total",
-      "status": "Status",
-      "lines": "Lines"
+      "lines": "Cylinders",
+      "days_breakdown": "Calc (cyl. × days)",
+      "days_breakdown_uniform": "{{cylinders}} cyl. × {{days}} d = {{total}}",
+      "days_breakdown_mixed": "{{cylinders}} cyl. · Σ {{total}} d (mixed days)",
+      "total_days": "Cylinder-days",
+      "total": "Total (ARS)",
+      "status": "Status"
     }
   },
   "reports": {
