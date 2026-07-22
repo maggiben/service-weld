@@ -1,6 +1,31 @@
 import { z } from "zod";
 import { paginated, PaginationQuery } from "./common";
 
+/**
+ * Collapse whitespace, NFC-normalize, and title-case words (es-AR).
+ * Used before create and when matching typed input to existing rows.
+ */
+export function normalizeTerritoryName(raw: string): string {
+  const collapsed = raw.normalize("NFC").trim().replace(/\s+/g, " ");
+  if (!collapsed) return "";
+  return collapsed
+    .split(" ")
+    .map((word) => {
+      const first = word.charAt(0).toLocaleUpperCase("es-AR");
+      const rest = word.slice(1).toLocaleLowerCase("es-AR");
+      return `${first}${rest}`;
+    })
+    .join(" ");
+}
+
+/** Case- and diacritic-insensitive key for duplicate detection (e.g. junin ≈ Junín). */
+export function territoryMatchKey(name: string): string {
+  return normalizeTerritoryName(name)
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLocaleLowerCase("es-AR");
+}
+
 export const Territory = z.object({
   id: z.number().int(),
   name: z.string(),
@@ -9,7 +34,10 @@ export const Territory = z.object({
 export type Territory = z.infer<typeof Territory>;
 
 export const CreateTerritoryInput = z.object({
-  name: z.string().trim().min(1).max(120),
+  name: z
+    .string()
+    .transform(normalizeTerritoryName)
+    .pipe(z.string().min(1).max(120)),
 });
 export type CreateTerritoryInput = z.infer<typeof CreateTerritoryInput>;
 

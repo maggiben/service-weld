@@ -7,6 +7,7 @@ import type {
   Territory,
   TerritoryListQuery,
 } from "@weld/schemas";
+import { normalizeTerritoryName, territoryMatchKey } from "@weld/schemas";
 import { ApiErrors } from "../common/errors/api-error";
 import {
   buildPageMeta,
@@ -83,10 +84,31 @@ export class MastersRepository {
 
   async createTerritory(input: CreateTerritoryInput): Promise<Territory> {
     const db = resolveDb(this.db);
+    const name = normalizeTerritoryName(input.name);
+    if (!name) {
+      throw ApiErrors.validationFailed("Territory name is required");
+    }
+
+    // Prefer an existing row when the name matches ignoring case/diacritics
+    // (citext uniqueness alone does not fold accents: "Junin" ≠ "Junín").
+    const existing = await db
+      .selectFrom("dispatch_territory")
+      .select(["id", "name", "is_active"])
+      .execute();
+    const match = existing.find(
+      (row) => territoryMatchKey(row.name) === territoryMatchKey(name),
+    );
+    if (match) {
+      throw ApiErrors.conflict(
+        "DUPLICATE_TERRITORY",
+        "A territory with this name already exists",
+      );
+    }
+
     try {
       const row = await db
         .insertInto("dispatch_territory")
-        .values({ name: input.name, is_active: true })
+        .values({ name, is_active: true })
         .returning(["id", "name", "is_active"])
         .executeTakeFirstOrThrow();
       return {

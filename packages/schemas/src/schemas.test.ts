@@ -2,6 +2,11 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { isValidCuit, Cuit } from "./cuit";
 import {
+  CreateTerritoryInput,
+  normalizeTerritoryName,
+  territoryMatchKey,
+} from "./geo";
+import {
   SystemSettings,
   UpdateSystemSettingsInput,
   BusinessTimezone,
@@ -48,5 +53,30 @@ describe("settings", () => {
     );
     assert.throws(() => UpdateSystemSettingsInput.parse({}));
     assert.throws(() => BusinessTimezone.parse("Not/A_Zone"));
+  });
+});
+
+describe("territory name normalization", () => {
+  it("trims, collapses spaces, and title-cases", () => {
+    assert.equal(normalizeTerritoryName("  pergamino  "), "Pergamino");
+    assert.equal(normalizeTerritoryName("LA   PLATA"), "La Plata");
+    assert.equal(normalizeTerritoryName("junín"), "Junín");
+  });
+
+  it("matches ignoring case and diacritics", () => {
+    assert.equal(territoryMatchKey("Junín"), territoryMatchKey("junin"));
+    assert.equal(
+      territoryMatchKey("Chacabuco"),
+      territoryMatchKey("  chacabuco "),
+    );
+    assert.notEqual(territoryMatchKey("Junín"), territoryMatchKey("Chacabuco"));
+  });
+
+  it("normalizes CreateTerritoryInput.name", () => {
+    assert.equal(
+      CreateTerritoryInput.parse({ name: "  san  pedro " }).name,
+      "San Pedro",
+    );
+    assert.throws(() => CreateTerritoryInput.parse({ name: "   " }));
   });
 });

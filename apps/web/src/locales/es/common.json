@@ -914,6 +914,8 @@
       "password_optional_help": "Dejar vacío para mantener la contraseña actual",
       "roles": "Roles",
       "territories": "Territorios",
+      "territories_hint": "Buscá un territorio existente o creá uno nuevo si no aparece en la lista",
+      "create_territory": "Agregar «{{name}}»",
       "mfa_enabled": "MFA habilitado",
       "is_active": "Activo"
     }

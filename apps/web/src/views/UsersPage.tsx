@@ -3,10 +3,12 @@
 import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import Alert from "@mui/material/Alert";
+import Autocomplete, { createFilterOptions } from "@mui/material/Autocomplete";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Checkbox from "@mui/material/Checkbox";
 import Chip from "@mui/material/Chip";
+import CircularProgress from "@mui/material/CircularProgress";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
@@ -33,6 +35,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { AdminUser, RoleCode } from "@weld/schemas";
+import { normalizeTerritoryName, territoryMatchKey } from "@weld/schemas";
 import { ApiClientError } from "@weld/api-client";
 import { api } from "../api/client";
 import { RequireCapability } from "../auth/RequireAuth";
@@ -50,6 +53,15 @@ const ASSIGNABLE_ROLES: RoleCode[] = [
   "ADMIN",
   "MEDICAL",
 ];
+
+type TerritoryOption = {
+  id: number;
+  name: string;
+  /** When set, selecting this option creates a new territory. */
+  inputValue?: string;
+};
+
+const filterTerritoryOptions = createFilterOptions<TerritoryOption>();
 
 type Draft = {
   username: string;
@@ -75,7 +87,7 @@ function UsersPageInner() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const currentUserId = useSessionStore((s) => s.user?.id);
-  const { territories } = useLocations();
+  const { territories, refetch: refetchLocations } = useLocations();
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
     page: 0,
     pageSize: 50,
@@ -90,6 +102,10 @@ function UsersPageInner() {
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [error, setError] = useState<string | null>(null);
   const [removeTarget, setRemoveTarget] = useState<AdminUser | null>(null);
+  /** Extra labels for assigned territories not yet in the active list. */
+  const [knownTerritories, setKnownTerritories] = useState<
+    Array<{ id: number; name: string }>
+  >([]);
 
   const cursor = cursors[paginationModel.page];
   const queryParams = useMemo(
@@ -119,9 +135,32 @@ function UsersPageInner() {
     });
   }, [usersQuery.data?.page.next_cursor, paginationModel.page]);
 
+  const territoryOptions = useMemo(() => {
+    const byId = new Map<number, TerritoryOption>();
+    for (const tr of territories) {
+      byId.set(tr.id, { id: tr.id, name: tr.name });
+    }
+    for (const tr of knownTerritories) {
+      if (!byId.has(tr.id)) byId.set(tr.id, { id: tr.id, name: tr.name });
+    }
+    return [...byId.values()].sort((a, b) =>
+      a.name.localeCompare(b.name, "es"),
+    );
+  }, [territories, knownTerritories]);
+
+  const selectedTerritories = useMemo(
+    () =>
+      draft.territory_ids.map((id) => {
+        const found = territoryOptions.find((tr) => tr.id === id);
+        return found ?? { id, name: `#${id}` };
+      }),
+    [draft.territory_ids, territoryOptions],
+  );
+
   const openCreate = () => {
     setEditing(null);
     setDraft(emptyDraft());
+    setKnownTerritories([]);
     setError(null);
     setDrawerOpen(true);
   };
@@ -137,9 +176,78 @@ function UsersPageInner() {
       mfa_enabled: user.mfa_enabled,
       is_active: user.is_active,
     });
+    setKnownTerritories(
+      user.territory_ids.map((id, index) => ({
+        id,
+        name: user.territories[index] ?? `#${id}`,
+      })),
+    );
     setError(null);
     setDrawerOpen(true);
   };
+
+  const rememberTerritory = (row: { id: number; name: string }) => {
+    setKnownTerritories((prev) => {
+      if (prev.some((tr) => tr.id === row.id)) return prev;
+      return [...prev, row];
+    });
+  };
+
+  const findExistingTerritory = (rawName: string) => {
+    const key = territoryMatchKey(rawName);
+    if (!key) return undefined;
+    return territoryOptions.find((tr) => territoryMatchKey(tr.name) === key);
+  };
+
+  const createTerritoryMutation = useMutation({
+    mutationFn: async (rawName: string) => {
+      const name = normalizeTerritoryName(rawName);
+      if (!name) throw new Error("empty");
+      const existing = findExistingTerritory(name);
+      if (existing) return existing;
+      try {
+        return await api.createTerritory({ name });
+      } catch (err) {
+        if (
+          err instanceof ApiClientError &&
+          err.code === "DUPLICATE_TERRITORY"
+        ) {
+          await refetchLocations();
+          const listed = await api.listTerritories({
+            limit: 200,
+            "filter[is_active]": "true",
+          });
+          const match = listed.data.find(
+            (tr) => territoryMatchKey(tr.name) === territoryMatchKey(name),
+          );
+          if (match) return { id: match.id, name: match.name };
+        }
+        throw err;
+      }
+    },
+    onSuccess: async (row) => {
+      rememberTerritory(row);
+      setDraft((d) =>
+        d.territory_ids.includes(row.id)
+          ? d
+          : { ...d, territory_ids: [...d.territory_ids, row.id] },
+      );
+      await queryClient.invalidateQueries({ queryKey: ["territories"] });
+      await refetchLocations();
+    },
+    onError: (err) => {
+      if (err instanceof Error && err.message === "empty") return;
+      if (err instanceof ApiClientError) {
+        setError(
+          err.code === "DUPLICATE_TERRITORY"
+            ? t("errors.duplicate_location")
+            : err.message,
+        );
+        return;
+      }
+      setError(t("errors.generic"));
+    },
+  });
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -438,37 +546,86 @@ function UsersPageInner() {
               ))}
             </Select>
           </FormControl>
-          <FormControl fullWidth>
-            <InputLabel id="users-form-territories-label">
-              {t("users.form.territories")}
-            </InputLabel>
-            <Select
-              labelId="users-form-territories-label"
-              multiple
-              label={t("users.form.territories")}
-              value={draft.territory_ids}
-              onChange={(e) =>
-                setDraft((d) => ({
-                  ...d,
-                  territory_ids: e.target.value as number[],
-                }))
+          <Autocomplete
+            multiple
+            options={territoryOptions}
+            value={selectedTerritories}
+            loading={createTerritoryMutation.isPending}
+            disabled={createTerritoryMutation.isPending}
+            isOptionEqualToValue={(a, b) => a.id === b.id}
+            getOptionLabel={(option) => option.name}
+            filterOptions={(options, params) => {
+              const filtered = filterTerritoryOptions(options, params);
+              const normalized = normalizeTerritoryName(params.inputValue);
+              if (!normalized) return filtered;
+              const exists = options.some(
+                (opt) =>
+                  territoryMatchKey(opt.name) === territoryMatchKey(normalized),
+              );
+              if (!exists) {
+                filtered.push({
+                  id: -1,
+                  name: normalized,
+                  inputValue: normalized,
+                });
               }
-              input={<OutlinedInput label={t("users.form.territories")} />}
-              renderValue={(selected) =>
-                territories
-                  .filter((tr) => selected.includes(tr.id))
-                  .map((tr) => tr.name)
-                  .join(", ")
+              return filtered;
+            }}
+            onChange={(_event, next) => {
+              const pendingCreate = next.find((opt) => opt.inputValue);
+              const kept = next.filter((opt) => !opt.inputValue && opt.id > 0);
+              setDraft((d) => ({
+                ...d,
+                territory_ids: kept.map((opt) => opt.id),
+              }));
+              if (pendingCreate?.inputValue) {
+                const existing = findExistingTerritory(
+                  pendingCreate.inputValue,
+                );
+                if (existing) {
+                  rememberTerritory(existing);
+                  setDraft((d) =>
+                    d.territory_ids.includes(existing.id)
+                      ? d
+                      : {
+                          ...d,
+                          territory_ids: [...d.territory_ids, existing.id],
+                        },
+                  );
+                  return;
+                }
+                createTerritoryMutation.mutate(pendingCreate.inputValue);
               }
-            >
-              {territories.map((tr) => (
-                <MenuItem key={tr.id} value={tr.id}>
-                  <Checkbox checked={draft.territory_ids.includes(tr.id)} />
-                  {tr.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+            }}
+            renderOption={(props, option) => {
+              const { key, ...rest } = props;
+              return (
+                <li key={key} {...rest}>
+                  {option.inputValue
+                    ? t("users.form.create_territory", { name: option.name })
+                    : option.name}
+                </li>
+              );
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label={t("users.form.territories")}
+                helperText={t("users.form.territories_hint")}
+                InputProps={{
+                  ...params.InputProps,
+                  endAdornment: (
+                    <>
+                      {createTerritoryMutation.isPending ? (
+                        <CircularProgress color="inherit" size={18} />
+                      ) : null}
+                      {params.InputProps.endAdornment}
+                    </>
+                  ),
+                }}
+              />
+            )}
+          />
           <FormControlLabel
             control={
               <Switch
@@ -500,6 +657,7 @@ function UsersPageInner() {
               onClick={() => saveMutation.mutate()}
               disabled={
                 saveMutation.isPending ||
+                createTerritoryMutation.isPending ||
                 draft.roles.length < 1 ||
                 (!editing && draft.password.length < 8) ||
                 (!editing && draft.username.trim().length < 2)
