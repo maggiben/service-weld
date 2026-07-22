@@ -22,6 +22,8 @@ RUN pnpm --filter @weld/schemas build \
 
 # Keep the pnpm workspace layout so package symlinks resolve at runtime.
 # Python + pg_dump enable online admin migration-data (011 importer).
+# Install PostgreSQL 18 client tools to match Railway Postgres 18.x
+# (Debian bookworm's default postgresql-client is 15 and refuses to dump 18).
 FROM node:24.18-bookworm-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
@@ -32,15 +34,24 @@ ENV PYTHON_BIN=/opt/weld-migration-venv/bin/python
 COPY migration/requirements.txt /tmp/migration-requirements.txt
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
+      ca-certificates \
+      curl \
+      gnupg \
       python3 \
       python3-pip \
       python3-venv \
-      postgresql-client \
+ && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+      | gpg --dearmor -o /usr/share/keyrings/postgresql.gpg \
+ && echo "deb [signed-by=/usr/share/keyrings/postgresql.gpg] http://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" \
+      > /etc/apt/sources.list.d/pgdg.list \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends postgresql-client-18 \
  && rm -rf /var/lib/apt/lists/* \
  && python3 -m venv /opt/weld-migration-venv \
  && /opt/weld-migration-venv/bin/pip install --no-cache-dir -r /tmp/migration-requirements.txt \
  && mkdir -p /data/migration \
- && rm /tmp/migration-requirements.txt
+ && rm /tmp/migration-requirements.txt \
+ && pg_dump --version
 ENV PATH="/opt/weld-migration-venv/bin:${PATH}"
 COPY --from=build /app/package.json /app/pnpm-workspace.yaml ./
 COPY --from=build /app/node_modules ./node_modules
