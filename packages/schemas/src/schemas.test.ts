@@ -20,7 +20,13 @@ import {
 } from "./settings";
 import {
   MigrationDataStatus,
+  MigrationExportDataset,
+  MigrationMarkGoodRequest,
+  MigrationRollbackRequest,
   MigrationRunRequest,
+  MigrationRunResult,
+  MigrationSnapshot,
+  MigrationUploadedFile,
   MigrationWorkbookSlot,
 } from "./migration-data";
 
@@ -193,5 +199,54 @@ describe("migration-data schemas", () => {
       ],
     });
     assert.equal(status.missing_slots.length, 3);
+  });
+
+  it("parses upload, snapshot, run, rollback, and mark-good payloads", () => {
+    assert.equal(MigrationExportDataset.parse("clients"), "clients");
+    assert.equal(MigrationExportDataset.parse("all"), "all");
+
+    const uploaded = MigrationUploadedFile.parse({
+      slot: "propios",
+      original_name: "CILINDROS PROPIOS.xls",
+      size_bytes: 1024,
+      uploaded_at: "2026-07-22T12:00:00.000Z",
+    });
+    assert.equal(uploaded.slot, "propios");
+
+    const snap = MigrationSnapshot.parse({
+      id: "20260722T120000Z_abcd1234",
+      label: "pre-sync",
+      created_at: "2026-07-22T12:00:00.000Z",
+      row_counts: { clients: 1, cylinders: 2 },
+      dump_bytes: 10,
+      elapsed_s: 1.2,
+      marked_good: true,
+    });
+    assert.equal(snap.marked_good, true);
+
+    const run = MigrationRunResult.parse({
+      dry_run: false,
+      snapshot_id: snap.id,
+      report: { imported_clean: 3 },
+    });
+    assert.equal(run.dry_run, false);
+
+    assert.equal(
+      MigrationRollbackRequest.parse({ snapshot_id: snap.id }).snapshot_id,
+      snap.id,
+    );
+    assert.equal(
+      MigrationMarkGoodRequest.parse({ snapshot_id: snap.id }).good,
+      true,
+    );
+    assert.equal(
+      MigrationMarkGoodRequest.parse({
+        snapshot_id: snap.id,
+        good: false,
+      }).good,
+      false,
+    );
+    assert.throws(() => MigrationWorkbookSlot.parse("other"));
+    assert.throws(() => MigrationRunRequest.parse({ label: "x".repeat(200) }));
   });
 });
