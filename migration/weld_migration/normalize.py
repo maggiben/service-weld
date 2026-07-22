@@ -160,6 +160,139 @@ def fold_person_key(value: Any) -> str:
     return _WS_RE.sub(" ", s).strip()
 
 
+# Canonical towns from schema.sql seed / domain.md Locality enum (BR-15).
+CANONICAL_LOCALITIES: tuple[str, ...] = (
+    "Junín",
+    "Salto",
+    "Rojas",
+    "Arrecifes",
+    "Colón",
+    "Carabelas",
+    "Carmen de Areco",
+    "Baigorrita",
+    "Vedia",
+    "Villa Sanguinetti",
+    "Chacabuco",
+    "O'Higgins",
+    "Rawson",
+    "Irala",
+    "Chivilcoy",
+    "Ascensión",
+    "Tres Sargentos",
+    "Castilla",
+    "Sarmiento",
+)
+
+# Observed Excel typos / spellings → canonical display name.
+LOCALITY_ALIASES: dict[str, str] = {
+    "ochacabuco": "Chacabuco",
+    "o higgins": "O'Higgins",
+    "ohiggins": "O'Higgins",
+    "o´higgins": "O'Higgins",
+    "villa sanguineti": "Villa Sanguinetti",
+    "ascension": "Ascensión",
+    "colon": "Colón",
+    "junin": "Junín",
+}
+
+_CPA_PREFIX_RE = re.compile(r"^\d{4}\s+")
+_PHONE_LIKE_RE = re.compile(r"^\d{3,4}[\s\-/]?\d{5,}")
+_STREET_NUM_RE = re.compile(
+    r"(?:"
+    r"\d+\s*/\s*\d+"  # 63/64
+    r"|"
+    r"^(?:av\.?|avenida)\b"  # AV ALSINA…
+    r"|"
+    r"^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ.\s]{2,}\s+\d{1,5}$"  # FRIAS 161
+    r"|"
+    r"^\d+\s+[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]"  # 11 E 63/64, 20 ENTRE…
+    r")",
+    re.IGNORECASE,
+)
+_ADDRESS_WORDS = (
+    "entre",
+    "barrio",
+    "casa",
+    "calle",
+    "ruta",
+    " km",
+    "domicilio",
+    "estacionfood",
+)
+
+
+def fold_locality_key(value: Any) -> str:
+    """Accent-insensitive key so COLON / Colón / colón collide."""
+    return fold_person_key(value)
+
+
+def _looks_like_address_or_noise(s: str) -> bool:
+    low = s.casefold()
+    if any(w in low for w in _ADDRESS_WORDS):
+        return True
+    if _STREET_NUM_RE.search(s):
+        return True
+    return False
+
+
+def _looks_like_phone(s: str) -> bool:
+    digits = "".join(ch for ch in s if ch.isdigit())
+    if len(digits) >= 6 and len(digits) >= max(1, len(re.sub(r"\s", "", s)) // 2):
+        return True
+    return bool(_PHONE_LIKE_RE.match(s))
+
+
+def normalize_locality(
+    raw: Any,
+    *,
+    known_names: list[str] | tuple[str, ...] | None = None,
+) -> str | None:
+    """Map legacy Excel locality text → canonical town name (BR-15).
+
+    Handles CPA prefixes (``6740 CHACABUCO``), accentless spellings (``JUNIN``),
+    typos (``OCHACABUCO``), and rejects phones / street fragments / field labels
+    (``telefono:``). Returns ``None`` when the cell is empty or not a locality.
+    """
+    s = norm_text(raw)
+    if not s:
+        return None
+
+    low = s.casefold()
+    if low.startswith(("tel", "cuit", "domicilio", "fecha", "cel", "fax")):
+        return None
+
+    # Strip Argentine CPA prefix first: "6740 CHACABUCO" / "6000 Junin".
+    stripped = _CPA_PREFIX_RE.sub("", s).strip()
+    if not stripped or stripped.isdigit():
+        return None
+    if _looks_like_phone(stripped) or _looks_like_address_or_noise(stripped):
+        return None
+
+    catalog: dict[str, str] = {}
+    for name in CANONICAL_LOCALITIES:
+        catalog[fold_locality_key(name)] = name
+    for alias, canon in LOCALITY_ALIASES.items():
+        catalog[fold_locality_key(alias)] = canon
+    if known_names:
+        for name in known_names:
+            key = fold_locality_key(name)
+            if key:
+                catalog.setdefault(key, name)
+
+    key = fold_locality_key(stripped)
+    if not key:
+        return None
+    if key in catalog:
+        return catalog[key]
+
+    # Containment for noisy cells that still embed a known town (len≥5 avoids Salto-in-…).
+    for ck, cname in catalog.items():
+        if len(ck) >= 5 and (ck in key or key in ck):
+            return cname
+
+    return None
+
+
 def person_token_set(value: Any) -> set[str]:
     stop = {"de", "del", "la", "el", "los", "las", "y", "e", "ex", "sa", "srl"}
     return {t for t in fold_person_key(value).split() if t and t not in stop}

@@ -14,8 +14,10 @@ from psycopg.types.json import Jsonb
 from .normalize import (
     EXTRA_GAS_ALIASES,
     coverage_from_holder_name,
+    fold_locality_key,
     fold_person_key,
     is_noise_holder_name,
+    normalize_locality,
     person_token_set,
     request_id_for,
     resolve_gas,
@@ -59,6 +61,7 @@ class Loader:
         self.party_type: dict[int, str] = {}
         self.territory_by_name: dict[str, int] = {}
         self.locality_by_name: dict[str, int] = {}
+        self._locality_display: dict[str, str] = {}  # fold_key → canonical name in DB
         self.gas_alias: dict[str, str] = {}
         self.cylinder_id: dict[tuple[int, str], int] = {}  # (owner_id, serial) -> id
         self.client_id: dict[str, int] = {}  # display_name.casefold() -> party_id
@@ -165,7 +168,11 @@ class Loader:
         for row in conn.execute("SELECT id, name::text AS name FROM dispatch_territory"):
             self.territory_by_name[row["name"].casefold()] = row["id"]
         for row in conn.execute("SELECT id, name::text AS name FROM locality"):
-            self.locality_by_name[row["name"].casefold()] = row["id"]
+            key = fold_locality_key(row["name"])
+            if not key:
+                continue
+            self.locality_by_name[key] = row["id"]
+            self._locality_display[key] = row["name"]
         for row in conn.execute(
             "SELECT id, display_name::text AS display_name, party_type::text AS party_type FROM party WHERE deleted_at IS NULL"
         ):
@@ -315,9 +322,17 @@ class Loader:
     def _ensure_locality(
         self, conn: psycopg.Connection, name: str | None, territory_id: int | None
     ) -> int | None:
+        """Resolve Excel locality text to a seeded/canonical locality id (BR-15).
+
+        Never inserts raw street/phone/CPA junk as new locality rows.
+        """
         if not name:
             return None
-        key = name.casefold()
+        known = list(self._locality_display.values())
+        canonical = normalize_locality(name, known_names=known)
+        if not canonical:
+            return None
+        key = fold_locality_key(canonical)
         if key in self.locality_by_name:
             return self.locality_by_name[key]
         if self.dry_run:
@@ -327,13 +342,128 @@ class Loader:
             INSERT INTO locality(name, territory_id)
             VALUES (%s, %s)
             ON CONFLICT (name, province) DO UPDATE SET territory_id = COALESCE(locality.territory_id, EXCLUDED.territory_id)
-            RETURNING id
+            RETURNING id, name::text AS name
             """,
-            (name, territory_id),
+            (canonical, territory_id),
         ).fetchone()
         assert row
         self.locality_by_name[key] = row["id"]
+        self._locality_display[key] = row["name"]
         return row["id"]
+
+    def backfill_localities(self) -> dict[str, Any]:
+        """Remap clients off garbage/alias localities onto canonical towns.
+
+        Safe on a loaded DB: rewrites ``client.locality_id``, clears unrecoverable
+        junk, and deletes orphan alias rows that no longer have clients.
+        """
+        with psycopg.connect(self.dsn, row_factory=dict_row) as conn:
+            self._bootstrap(conn)
+            localities = list(
+                conn.execute("SELECT id, name::text AS name FROM locality")
+            )
+            known = [row["name"] for row in localities]
+            remapped = 0
+            cleared = 0
+            deleted = 0
+            unresolved: list[dict[str, Any]] = []
+
+            preferred: dict[str, int] = {}
+            for row in localities:
+                canon = normalize_locality(row["name"], known_names=known)
+                if canon is None:
+                    continue
+                key = fold_locality_key(canon)
+                if key not in preferred or row["name"] == canon:
+                    preferred[key] = row["id"]
+
+            plan: list[tuple[int, int | None, str]] = []
+            for row in localities:
+                lid = row["id"]
+                canon = normalize_locality(row["name"], known_names=known)
+                if canon is None:
+                    plan.append((lid, None, "clear"))
+                    continue
+                target_id = preferred.get(fold_locality_key(canon))
+                if target_id is None:
+                    unresolved.append({"id": lid, "name": row["name"], "canon": canon})
+                    continue
+                if target_id == lid:
+                    continue
+                plan.append((lid, target_id, canon))
+
+            if self.dry_run:
+                for lid, target_id, _action in plan:
+                    n = conn.execute(
+                        "SELECT count(*)::int AS n FROM client WHERE locality_id = %s AND deleted_at IS NULL",
+                        (lid,),
+                    ).fetchone()["n"]
+                    if target_id is None:
+                        cleared += n
+                    else:
+                        remapped += n
+                return {
+                    "mode": "backfill_localities",
+                    "dry_run": True,
+                    "clients_remapped": remapped,
+                    "clients_cleared": cleared,
+                    "orphan_localities_deleted": 0,
+                    "unresolved": unresolved,
+                    "plan_rows": len(plan),
+                }
+
+            with conn.transaction():
+                conn.execute("SELECT set_config('app.source', 'migration', true)")
+                for lid, target_id, _action in plan:
+                    if target_id is None:
+                        res = conn.execute(
+                            """
+                            UPDATE client SET locality_id = NULL, updated_at = now()
+                            WHERE locality_id = %s AND deleted_at IS NULL
+                            RETURNING party_id
+                            """,
+                            (lid,),
+                        ).fetchall()
+                        cleared += len(res)
+                    else:
+                        res = conn.execute(
+                            """
+                            UPDATE client SET locality_id = %s, updated_at = now()
+                            WHERE locality_id = %s AND deleted_at IS NULL
+                            RETURNING party_id
+                            """,
+                            (target_id, lid),
+                        ).fetchall()
+                        remapped += len(res)
+
+                for row in localities:
+                    lid = row["id"]
+                    canon = normalize_locality(row["name"], known_names=known)
+                    is_canonical_row = canon is not None and row["name"] == canon
+                    if is_canonical_row:
+                        continue
+                    still = conn.execute(
+                        """
+                        SELECT 1 FROM client
+                        WHERE locality_id = %s AND deleted_at IS NULL
+                        LIMIT 1
+                        """,
+                        (lid,),
+                    ).fetchone()
+                    if still:
+                        continue
+                    conn.execute("DELETE FROM locality WHERE id = %s", (lid,))
+                    deleted += 1
+                    self.stats["locality_orphan_deleted"] += 1
+
+            return {
+                "mode": "backfill_localities",
+                "dry_run": False,
+                "clients_remapped": remapped,
+                "clients_cleared": cleared,
+                "orphan_localities_deleted": deleted,
+                "unresolved": unresolved,
+            }
 
     def _self_party_id(self) -> int:
         return self.party_by_name["nuestra empresa"]
@@ -671,6 +801,18 @@ class Loader:
                             "UPDATE client SET coverage = %s WHERE party_id = %s AND deleted_at IS NULL",
                             (cl.coverage, existing_id),
                         )
+                    # Heal alias/junk localities on re-import (BR-15).
+                    locality_id = self._ensure_locality(conn, cl.locality, territory_id)
+                    if locality_id is not None:
+                        conn.execute(
+                            """
+                            UPDATE client SET locality_id = %s, updated_at = now()
+                            WHERE party_id = %s AND deleted_at IS NULL
+                              AND locality_id IS DISTINCT FROM %s
+                            """,
+                            (locality_id, existing_id, locality_id),
+                        )
+                        self.stats["client_locality_refreshed"] += 1
                     self.stats["client_exists"] += 1
                     continue
 

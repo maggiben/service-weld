@@ -92,6 +92,11 @@ def main(argv: list[str] | None = None) -> int:
         help="Only re-parse PROPIOS headers and UPDATE cylinder.capacity_m3 (safe on loaded DB)",
     )
     parser.add_argument(
+        "--backfill-localities",
+        action="store_true",
+        help="Remap clients from garbage/alias locality rows onto canonical towns (safe on loaded DB)",
+    )
+    parser.add_argument(
         "--report",
         type=Path,
         default=ROOT / "migration" / "reconciliation_report.json",
@@ -188,6 +193,20 @@ def main(argv: list[str] | None = None) -> int:
         )
         loader = Loader(database_url, dry_run=args.dry_run)
         report = loader.backfill_capacities(extracted.cylinders)
+        args.report.parent.mkdir(parents=True, exist_ok=True)
+        args.report.write_text(json.dumps(report, indent=2, default=str))
+        print(json.dumps(report, indent=2, default=str))
+        print(f"\nWrote report → {args.report}", flush=True)
+        return 0
+
+    if args.backfill_localities:
+        print("Backfill localities (alias/junk → canonical)", flush=True)
+        print(
+            f"  database: {database_url.split('@')[-1] if '@' in database_url else database_url}",
+            flush=True,
+        )
+        loader = Loader(database_url, dry_run=args.dry_run)
+        report = loader.backfill_localities()
         args.report.parent.mkdir(parents=True, exist_ok=True)
         args.report.write_text(json.dumps(report, indent=2, default=str))
         print(json.dumps(report, indent=2, default=str))

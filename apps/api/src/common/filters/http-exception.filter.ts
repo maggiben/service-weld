@@ -7,6 +7,7 @@ import {
 } from "@nestjs/common";
 import type { Response } from "express";
 import { ZodValidationException } from "nestjs-zod";
+import { ZodError } from "zod";
 import { ApiError, type ApiErrorDetail } from "../errors/api-error";
 
 export const REQUEST_ID_KEY = "requestId";
@@ -37,10 +38,13 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     if (exception instanceof ZodValidationException) {
       const zodError = exception.getZodError();
-      const details: ApiErrorDetail[] = zodError.issues.map((issue) => ({
-        field: issue.path.join(".") || "body",
-        issue: issue.message,
-      }));
+      const details: ApiErrorDetail[] =
+        zodError instanceof ZodError
+          ? zodError.issues.map((issue) => ({
+              field: issue.path.join(".") || "body",
+              issue: issue.message,
+            }))
+          : [];
       response
         .status(HttpStatus.UNPROCESSABLE_ENTITY)
         .json(

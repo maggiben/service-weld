@@ -2,7 +2,7 @@ import "reflect-metadata";
 import { ConfigService } from "@nestjs/config";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
-import { ZodValidationPipe, patchNestJsSwagger } from "nestjs-zod";
+import { ZodValidationPipe, cleanupOpenApiDoc } from "nestjs-zod";
 import { AppModule } from "./app.module";
 import type { Env } from "./config/config.schema";
 import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
@@ -42,14 +42,15 @@ async function bootstrap(): Promise<void> {
 
   // Emit OpenAPI from the Zod DTOs; the emitted JSON is the runtime contract
   // (D-10). Design doc openapi_specification.md is the parity checklist.
-  patchNestJsSwagger();
   const swaggerConfig = new DocumentBuilder()
     .setTitle("Cylinder Custody, Circulation & Rental Management API")
     .setDescription("REST API — see specs/004 and openapi_specification.md")
     .setVersion("1.0.0")
     .addBearerAuth()
     .build();
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  const document = cleanupOpenApiDoc(
+    SwaggerModule.createDocument(app, swaggerConfig),
+  );
   SwaggerModule.setup("api/docs", app, document, {
     jsonDocumentUrl: "api/docs-json",
   });

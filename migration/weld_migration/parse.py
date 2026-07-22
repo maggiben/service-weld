@@ -14,6 +14,7 @@ from .normalize import (
     extract_cylinder_capacity,
     infer_ownership,
     norm_text,
+    normalize_locality,
     parse_capacity,
     parse_cuit,
     parse_serial_cell,
@@ -220,9 +221,16 @@ def parse_client_workbook(
                 if low.startswith("domicilio") and c + 1 < sh.ncols:
                     address = norm_text(sh.cell_value(r, c + 1)) or address
                     if c + 2 < sh.ncols:
-                        loc = norm_text(sh.cell_value(r, c + 2))
-                        if loc and not loc.casefold().startswith("cuit"):
-                            locality = loc
+                        loc_raw = norm_text(sh.cell_value(r, c + 2))
+                        loc_low = loc_raw.casefold()
+                        # Next cell is often TEL / CUIT / empty — never treat labels as town.
+                        if loc_raw and not loc_low.startswith(
+                            ("cuit", "tel", "cel", "fax", "fecha", "domicilio")
+                        ):
+                            locality = normalize_locality(loc_raw) or locality
+                    # Fallback: town sometimes glued into the address cell ("6740 CHACABUCO").
+                    if locality is None and address:
+                        locality = normalize_locality(address)
                 if "cuit" in low and c + 1 < sh.ncols:
                     cuit = parse_cuit(sh.cell_value(r, c + 1)) or parse_cuit(v)
                 if low.startswith("tel") or "tel." in low:
@@ -685,7 +693,7 @@ def _parse_sales(book: xlrd.Book, sh: xlrd.sheet.Sheet, workbook_label: str, res
                 return_date=None,
                 gas_raw=gas_raw or None,
                 sale_address=addr or None,
-                sale_locality=loc or None,
+                sale_locality=normalize_locality(loc) if loc else None,
                 sale_phone=phone or None,
                 capacity_m3=cap,
                 flags=serial_info["flags"],

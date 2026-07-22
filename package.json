@@ -25,7 +25,8 @@
     "db:invariants": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f db/tests/invariants.sql",
     "migrate:xls": "PYTHONPATH=migration python3 -m weld_migration",
     "migrate:xls:dry": "PYTHONPATH=migration python3 -m weld_migration --dry-run",
-    "migrate:xls:backfill-capacity": "PYTHONPATH=migration python3 -m weld_migration --backfill-capacity"
+    "migrate:xls:backfill-capacity": "PYTHONPATH=migration python3 -m weld_migration --backfill-capacity",
+    "migrate:xls:backfill-localities": "PYTHONPATH=migration python3 -m weld_migration --backfill-localities"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,mjs,cjs,json,md,yml,yaml,css,html}": "prettier --check"

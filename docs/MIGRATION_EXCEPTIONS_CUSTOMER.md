@@ -84,6 +84,14 @@ Please set expectations with the customer on these **unfixable / partial** cases
 
    After that pass on a typical loaded DB: on the order of **~25–30% of own (`OURS`) cylinders** have a reliable size; overall still a minority of all cylinders because customer/supplier masters seldom carry size in Excel. Values outside known sizes (2, 3, 4, 5, 6, 7, 10, 20, 40 m³, plus a few observed variants) are discarded so serials are not stored as m³.
 
+   **Locality aliases / junk from Excel headers**
+
+   Legacy `DOMICILIO` cells often put CPA+town, street fragments, or the next-column label (`telefono:`) into the locality slot. The importer now normalizes to the seeded town list (BR-15: `COLON`→`Colón`, `6740 CHACABUCO`→`Chacabuco`) and rejects phones/addresses. To repair an already-loaded DB without a full re-import:
+
+   ```bash
+   pnpm migrate:xls:backfill-localities
+   ```
+
    **Customer conversation points**
 
    - Ask whether size should be mandatory going forward in Weld for new cylinders / rates by size.
