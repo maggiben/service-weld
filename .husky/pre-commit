@@ -4,6 +4,9 @@ set -e
 echo "▸ Checking for secrets…"
 pnpm run check:secrets
 
+echo "▸ Dependency advisories & deprecated packages…"
+pnpm run check:deps
+
 echo "▸ Lint staged files (prettier)…"
 pnpm exec lint-staged
 

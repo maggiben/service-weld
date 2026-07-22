@@ -21,7 +21,7 @@
     "@weld/api-client": "workspace:*",
     "@weld/schemas": "workspace:*",
     "idb-keyval": "^6.2.1",
-    "next": "^16.2.10",
+    "next": "^16.2.11",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "uuid": "^11.0.0",

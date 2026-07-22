@@ -111,7 +111,7 @@ Local hooks and CI enforce the same intent. **Never commit without the pre-commi
 
 | Gate          | When                      | What runs                                                                                          |
 | ------------- | ------------------------- | -------------------------------------------------------------------------------------------------- |
-| pre-commit    | every `git commit`        | `pnpm run check:secrets` → lint-staged (Prettier on staged files) → `pnpm run typecheck`           |
+| pre-commit    | every `git commit`        | `pnpm run check:secrets` → `pnpm run check:deps` → lint-staged (Prettier) → `pnpm run typecheck`   |
 | pre-push      | every `git push`          | `pnpm run test:coverage` — **≥80%** lines / branches / functions / statements on **every** package |
 | CI (`ci.yml`) | every PR / push to `main` | format check, typecheck, unit tests, coverage ≥80%, build + DB schema/invariants                   |
 
@@ -123,6 +123,7 @@ Hooks live in `.husky/` (`core.hooksPath=.husky`, installed on `pnpm install` vi
 
 ```bash
 pnpm run check:secrets
+pnpm run check:deps     # audit ≥ moderate + deprecated packages in lockfile
 pnpm run format:check   # or rely on lint-staged for staged files only
 pnpm run typecheck
 pnpm run test:coverage  # required before push; recommended before commit if tests changed

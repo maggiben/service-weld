@@ -68,6 +68,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Dependency advisories & deprecated packages
+        run: pnpm run check:deps
+
       - name: Lint (Prettier)
         run: pnpm run format:check
 
