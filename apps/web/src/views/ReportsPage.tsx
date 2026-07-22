@@ -66,9 +66,9 @@ export default function ReportsPage() {
   const canMedical = useSessionStore((s) => s.hasCapability("medical:read"));
   const { territories } = useTerritories();
   const [tab, setTab] = useState<ReportTab>("fleet");
-  const [groupBy, setGroupBy] = useState<"state" | "gas_code" | "owner">(
-    "state",
-  );
+  const [groupBy, setGroupBy] = useState<
+    "state" | "gas_code" | "owner" | "locality" | "client"
+  >("state");
   const [periodStart, setPeriodStart] = useState(monthStartIso());
   const [periodEnd, setPeriodEnd] = useState(todayIso());
   const [bucket, setBucket] = useState<"" | ">30" | ">90" | ">180" | ">365">(
@@ -233,7 +233,11 @@ export default function ReportsPage() {
             ? t("reports.group.state")
             : groupBy === "gas_code"
               ? t("reports.group.gas")
-              : t("reports.group.owner"),
+              : groupBy === "owner"
+                ? t("reports.group.owner")
+                : groupBy === "locality"
+                  ? t("reports.group.locality")
+                  : t("reports.group.client"),
         flex: 1,
         minWidth: 160,
         valueGetter: (_value, row) => {
@@ -246,6 +250,12 @@ export default function ReportsPage() {
           if (groupBy === "gas_code") {
             const code = row.gas_code ?? row.group_key;
             return t(`enums.gas.${code}`, { defaultValue: code });
+          }
+          if (groupBy === "locality") {
+            return row.locality_name ?? t("reports.group.unassigned_locality");
+          }
+          if (groupBy === "client") {
+            return row.client_name ?? row.group_key;
           }
           return row.owner_name ?? row.group_key;
         },
@@ -543,12 +553,19 @@ export default function ReportsPage() {
               label={t("reports.filters.group_by")}
               value={groupBy}
               onChange={(e) =>
-                setGroupBy(e.target.value as "state" | "gas_code" | "owner")
+                setGroupBy(
+                  e.target.value as
+                    "state" | "gas_code" | "owner" | "locality" | "client",
+                )
               }
             >
               <MenuItem value="state">{t("reports.group.state")}</MenuItem>
               <MenuItem value="gas_code">{t("reports.group.gas")}</MenuItem>
               <MenuItem value="owner">{t("reports.group.owner")}</MenuItem>
+              <MenuItem value="locality">
+                {t("reports.group.locality")}
+              </MenuItem>
+              <MenuItem value="client">{t("reports.group.client")}</MenuItem>
             </Select>
           </FormControl>
         ) : null}

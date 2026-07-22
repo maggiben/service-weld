@@ -811,7 +811,10 @@
     "group": {
       "state": "Estado",
       "gas": "Gas",
-      "owner": "Dueño"
+      "owner": "Dueño",
+      "locality": "Localidad",
+      "client": "Cliente",
+      "unassigned_locality": "Sin localidad"
     },
     "bucket": {
       "all": "Todos"
