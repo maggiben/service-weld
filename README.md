@@ -9,7 +9,6 @@ Service Weld
 </p>
 </div>
 
-
 # Gas-Cylinder Distribution — Reverse-Engineering & System Design
 
 [![CI](https://github.com/maggiben/service-weld/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/maggiben/service-weld/actions/workflows/ci.yml)
