@@ -4,6 +4,7 @@ import Alert from "@mui/material/Alert";
 import Autocomplete from "@mui/material/Autocomplete";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
 import MenuItem from "@mui/material/MenuItem";
@@ -36,6 +37,15 @@ import type {
 import { api } from "../api/client";
 import { useTerritories } from "../hooks/useTerritories";
 import { useSessionStore } from "../store/sessionStore";
+
+function loanStageChipColor(
+  stage: string,
+): "default" | "info" | "warning" | "success" {
+  if (stage === "OUT_TO_CLIENT") return "warning";
+  if (stage === "BACK_FROM_CLIENT") return "info";
+  if (stage === "RETURNED_TO_SUPPLIER") return "success";
+  return "default";
+}
 
 function todayIso() {
   return new Intl.DateTimeFormat("en-CA", {
@@ -218,9 +228,27 @@ export default function ReportsPage() {
     () => [
       {
         field: "group_key",
-        headerName: t("reports.columns.group"),
+        headerName:
+          groupBy === "state"
+            ? t("reports.group.state")
+            : groupBy === "gas_code"
+              ? t("reports.group.gas")
+              : t("reports.group.owner"),
         flex: 1,
-        minWidth: 120,
+        minWidth: 160,
+        valueGetter: (_value, row) => {
+          if (groupBy === "state") {
+            const state = row.state ?? row.group_key;
+            return t(`enums.cylinder_state.${state}`, {
+              defaultValue: state,
+            });
+          }
+          if (groupBy === "gas_code") {
+            const code = row.gas_code ?? row.group_key;
+            return t(`enums.gas.${code}`, { defaultValue: code });
+          }
+          return row.owner_name ?? row.group_key;
+        },
       },
       {
         field: "count",
@@ -228,7 +256,7 @@ export default function ReportsPage() {
         width: 110,
       },
     ],
-    [t],
+    [t, groupBy],
   );
 
   const floatColumns = useMemo<GridColDef<FloatAgingRow>[]>(
@@ -307,11 +335,15 @@ export default function ReportsPage() {
         field: "ownership_basis",
         headerName: t("reports.columns.basis"),
         width: 120,
+        valueFormatter: (value: string) =>
+          t(`enums.basis.${value}`, { defaultValue: value }),
       },
       {
         field: "state",
         headerName: t("reports.columns.state"),
-        width: 100,
+        width: 160,
+        valueFormatter: (value: string) =>
+          t(`enums.cylinder_state.${value}`, { defaultValue: value }),
       },
       {
         field: "count",
@@ -343,7 +375,19 @@ export default function ReportsPage() {
       {
         field: "stage",
         headerName: t("reports.columns.stage"),
-        width: 120,
+        width: 180,
+        renderCell: (params) => {
+          const stage = params.value as string;
+          return (
+            <Chip
+              size="small"
+              label={t(`enums.loan_stage.${stage}`, {
+                defaultValue: stage,
+              })}
+              color={loanStageChipColor(stage)}
+            />
+          );
+        },
       },
       {
         field: "days_open",

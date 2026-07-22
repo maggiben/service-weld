@@ -223,8 +223,25 @@ export default function SupplierLoansPage() {
       {
         field: "stage",
         headerName: t("loans.columns.stage"),
-        width: 160,
-        valueFormatter: (value: LoanStage) => t(`enums.loan_stage.${value}`),
+        width: 180,
+        renderCell: (params) => {
+          const stage = params.value as LoanStage;
+          const color =
+            stage === "OUT_TO_CLIENT"
+              ? "warning"
+              : stage === "BACK_FROM_CLIENT"
+                ? "info"
+                : stage === "RETURNED_TO_SUPPLIER"
+                  ? "success"
+                  : "default";
+          return (
+            <Chip
+              size="small"
+              label={t(`enums.loan_stage.${stage}`)}
+              color={color}
+            />
+          );
+        },
       },
       {
         field: "received_from_supplier",

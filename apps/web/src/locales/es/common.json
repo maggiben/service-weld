@@ -332,15 +332,15 @@
       "FULL": "Lleno"
     },
     "cylinder_state": {
-      "IN_STOCK_EMPTY": "Stock vacío",
-      "IN_STOCK_FULL": "Stock lleno",
-      "AT_CLIENT": "En cliente",
-      "AT_SUPPLIER": "En proveedor",
+      "IN_STOCK_EMPTY": "En depósito (vacío)",
+      "IN_STOCK_FULL": "En depósito (lleno)",
+      "AT_CLIENT": "En poder del cliente",
+      "AT_SUPPLIER": "En el proveedor",
       "SOLD": "Vendido",
       "LOST": "Perdido",
       "BROKEN": "Roto",
-      "RETURNED_TO_SUPPLIER": "Devuelto a proveedor",
-      "RETIRED": "Baja"
+      "RETURNED_TO_SUPPLIER": "Devuelto al proveedor",
+      "RETIRED": "Dado de baja"
     },
     "movement_kind": {
       "RENTAL": "Alquiler",
@@ -367,10 +367,10 @@
       "CANCELLED": "Anulado"
     },
     "loan_stage": {
-      "RECEIVED": "Recibido",
+      "RECEIVED": "Recibido del proveedor",
       "OUT_TO_CLIENT": "En cliente",
-      "BACK_FROM_CLIENT": "Devuelto por cliente",
-      "RETURNED_TO_SUPPLIER": "Devuelto a proveedor"
+      "BACK_FROM_CLIENT": "Devuelto por el cliente",
+      "RETURNED_TO_SUPPLIER": "Devuelto al proveedor"
     },
     "accessory_type": {
       "REGULATOR": "Regulador",
@@ -835,7 +835,20 @@
     "subtitle": "Apariencia y ajustes operativos",
     "saved": "Configuración guardada",
     "operational_title": "Umbrales operativos",
-    "operational_subtitle": "Umbrales del sistema usados por alertas y préstamos",
+    "operational_subtitle": "Zona horaria, lenguaje y umbrales del sistema usados por alertas, préstamos y facturación",
+    "business_timezone": "Zona horaria del negocio",
+    "business_timezone_help": "Define el día civil para vencimientos, acumulados y reportes",
+    "rental_min_days": "Días mínimos de préstamo",
+    "rental_min_days_help": "Mínimo de días facturables por alquiler. 0 = días exactos del calendario",
+    "primary_language": "Lenguaje principal",
+    "primary_language_help": "Idioma predeterminado de la organización",
+    "language_title": "Idioma",
+    "language_subtitle": "Idioma de la interfaz para esta sesión",
+    "ui_language": "Idioma de la interfaz",
+    "languages": {
+      "es": "Español",
+      "en": "English"
+    },
     "supplier_loan_overdue_days": "Préstamo proveedor vencido (días)",
     "supplier_loan_overdue_days_help": "Los ciclos abiertos más antiguos que esto se marcan como vencidos",
     "themes": {

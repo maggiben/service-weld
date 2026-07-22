@@ -332,9 +332,9 @@
       "FULL": "Full"
     },
     "cylinder_state": {
-      "IN_STOCK_EMPTY": "In stock (empty)",
-      "IN_STOCK_FULL": "In stock (full)",
-      "AT_CLIENT": "At client",
+      "IN_STOCK_EMPTY": "In depot (empty)",
+      "IN_STOCK_FULL": "In depot (full)",
+      "AT_CLIENT": "With customer",
       "AT_SUPPLIER": "At supplier",
       "SOLD": "Sold",
       "LOST": "Lost",
@@ -367,9 +367,9 @@
       "CANCELLED": "Cancelled"
     },
     "loan_stage": {
-      "RECEIVED": "Received",
-      "OUT_TO_CLIENT": "Out to client",
-      "BACK_FROM_CLIENT": "Back from client",
+      "RECEIVED": "Received from supplier",
+      "OUT_TO_CLIENT": "With client",
+      "BACK_FROM_CLIENT": "Returned by client",
       "RETURNED_TO_SUPPLIER": "Returned to supplier"
     },
     "accessory_type": {
@@ -835,7 +835,20 @@
     "subtitle": "Appearance and operational settings",
     "saved": "Settings saved",
     "operational_title": "Operational thresholds",
-    "operational_subtitle": "System thresholds used by alerts and loan workflows",
+    "operational_subtitle": "Timezone, language, and system thresholds used by alerts, loans, and billing",
+    "business_timezone": "Business timezone",
+    "business_timezone_help": "Defines the civil day for aging, accruals, and reports",
+    "rental_min_days": "Minimum loan days",
+    "rental_min_days_help": "Minimum billable days per rental. 0 = exact calendar days",
+    "primary_language": "Primary language",
+    "primary_language_help": "Default language for the organization",
+    "language_title": "Language",
+    "language_subtitle": "Interface language for this session",
+    "ui_language": "Interface language",
+    "languages": {
+      "es": "Español",
+      "en": "English"
+    },
     "supplier_loan_overdue_days": "Supplier loan overdue (days)",
     "supplier_loan_overdue_days_help": "Open supplier loan loops older than this are marked overdue",
     "themes": {
