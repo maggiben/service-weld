@@ -843,8 +843,7 @@
     "primary_language": "Primary language",
     "primary_language_help": "Default language for the organization",
     "language_title": "Language",
-    "language_subtitle": "Interface language for this session",
-    "ui_language": "Interface language",
+    "language_subtitle": "Interface preference for this session",
     "languages": {
       "es": "Español",
       "en": "English"

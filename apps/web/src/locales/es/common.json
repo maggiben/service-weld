@@ -843,8 +843,7 @@
     "primary_language": "Lenguaje principal",
     "primary_language_help": "Idioma predeterminado de la organización",
     "language_title": "Idioma",
-    "language_subtitle": "Idioma de la interfaz para esta sesión",
-    "ui_language": "Idioma de la interfaz",
+    "language_subtitle": "Preferencia de la interfaz para esta sesión",
     "languages": {
       "es": "Español",
       "en": "English"

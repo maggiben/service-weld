@@ -218,12 +218,8 @@ function LanguagePreference() {
         {t("settings.language_subtitle")}
       </Typography>
       <FormControl sx={{ minWidth: 220 }}>
-        <InputLabel id="ui-language-label">
-          {t("settings.ui_language")}
-        </InputLabel>
         <Select
-          labelId="ui-language-label"
-          label={t("settings.ui_language")}
+          aria-label={t("settings.language_title")}
           value={locale}
           onChange={(e) => setLocale(e.target.value as Locale)}
         >
@@ -248,14 +244,15 @@ export default function SettingsPage() {
         {t("settings.subtitle")}
       </Typography>
 
-      {canAdmin && (
+      {canAdmin ? (
         <>
           <OperationalSettings />
           <Divider sx={{ my: 4 }} />
         </>
+      ) : (
+        <LanguagePreference />
       )}
 
-      <LanguagePreference />
       <ThemePicker />
     </Box>
   );
