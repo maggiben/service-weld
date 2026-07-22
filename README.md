@@ -1,3 +1,4 @@
+<!-- prettier-ignore-start -->
 <div align="center">
 <br>
 <p align="center">
@@ -8,6 +9,7 @@
 Service Weld
 </p>
 </div>
+<!-- prettier-ignore-end -->
 
 # Gas-Cylinder Distribution — Reverse-Engineering & System Design
 
