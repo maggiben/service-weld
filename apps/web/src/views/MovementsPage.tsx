@@ -309,7 +309,16 @@ export default function MovementsPage() {
         alignItems={{ md: "center" }}
         justifyContent="space-between"
       >
-        <Typography variant="h5">{t("movements.title")}</Typography>
+        <Stack direction="row" spacing={1.5} alignItems="baseline">
+          <Typography variant="h5">{t("movements.title")}</Typography>
+          {pageMeta?.total_estimate != null && (
+            <Typography variant="body2" color="text.secondary">
+              {t("movements.total", {
+                count: pageMeta.total_estimate,
+              })}
+            </Typography>
+          )}
+        </Stack>
         {canWrite && (
           <Stack direction="row" spacing={1}>
             <Button
@@ -475,11 +484,10 @@ export default function MovementsPage() {
           paginationModel={paginationModel}
           onPaginationModelChange={handlePaginationModelChange}
           pageSizeOptions={PAGE_SIZE_OPTIONS}
-          rowCount={
-            paginationModel.page * paginationModel.pageSize +
-            rows.length +
-            (pageMeta?.has_more ? 1 : 0)
-          }
+          rowCount={pageMeta?.total_estimate ?? -1}
+          paginationMeta={{
+            hasNextPage: pageMeta?.has_more ?? false,
+          }}
           disableRowSelectionOnClick
           localeText={
             locale === "es"

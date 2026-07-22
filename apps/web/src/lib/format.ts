@@ -1,5 +1,7 @@
 /** Small pure formatters used across the back-office UI. */
 
+import type { CapacityUnit } from "@weld/schemas";
+
 export function dashIfEmpty(value: string | null | undefined): string {
   if (value == null || value.trim() === "") return "—";
   return value;
@@ -22,4 +24,19 @@ export function pluralize(count: number, one: string, many: string): string {
 
 export function boolLabel(value: boolean, yes = "sí", no = "no"): string {
   return value ? yes : no;
+}
+
+/** Format cylinder capacity with unit label (D-18). */
+export function formatCapacity(
+  value: number | null | undefined,
+  unit: CapacityUnit | null | undefined = "M3",
+  empty = "—",
+): string {
+  if (value == null) return empty;
+  const suffix = unit === "KG" ? " kg" : " m³";
+  return `${value}${suffix}`;
+}
+
+export function capacityUnitLabel(unit: CapacityUnit): string {
+  return unit === "KG" ? "kg" : "m³";
 }

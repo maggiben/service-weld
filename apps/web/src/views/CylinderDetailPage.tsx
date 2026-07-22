@@ -24,6 +24,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
 import { displayRentalDays } from "../features/movements/displayRentalDays";
+import { formatCapacity } from "../lib/format";
 import { useUiStore } from "../store/uiStore";
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
@@ -229,6 +230,16 @@ export default function CylinderDetailPage() {
                     size="small"
                     label={cylinder.gas_code}
                     color="primary"
+                  />
+                )}
+                {cylinder.capacity_m3 != null && (
+                  <Chip
+                    size="small"
+                    label={formatCapacity(
+                      cylinder.capacity_m3,
+                      cylinder.capacity_unit,
+                    )}
+                    variant="outlined"
                   />
                 )}
                 <Chip

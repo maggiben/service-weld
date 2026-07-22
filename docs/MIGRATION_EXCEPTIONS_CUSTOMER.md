@@ -67,14 +67,14 @@ Please set expectations with the customer on these **unfixable / partial** cases
 6. **Cylinder capacity in m³ (incomplete in source Excel)**  
    Capacity is an attribute of the cylinder master (`capacity_m3`). It is **not** on every sheet, and when present it is written inconsistently. This is a source-data limitation first; the importer can only recover what the workbooks actually say.
 
-   | Source / situation                           | What the sheets usually contain                                                                                    | Import outcome                                                |
-   | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
-   | `CILINDROS PROPIOS` header                   | Sometimes `6 mt` / `10 mts` / `6 m` / bare `6` or `10`; often **blank** or only weight (`10 KG`, `25 k`, `20 kgr`) | Recovered when volume is clear; weight is never treated as m³ |
-   | Header layout `gas \| serial \| capacity`    | Serial echoed next to size (e.g. `atal \| 14 \| 6 mt`)                                                             | Size taken from the volume cell, not from the serial echo     |
-   | Client route books (Junín / Chacabuco)       | `METROS` column is usually **rental days**, not cylinder size (ambiguous in legacy)                                | **Not** used to set cylinder capacity                         |
-   | Customer-owned cylinders (`Su Propiedad`)    | Serial appears on the client ledger only — no size master                                                          | Created without capacity (0% unless filled later in Weld)     |
-   | Supplier stock lists (e.g. Intergas N-PROPI) | Serial + gas; rarely size                                                                                          | Usually no capacity                                           |
-   | `CILINDROS VENDIDOS` (`METROS` column)       | Often a real size for that sale                                                                                    | Used to enrich the cylinder master when still blank           |
+   | Source / situation                           | What the sheets usually contain                                                                  | Import outcome                                                    |
+   | -------------------------------------------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+   | `CILINDROS PROPIOS` header                   | Sometimes `6 mt` / `10 mts` / `6 m` / bare `6` or `10`; often weight (`10 KG`, `25 k`, `20 kgr`) | Volume → `M3`; weight → `KG` (D-18); prefer volume if both appear |
+   | Header layout `gas \| serial \| capacity`    | Serial echoed next to size (e.g. `atal \| 14 \| 6 mt`)                                           | Size taken from the volume cell, not from the serial echo         |
+   | Client route books (Junín / Chacabuco)       | `METROS` column is usually **rental days**, not cylinder size (ambiguous in legacy)              | **Not** used to set cylinder capacity                             |
+   | Customer-owned cylinders (`Su Propiedad`)    | Serial appears on the client ledger only — no size master                                        | Created without capacity (0% unless filled later in Weld)         |
+   | Supplier stock lists (e.g. Intergas N-PROPI) | Serial + gas; rarely size                                                                        | Usually no capacity                                               |
+   | `CILINDROS VENDIDOS` (`METROS` column)       | Often a real size for that sale                                                                  | Used to enrich the cylinder master when still blank               |
 
    **What we already automated (ops):** re-run capacity backfill after parser fixes without reloading all movements:
 

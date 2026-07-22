@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { IsoDate, PageMeta, paginated, PaginationQuery } from "./common";
 import {
+  CapacityUnit,
   CylinderCondition,
   CylinderState,
   GasCode,
@@ -15,7 +16,9 @@ export const Cylinder = z.object({
   owner_name: z.string().optional(),
   serial_number: z.string(),
   gas_code: GasCode.nullable(),
+  /** Magnitude; unit is capacity_unit (D-18). Legacy column name. */
   capacity_m3: z.number().nullable(),
+  capacity_unit: CapacityUnit,
   ownership_basis: OwnershipBasis,
   packaging: PackagingKind,
   battery_id: z.number().int().nullable(),
@@ -39,6 +42,7 @@ export const CreateCylinderInput = z.object({
   serial_number: z.string().min(1),
   gas_code: GasCode.nullable().optional(),
   capacity_m3: z.coerce.number().positive().nullable().optional(),
+  capacity_unit: CapacityUnit.default("M3").optional(),
   ownership_basis: OwnershipBasis,
   packaging: PackagingKind.default("SINGLE"),
   home_territory_id: z.number().int().nullable().optional(),

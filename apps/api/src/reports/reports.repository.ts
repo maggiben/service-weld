@@ -286,6 +286,7 @@ export class ReportsRepository {
         "party.display_name as client_name",
         "movement_event.gas_code",
         "cylinder.capacity_m3",
+        "cylinder.capacity_unit",
         "movement_event.delivery_date",
         "movement_event.return_date",
         "movement_event.rental_days",
@@ -331,6 +332,7 @@ export class ReportsRepository {
         r.client_party_id == null ? null : Number(r.client_party_id),
       gas_code: r.gas_code,
       capacity_m3: r.capacity_m3 == null ? null : Number(r.capacity_m3),
+      capacity_unit: (r.capacity_unit ?? "M3") as "M3" | "KG",
       period: r.period as "DAILY" | "MONTHLY",
       amount: Number(r.amount),
       effective_from: isoDate(r.effective_from)!,
@@ -367,6 +369,7 @@ export class ReportsRepository {
         row.gas_code,
         delivery,
         row.capacity_m3 == null ? null : Number(row.capacity_m3),
+        (row.capacity_unit ?? "M3") as "M3" | "KG",
       );
       const fallback = row.daily_rate_default
         ? Number(row.daily_rate_default)

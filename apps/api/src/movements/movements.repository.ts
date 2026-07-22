@@ -188,11 +188,14 @@ export class MovementsRepository {
         ? "movement_event.rental_days"
         : "movement_event.delivery_date";
 
-    const rows = (await qb
-      .orderBy(sortColumn, sort.direction)
-      .orderBy("movement_event.id", sort.direction)
-      .limit(limit + 1)
-      .execute()) as MovementRow[];
+    const [rows, totalEstimate] = await Promise.all([
+      qb
+        .orderBy(sortColumn, sort.direction)
+        .orderBy("movement_event.id", sort.direction)
+        .limit(limit + 1)
+        .execute() as Promise<MovementRow[]>,
+      this.countMatching(query),
+    ]);
 
     const hasMore = rows.length > limit;
     const pageRows = hasMore ? rows.slice(0, limit) : rows;
@@ -210,8 +213,56 @@ export class MovementsRepository {
                 id: Number(last.id),
               })
             : null,
+        totalEstimate,
       }),
     };
+  }
+
+  /** Exact match count for the current list filters (no cursor). Feeds DataGrid totals. */
+  private async countMatching(query: MovementListQuery): Promise<number> {
+    const db = resolveDb(this.db);
+    let qb = db
+      .selectFrom("movement_event")
+      .leftJoin("client", "client.party_id", "movement_event.holder_party_id")
+      .select((eb) => eb.fn.countAll<string>().as("c"));
+
+    if (query.open) {
+      qb = qb
+        .where("movement_event.state", "=", "OPEN")
+        .where("movement_event.return_date", "is", null);
+    }
+    if (query["filter[cylinder_id]"] != null) {
+      qb = qb.where(
+        "movement_event.cylinder_id",
+        "=",
+        query["filter[cylinder_id]"],
+      );
+    }
+    if (query["filter[holder_party_id]"] != null) {
+      qb = qb.where(
+        "movement_event.holder_party_id",
+        "=",
+        query["filter[holder_party_id]"],
+      );
+    } else if (query["filter[locality_id]"] != null) {
+      qb = qb.where("client.locality_id", "=", query["filter[locality_id]"]);
+    }
+    if (query["filter[state]"]) {
+      qb = qb.where("movement_event.state", "=", query["filter[state]"]);
+    }
+    if (query["filter[movement_kind]"]) {
+      qb = qb.where(
+        "movement_event.movement_kind",
+        "=",
+        query["filter[movement_kind]"],
+      );
+    }
+    if (query["filter[gas_code]"]) {
+      qb = qb.where("movement_event.gas_code", "=", query["filter[gas_code]"]);
+    }
+
+    const row = await qb.executeTakeFirst();
+    return Number(row?.c ?? 0);
   }
 
   async getById(id: number): Promise<MovementEvent | null> {

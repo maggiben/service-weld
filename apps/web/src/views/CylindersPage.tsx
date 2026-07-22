@@ -38,6 +38,7 @@ import { RegisterCylinderDrawer } from "../features/cylinders/RegisterCylinderDr
 import { ReplaceCylinderDialog } from "../features/cylinders/ReplaceCylinderDialog";
 import { ReportLossDialog } from "../features/cylinders/ReportLossDialog";
 import { useLocations } from "../hooks/useLocations";
+import { formatCapacity } from "../lib/format";
 import { useSessionStore } from "../store/sessionStore";
 import { useUiStore } from "../store/uiStore";
 
@@ -222,9 +223,10 @@ export default function CylindersPage() {
       {
         field: "capacity_m3",
         headerName: t("cylinders.columns.capacity"),
-        width: 100,
-        type: "number",
+        width: 110,
         sortable: false,
+        valueGetter: (_v, row: Cylinder) =>
+          formatCapacity(row.capacity_m3, row.capacity_unit),
       },
       {
         field: "ownership_basis",

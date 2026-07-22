@@ -9,6 +9,7 @@ export {
   businessTodayIso,
   DEFAULT_BUSINESS_TIMEZONE,
 } from "./value-objects";
+export type { CapacityUnit } from "./value-objects";
 export {
   TERMINAL_CYLINDER_STATES,
   DELIVERABLE_STATES,

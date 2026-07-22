@@ -22,6 +22,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import {
+  CapacityUnit,
   CreateCylinderInput,
   OwnershipBasis,
   type CreateCylinderInput as FormValues,
@@ -65,6 +66,7 @@ export function RegisterCylinderDrawer({ open, onClose }: Props) {
       serial_number: "",
       gas_code: "O2",
       capacity_m3: null,
+      capacity_unit: "M3",
       ownership_basis: "OURS",
       packaging: "SINGLE",
       home_territory_id: territories[0]?.id ?? 1,
@@ -92,6 +94,7 @@ export function RegisterCylinderDrawer({ open, onClose }: Props) {
         serial_number: "",
         gas_code: "O2",
         capacity_m3: null,
+        capacity_unit: "M3",
         ownership_basis: "OURS",
         packaging: "SINGLE",
         home_territory_id: territories[0]?.id ?? 1,
@@ -306,6 +309,34 @@ export function RegisterCylinderDrawer({ open, onClose }: Props) {
                       </MenuItem>
                     ))}
                   </Select>
+                </FormControl>
+              )}
+            />
+
+            <Controller
+              name="capacity_unit"
+              control={control}
+              render={({ field }) => (
+                <FormControl fullWidth>
+                  <InputLabel>{t("cylinders.form.capacity_unit")}</InputLabel>
+                  <Select
+                    label={t("cylinders.form.capacity_unit")}
+                    value={field.value ?? "M3"}
+                    onChange={(e) =>
+                      field.onChange(
+                        e.target.value as FormValues["capacity_unit"],
+                      )
+                    }
+                  >
+                    {CapacityUnit.options.map((unit) => (
+                      <MenuItem key={unit} value={unit}>
+                        {t(`enums.capacity_unit.${unit}`)}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  <FormHelperText>
+                    {t("cylinders.form.capacity_hint")}
+                  </FormHelperText>
                 </FormControl>
               )}
             />

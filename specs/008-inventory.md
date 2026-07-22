@@ -8,7 +8,7 @@ Track every physical cylinder, battery, and accessory through its full lifecycle
 
 ## Requirements
 
-- R1. Implement **cylinder registration** with `(owner, serial)` identity, gas, capacity, ownership basis, packaging, home territory (W2, BR-02/07).
+- R1. Implement **cylinder registration** with `(owner, serial)` identity, gas, capacity as `(magnitude, capacity_unit ∈ {M3,KG})` (D-18), ownership basis, packaging, home territory (W2, BR-02/07). List/detail UIs MUST show the unit beside the magnitude.
 - R2. Implement **custody transitions** driven by movements: `IN_STOCK_* ↔ AT_CLIENT ↔ AT_SUPPLIER`, terminal `SOLD/LOST/BROKEN/RETURNED_TO_SUPPLIER/RETIRED` (state machine in `sdd.md`).
 - R3. Enforce **single custody** (BR-01): at most one open holding per cylinder.
 - R4. Implement **batteries** (W2): create with ≥2 members, member cannot be in two active batteries or circulate independently (BR-13); a battery moves as a unit.

@@ -20,10 +20,19 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import dayjs, { type Dayjs } from "dayjs";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { GasCode, RatePeriod, RentalRate } from "@weld/schemas";
-import { CYLINDER_CAPACITY_OPTIONS } from "@weld/schemas";
+import type {
+  CapacityUnit,
+  GasCode,
+  RatePeriod,
+  RentalRate,
+} from "@weld/schemas";
+import {
+  CYLINDER_CAPACITY_KG_OPTIONS,
+  CYLINDER_CAPACITY_OPTIONS,
+} from "@weld/schemas";
 import { ApiClientError } from "@weld/api-client";
 import { api } from "../api/client";
+import { formatCapacity } from "../lib/format";
 import { useSessionStore } from "../store/sessionStore";
 
 const GASES: GasCode[] = ["O2", "O2_MED", "CO2", "N2", "AR", "ATAL", "ACET"];
@@ -43,6 +52,7 @@ export default function RatesPage() {
   const [period, setPeriod] = useState<RatePeriod>("DAILY");
   const [gas, setGas] = useState<GasCode | "">("");
   const [capacity, setCapacity] = useState<number | "">("");
+  const [capacityUnit, setCapacityUnit] = useState<CapacityUnit>("M3");
   const [clientId, setClientId] = useState<number | "">("");
   const [effectiveFrom, setEffectiveFrom] = useState(
     dayjs().format("YYYY-MM-DD"),
@@ -91,6 +101,7 @@ export default function RatesPage() {
       setPeriod(rate.period);
       setGas(rate.gas_code ?? "");
       setCapacity(rate.capacity_m3 ?? "");
+      setCapacityUnit(rate.capacity_unit ?? "M3");
       setClientId(rate.client_party_id ?? "");
       setEffectiveFrom(rate.effective_from);
       setEffectiveTo(rate.effective_to);
@@ -101,6 +112,7 @@ export default function RatesPage() {
     setPeriod("DAILY");
     setGas("");
     setCapacity("");
+    setCapacityUnit("M3");
     setClientId("");
     setEffectiveFrom(dayjs().format("YYYY-MM-DD"));
     setEffectiveTo(null);
@@ -130,6 +142,7 @@ export default function RatesPage() {
         period,
         gas_code: gas || null,
         capacity_m3: capacity === "" ? null : Number(capacity),
+        capacity_unit: capacityUnit,
         client_party_id: clientId === "" ? null : Number(clientId),
         effective_from: effectiveFrom,
         effective_to: effectiveTo,
@@ -186,9 +199,9 @@ export default function RatesPage() {
         field: "capacity_m3",
         headerName: t("rates.columns.capacity"),
         width: 110,
-        valueGetter: (_v, row) =>
+        valueGetter: (_v, row: RentalRate) =>
           row.capacity_m3 != null
-            ? `${row.capacity_m3} m³`
+            ? formatCapacity(row.capacity_m3, row.capacity_unit)
             : t("rates.any_capacity"),
       },
       {
@@ -319,6 +332,19 @@ export default function RatesPage() {
           </TextField>
           <TextField
             select
+            label={t("rates.form.capacity_unit")}
+            value={capacityUnit}
+            onChange={(e) => {
+              setCapacityUnit(e.target.value as CapacityUnit);
+              setCapacity("");
+            }}
+            fullWidth
+          >
+            <MenuItem value="M3">{t("enums.capacity_unit.M3")}</MenuItem>
+            <MenuItem value="KG">{t("enums.capacity_unit.KG")}</MenuItem>
+          </TextField>
+          <TextField
+            select
             label={t("rates.form.capacity")}
             value={capacity}
             onChange={(e) =>
@@ -328,9 +354,12 @@ export default function RatesPage() {
             helperText={t("rates.form.capacity_hint")}
           >
             <MenuItem value="">{t("rates.any_capacity")}</MenuItem>
-            {CYLINDER_CAPACITY_OPTIONS.map((m3) => (
-              <MenuItem key={m3} value={m3}>
-                {m3} m³
+            {(capacityUnit === "KG"
+              ? CYLINDER_CAPACITY_KG_OPTIONS
+              : CYLINDER_CAPACITY_OPTIONS
+            ).map((size) => (
+              <MenuItem key={`${capacityUnit}-${size}`} value={size}>
+                {formatCapacity(size, capacityUnit)}
               </MenuItem>
             ))}
           </TextField>

@@ -15,15 +15,32 @@ export function businessTodayIso(
   }).format(now);
 }
 
-/** Immutable capacity in m³ (002 R4 / C5). */
-export class Capacity {
-  private constructor(readonly m3: number) {}
+/** Capacity unit (D-18 / 002 R4). */
+export type CapacityUnit = "M3" | "KG";
 
-  static of(m3: number): Capacity {
-    if (!(m3 > 0) || !Number.isFinite(m3)) {
+/**
+ * Immutable capacity as (magnitude, unit). Column `capacity_m3` stores the
+ * magnitude; `capacity_unit` stores the unit. No m³↔kg conversion (D-18).
+ */
+export class Capacity {
+  private constructor(
+    readonly value: number,
+    readonly unit: CapacityUnit,
+  ) {}
+
+  /** @deprecated Prefer `.value` — kept for callers that assumed m³-only. */
+  get m3(): number {
+    return this.value;
+  }
+
+  static of(value: number, unit: CapacityUnit = "M3"): Capacity {
+    if (!(value > 0) || !Number.isFinite(value)) {
       throw DomainErrors.invalidCapacity();
     }
-    return new Capacity(m3);
+    if (unit !== "M3" && unit !== "KG") {
+      throw DomainErrors.invalidCapacity();
+    }
+    return new Capacity(value, unit);
   }
 }
 

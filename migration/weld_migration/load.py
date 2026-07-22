@@ -21,7 +21,7 @@ from .normalize import (
     person_token_set,
     request_id_for,
     resolve_gas,
-    sanitize_capacity_m3,
+    sanitize_capacity,
 )
 from .parse import ExtractResult, StagedClient, StagedCylinder, StagedMovement
 
@@ -215,7 +215,11 @@ class Loader:
     ) -> None:
         key = display_name.casefold()
         self.client_id[key] = party_id
-        self.party_by_name[key] = party_id
+        # Do not clobber SELF/SUPPLIER/SUBDISTRIBUTOR name keys — loan/cylinder
+        # ownership resolves via party_by_name and must keep BR-07 owners.
+        existing = self.party_by_name.get(key)
+        if existing is None or self.party_type.get(existing) == "CUSTOMER":
+            self.party_by_name[key] = party_id
         self.party_type[party_id] = "CUSTOMER"
         self.client_territory[party_id] = territory_id
         fold = fold_person_key(display_name)
@@ -436,10 +440,14 @@ class Loader:
                         ).fetchall()
                         remapped += len(res)
 
+                # Drop alias/junk localities that no longer have clients (keep seed rows
+                # that normalize to themselves even with zero clients).
                 for row in localities:
                     lid = row["id"]
                     canon = normalize_locality(row["name"], known_names=known)
-                    is_canonical_row = canon is not None and row["name"] == canon
+                    is_canonical_row = (
+                        canon is not None and row["name"] == canon
+                    )
                     if is_canonical_row:
                         continue
                     still = conn.execute(
@@ -452,6 +460,7 @@ class Loader:
                     ).fetchone()
                     if still:
                         continue
+                    # Also skip if referenced by cylinder_sale snapshots only — those are text.
                     conn.execute("DELETE FROM locality WHERE id = %s", (lid,))
                     deleted += 1
                     self.stats["locality_orphan_deleted"] += 1
@@ -466,13 +475,71 @@ class Loader:
             }
 
     def _self_party_id(self) -> int:
+        for pid, pt in self.party_type.items():
+            if pt == "SELF":
+                return pid
         return self.party_by_name["nuestra empresa"]
 
-    def _owner_id(self, hint: str) -> int:
+    def _supplier_party_id(self, hint: str) -> int | None:
+        """Resolve hint to a SUPPLIER/SUBDISTRIBUTOR party only (BR-07)."""
+        key = hint.casefold()
+        for table in (self.origin_parties, self.party_by_name):
+            pid = table.get(key)
+            if pid is not None and self.party_type.get(pid) in (
+                "SUPPLIER",
+                "SUBDISTRIBUTOR",
+            ):
+                return pid
+        return None
+
+    def _ensure_supplier(self, conn: psycopg.Connection, hint: str) -> int:
+        """Return a SUPPLIER/SUBDISTRIBUTOR party id, creating the supplier if missing."""
+        existing = self._supplier_party_id(hint)
+        if existing is not None:
+            return existing
+        display = hint.strip() or "Nordelta"
+        try:
+            with self._sp(conn):
+                row = conn.execute(
+                    """
+                    INSERT INTO party(party_type, display_name)
+                    VALUES ('SUPPLIER', %s)
+                    RETURNING id
+                    """,
+                    (display,),
+                ).fetchone()
+        except psycopg.Error:
+            row = conn.execute(
+                """
+                SELECT id FROM party
+                WHERE party_type IN ('SUPPLIER', 'SUBDISTRIBUTOR')
+                  AND lower(display_name::text) = lower(%s)
+                  AND deleted_at IS NULL
+                LIMIT 1
+                """,
+                (display,),
+            ).fetchone()
+        if not row:
+            raise RuntimeError(f"could not ensure supplier party for {display!r}")
+        pid = row["id"]
+        self.party_by_name[display.casefold()] = pid
+        self.party_type[pid] = "SUPPLIER"
+        self.origin_parties[display.casefold()] = pid
+        self.stats["supplier_party_created"] += 1
+        return pid
+
+    def _owner_id(self, hint: str, *, basis: str | None = None) -> int:
+        """Resolve owner party for a cylinder hint (BR-07-aware)."""
+        if basis == "OURS":
+            return self._self_party_id()
+        if basis == "SUPPLIER":
+            sid = self._supplier_party_id(hint)
+            if sid is not None:
+                return sid
+            raise KeyError(f"supplier party not found for hint={hint!r}")
         key = hint.casefold()
         if key in self.party_by_name:
             return self.party_by_name[key]
-        # fallback SELF
         return self._self_party_id()
 
     def _load_cylinders(self, conn: psycopg.Connection, cylinders: list[StagedCylinder]) -> None:
@@ -481,12 +548,22 @@ class Loader:
             if cyl.packaging == "BATTERY":
                 batteries[cyl.serial_number] = cyl
 
-            owner_id = self._owner_id(cyl.owner_hint)
+            if cyl.ownership_basis == "SUPPLIER":
+                owner_id = self._ensure_supplier(conn, cyl.owner_hint)
+            elif cyl.ownership_basis == "OURS":
+                owner_id = self._self_party_id()
+            else:
+                owner_id = self._owner_id(cyl.owner_hint)
             key = (owner_id, cyl.serial_number)
-            capacity = sanitize_capacity_m3(cyl.capacity_m3)
+            unit = cyl.capacity_unit if cyl.capacity_unit in ("M3", "KG") else "M3"
+            parsed = sanitize_capacity(cyl.capacity_m3, unit)  # type: ignore[arg-type]
+            capacity = parsed.value if parsed else None
+            capacity_unit = parsed.unit if parsed else "M3"
             if key in self.cylinder_id:
                 self.stats["cylinder_exists"] += 1
-                self._maybe_backfill_capacity(conn, self.cylinder_id[key], capacity)
+                self._maybe_backfill_capacity(
+                    conn, self.cylinder_id[key], capacity, capacity_unit
+                )
                 continue
 
             gas_code, provisional, gas_reason = resolve_gas(cyl.gas_raw, self.gas_alias)
@@ -541,8 +618,9 @@ class Loader:
                         """
                         INSERT INTO cylinder(
                             owner_party_id, serial_number, gas_code, capacity_m3,
-                            ownership_basis, packaging, battery_id, state, condition
-                        ) VALUES (%s,%s,%s,%s,%s,%s,%s,'IN_STOCK_EMPTY','EMPTY')
+                            capacity_unit, ownership_basis, packaging, battery_id,
+                            state, condition
+                        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,'IN_STOCK_EMPTY','EMPTY')
                         RETURNING id
                         """,
                         (
@@ -550,6 +628,7 @@ class Loader:
                             cyl.serial_number,
                             gas_code,
                             capacity,
+                            capacity_unit,
                             cyl.ownership_basis,
                             packaging,
                             battery_id,
@@ -622,25 +701,45 @@ class Loader:
                             )
 
     def _maybe_backfill_capacity(
-        self, conn: psycopg.Connection, cylinder_id: int, capacity: float | None
+        self,
+        conn: psycopg.Connection,
+        cylinder_id: int,
+        capacity: float | None,
+        capacity_unit: str = "M3",
     ) -> None:
         """Write capacity when missing, or replace prior garbage (non-known sizes)."""
         row = conn.execute(
-            "SELECT capacity_m3 FROM cylinder WHERE id = %s AND deleted_at IS NULL",
+            """
+            SELECT capacity_m3, capacity_unit
+            FROM cylinder WHERE id = %s AND deleted_at IS NULL
+            """,
             (cylinder_id,),
         ).fetchone()
         if not row:
             return
         raw_current = float(row["capacity_m3"]) if row["capacity_m3"] is not None else None
-        current = sanitize_capacity_m3(raw_current)
-        garbage = raw_current is not None and current is None
+        current_unit = row["capacity_unit"] or "M3"
+        current_parsed = (
+            sanitize_capacity(raw_current, current_unit)  # type: ignore[arg-type]
+            if raw_current is not None
+            else None
+        )
+        garbage = raw_current is not None and current_parsed is None
 
         if capacity is not None:
-            if current == capacity:
+            if (
+                current_parsed is not None
+                and current_parsed.value == capacity
+                and current_parsed.unit == capacity_unit
+            ):
                 return
             conn.execute(
-                "UPDATE cylinder SET capacity_m3 = %s, updated_at = now() WHERE id = %s",
-                (capacity, cylinder_id),
+                """
+                UPDATE cylinder
+                SET capacity_m3 = %s, capacity_unit = %s, updated_at = now()
+                WHERE id = %s
+                """,
+                (capacity, capacity_unit, cylinder_id),
             )
             self.stats["cylinder_capacity_backfilled"] += 1
             return
@@ -659,10 +758,16 @@ class Loader:
             if self.dry_run:
                 would = 0
                 for cyl in cylinders:
-                    capacity = sanitize_capacity_m3(cyl.capacity_m3)
-                    if capacity is None:
+                    unit = cyl.capacity_unit if cyl.capacity_unit in ("M3", "KG") else "M3"
+                    parsed = sanitize_capacity(cyl.capacity_m3, unit)  # type: ignore[arg-type]
+                    if parsed is None:
                         continue
-                    owner_id = self._owner_id(cyl.owner_hint)
+                    if cyl.ownership_basis == "SUPPLIER":
+                        owner_id = self._supplier_party_id(cyl.owner_hint) or -1
+                    elif cyl.ownership_basis == "OURS":
+                        owner_id = self._self_party_id()
+                    else:
+                        owner_id = self._owner_id(cyl.owner_hint)
                     cid = self.cylinder_id.get((owner_id, cyl.serial_number))
                     if cid is None:
                         matches = [
@@ -678,8 +783,22 @@ class Loader:
                 with conn.transaction():
                     conn.execute("SELECT set_config('app.source', 'migration', true)")
                     for cyl in cylinders:
-                        capacity = sanitize_capacity_m3(cyl.capacity_m3)
-                        owner_id = self._owner_id(cyl.owner_hint)
+                        unit = (
+                            cyl.capacity_unit
+                            if cyl.capacity_unit in ("M3", "KG")
+                            else "M3"
+                        )
+                        parsed = sanitize_capacity(
+                            cyl.capacity_m3, unit  # type: ignore[arg-type]
+                        )
+                        capacity = parsed.value if parsed else None
+                        capacity_unit = parsed.unit if parsed else "M3"
+                        if cyl.ownership_basis == "SUPPLIER":
+                            owner_id = self._supplier_party_id(cyl.owner_hint) or -1
+                        elif cyl.ownership_basis == "OURS":
+                            owner_id = self._self_party_id()
+                        else:
+                            owner_id = self._owner_id(cyl.owner_hint)
                         cid = self.cylinder_id.get((owner_id, cyl.serial_number))
                         if cid is None:
                             matches = [
@@ -691,20 +810,29 @@ class Loader:
                         if cid is None:
                             self.stats["cylinder_capacity_unmatched"] += 1
                             continue
-                        self._maybe_backfill_capacity(conn, cid, capacity)
+                        self._maybe_backfill_capacity(
+                            conn, cid, capacity, capacity_unit
+                        )
 
-                    # Sales sheet METROS column → cylinder master when still null.
+                    # Sales sheet METROS/KG column → cylinder master when still null.
                     sale_rows = conn.execute(
                         """
                         UPDATE cylinder c
-                        SET capacity_m3 = s.capacity_m3
+                        SET capacity_m3 = s.capacity_m3,
+                            capacity_unit = s.capacity_unit
                         FROM cylinder_sale s
                         WHERE s.cylinder_id = c.id
                           AND c.deleted_at IS NULL
                           AND c.capacity_m3 IS NULL
                           AND s.capacity_m3 IS NOT NULL
-                          AND s.capacity_m3::float IN (
+                          AND (
+                            (s.capacity_unit = 'M3' AND s.capacity_m3::float IN (
                               1, 2, 3, 4, 4.5, 5, 6, 7, 8, 10, 20, 40
+                            ))
+                            OR
+                            (s.capacity_unit = 'KG' AND s.capacity_m3::float IN (
+                              5, 10, 15, 20, 25, 30, 40, 45, 50
+                            ))
                           )
                         RETURNING c.id
                         """
@@ -718,8 +846,14 @@ class Loader:
                         SET capacity_m3 = NULL
                         WHERE deleted_at IS NULL
                           AND capacity_m3 IS NOT NULL
-                          AND capacity_m3::float NOT IN (
+                          AND NOT (
+                            (capacity_unit = 'M3' AND capacity_m3::float IN (
                               1, 2, 3, 4, 4.5, 5, 6, 7, 8, 10, 20, 40
+                            ))
+                            OR
+                            (capacity_unit = 'KG' AND capacity_m3::float IN (
+                              5, 10, 15, 20, 25, 30, 40, 45, 50
+                            ))
                           )
                         RETURNING id
                         """
@@ -732,7 +866,13 @@ class Loader:
             "counts": dict(self.stats),
             "cylinders_parsed": len(cylinders),
             "with_capacity": sum(
-                1 for c in cylinders if sanitize_capacity_m3(c.capacity_m3) is not None
+                1
+                for c in cylinders
+                if sanitize_capacity(
+                    c.capacity_m3,
+                    c.capacity_unit if c.capacity_unit in ("M3", "KG") else "M3",  # type: ignore[arg-type]
+                )
+                is not None
             ),
         }
 
@@ -1523,7 +1663,10 @@ class Loader:
             )
             return
         holder_id = self._resolve_holder(mv.holder_name)
-        capacity = sanitize_capacity_m3(mv.capacity_m3)
+        unit = mv.capacity_unit if mv.capacity_unit in ("M3", "KG") else "M3"
+        parsed = sanitize_capacity(mv.capacity_m3, unit)  # type: ignore[arg-type]
+        capacity = parsed.value if parsed else None
+        capacity_unit = parsed.unit if parsed else "M3"
         if mv.capacity_m3 is not None and capacity is None and mv.capacity_m3 >= 1000:
             self._flag(
                 conn,
@@ -1539,8 +1682,8 @@ class Loader:
                     """
                     INSERT INTO cylinder_sale(
                         cylinder_id, client_party_id, sale_date, gas_code, capacity_m3,
-                        address_snapshot, locality_snapshot, phone_snapshot
-                    ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+                        capacity_unit, address_snapshot, locality_snapshot, phone_snapshot
+                    ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
                     ON CONFLICT (cylinder_id) DO NOTHING
                     """,
                     (
@@ -1549,6 +1692,7 @@ class Loader:
                         mv.delivery_date,
                         gas_code,
                         capacity,
+                        capacity_unit,
                         mv.sale_address,
                         mv.sale_locality,
                         mv.sale_phone,
@@ -1556,7 +1700,7 @@ class Loader:
                 )
                 conn.execute("UPDATE cylinder SET state='SOLD' WHERE id=%s", (cyl_id,))
                 if capacity is not None:
-                    self._maybe_backfill_capacity(conn, cyl_id, capacity)
+                    self._maybe_backfill_capacity(conn, cyl_id, capacity, capacity_unit)
             self.stats["sale_inserted"] += 1
             self.stats["imported_clean"] += 1
         except psycopg.Error as e:
@@ -1572,28 +1716,44 @@ class Loader:
     def _load_loan(self, conn: psycopg.Connection, mv: StagedMovement) -> None:
         serial = mv.serials[0]
         gas_code, _, _ = resolve_gas(mv.gas_raw, self.gas_alias)
-        supplier_id = self._owner_id(mv.supplier_hint or "Nordelta")
-        # Ensure supplier-owned cylinder
+        supplier_id = self._ensure_supplier(conn, mv.supplier_hint or "Nordelta")
+        # Ensure supplier-owned cylinder (savepoint: BR-07 must not abort the txn)
         key = (supplier_id, serial)
         if key not in self.cylinder_id:
+            row = None
             try:
-                row = conn.execute(
-                    """
-                    INSERT INTO cylinder(
-                        owner_party_id, serial_number, gas_code, ownership_basis,
-                        packaging, state, condition
-                    ) VALUES (%s,%s,%s,'SUPPLIER','SINGLE','AT_SUPPLIER','FULL')
-                    RETURNING id
-                    """,
-                    (supplier_id, serial, gas_code),
-                ).fetchone()
-            except psycopg.Error:
+                with self._sp(conn):
+                    row = conn.execute(
+                        """
+                        INSERT INTO cylinder(
+                            owner_party_id, serial_number, gas_code, ownership_basis,
+                            packaging, state, condition
+                        ) VALUES (%s,%s,%s,'SUPPLIER','SINGLE','AT_SUPPLIER','FULL')
+                        RETURNING id
+                        """,
+                        (supplier_id, serial, gas_code),
+                    ).fetchone()
+            except psycopg.Error as e:
                 row = conn.execute(
                     "SELECT id FROM cylinder WHERE owner_party_id=%s AND serial_number=%s AND deleted_at IS NULL",
                     (supplier_id, serial),
                 ).fetchone()
+                if row is None:
+                    self._flag(
+                        conn,
+                        mv.workbook,
+                        mv.sheet,
+                        mv.row_ref,
+                        f"LOAN_CYLINDER_INSERT_FAILED:{e.__class__.__name__}",
+                        {
+                            "serial": serial,
+                            "supplier": mv.supplier_hint,
+                            "err": str(e)[:200],
+                        },
+                    )
             if row:
                 self.cylinder_id[key] = row["id"]
+                self._cyl_owner[row["id"]] = supplier_id
         cyl_id = self.cylinder_id.get(key) or self._find_cylinder(conn, serial, "LOAN", None, gas_code)
         if cyl_id is None:
             self._flag(conn, mv.workbook, mv.sheet, mv.row_ref, "LOAN_CYLINDER_MISSING", {"serial": serial})

@@ -204,7 +204,8 @@ components:
         owner_party_id: { type: integer }
         serial_number: { type: string }
         gas_code: { $ref: '#/components/schemas/GasCode' }
-        capacity_m3: { type: number, nullable: true }
+        capacity_m3: { type: number, nullable: true },
+        capacity_unit: { type: string, enum: [M3, KG], default: M3 }
         ownership_basis: { type: string, enum: [OURS, SUPPLIER, CUSTOMER] }
         packaging: { type: string, enum: [SINGLE, BATTERY, BATTERY_MEMBER] }
         state: { type: string, enum: [IN_STOCK_EMPTY, IN_STOCK_FULL, AT_CLIENT, AT_SUPPLIER, SOLD, LOST, BROKEN, RETURNED_TO_SUPPLIER, RETIRED] }
@@ -422,6 +423,7 @@ security:
   "serial_number": "1837",
   "gas_code": "O2",
   "capacity_m3": 6,
+  "capacity_unit": "M3",
   "ownership_basis": "OURS",
   "home_territory_id": 3,
   "acquisition_date": "2013-05-17"

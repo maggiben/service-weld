@@ -135,6 +135,17 @@ Legend: **D-n** decision · resolves inconsistency **I-n** / missing **M-n** fro
 - **pre-commit:** secrets scan → Prettier (lint-staged) → typecheck. **pre-push:** coverage gate.
 - **Policy:** do not create a commit until pre-commit checks pass; do not push until coverage passes; do not skip hooks (`--no-verify`) unless the operator explicitly requests a bypass. Specs `010` / `012` / `000` and `docs/DEVELOPMENT.md` are authoritative.
 
+### D-18 — Cylinder capacity units: m³ and kg _(product)_
+
+- Cylinder nameplate size is a **(magnitude, unit)** pair. Units: **`M3`** (cubic metres) and **`KG`** (kilograms).
+- **Why:** compressed gases are typically sized in m³; liquefied / weight-sold gases (and many legacy workbook cells) are sized in kg. Route workbooks report both; the app must store and display both without converting between them.
+- **Persistence:** keep the numeric column `capacity_m3` as the **magnitude** (legacy name; value is in `capacity_unit`, not always m³). Add PostgreSQL ENUM `capacity_unit ('M3','KG')` and column `capacity_unit NOT NULL DEFAULT 'M3'` on `cylinder`, `rental_rate`, and `cylinder_sale`.
+- **Semantics:** null magnitude = unknown size; when magnitude is set, `capacity_unit` is required (default `M3` for backfill). Rate wildcards (`capacity_m3 IS NULL`) ignore unit. Rate match and overlap keys are `(client, gas, magnitude, unit)`.
+- **No conversion:** do not invent m³↔kg factors; treat units as incomparable categories.
+- **UI:** every capacity cell/form shows the unit label (`m³` / `kg`). Forms expose a unit selector when capturing size.
+- **Import (011):** parse explicit weight cells (`10 KG`, `25 k`, …) into magnitude + `KG` instead of discarding them; prefer explicit volume over weight when both appear.
+- Specs updated: `002` (Capacity VO), `003` (ENUM/columns), `008`/`009` (inventory/rates), `011` (importer).
+
 ---
 
 ## Deviations from spec (flagged)

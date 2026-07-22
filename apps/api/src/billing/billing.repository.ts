@@ -25,6 +25,7 @@ interface BillableMovement {
   daily_rate_default: string | number | null;
   gas_code: string | null;
   capacity_m3: string | number | null;
+  capacity_unit: "M3" | "KG";
   delivery_date: string | Date;
   return_date: string | Date | null;
   cylinder_serial: string;
@@ -284,6 +285,7 @@ export class BillingRepository {
         "client.daily_rate_default",
         "movement_event.gas_code",
         "cylinder.capacity_m3",
+        "cylinder.capacity_unit",
         "movement_event.delivery_date",
         "movement_event.return_date",
         "cylinder.serial_number as cylinder_serial",
@@ -363,11 +365,13 @@ export class BillingRepository {
 
       const capacityM3 =
         movement.capacity_m3 == null ? null : Number(movement.capacity_m3);
+      const capacityUnit = movement.capacity_unit ?? "M3";
       const unit = resolveBillingUnitPrice({
         rates,
         clientPartyId: holderId,
         gasCode: movement.gas_code,
         capacityM3,
+        capacityUnit,
         mode: isHistory ? "history" : "period",
         deliveryDate: delivery,
         periodStart,
@@ -390,7 +394,9 @@ export class BillingRepository {
         lines: [],
       };
       const gasLabel = movement.gas_code ? ` · ${movement.gas_code}` : "";
-      const sizeLabel = capacityM3 != null ? ` · ${capacityM3} m³` : "";
+      const sizeSuffix = capacityUnit === "KG" ? " kg" : " m³";
+      const sizeLabel =
+        capacityM3 != null ? ` · ${capacityM3}${sizeSuffix}` : "";
       const billStart = delivery > periodStart ? delivery : periodStart;
       const billEnd = ret
         ? ret < periodEnd

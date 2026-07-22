@@ -41,6 +41,7 @@ export type AccessoryState =
   "IN_STOCK" | "ON_LOAN" | "IN_REPAIR" | "LOST" | "BROKEN" | "RETIRED";
 export type AccessoryRentalState = "ON_LOAN" | "RETURNED" | "LOST";
 export type ChargeBasis = "RENTAL" | "FREE_LOAN";
+export type CapacityUnit = "M3" | "KG";
 
 export interface AppUserTable {
   id: Generated<number>;
@@ -157,6 +158,7 @@ export interface CylinderTable {
   serial_number: string;
   gas_code: string | null;
   capacity_m3: string | null;
+  capacity_unit: CapacityUnit;
   ownership_basis: OwnershipBasis;
   packaging: PackagingKind;
   battery_id: number | null;
@@ -234,8 +236,9 @@ export interface RentalRateTable {
   id: Generated<number>;
   client_party_id: number | null;
   gas_code: string | null;
-  /** Null = any cylinder size (m³). */
+  /** Null = any cylinder size. Magnitude is in capacity_unit (D-18). */
   capacity_m3: string | null;
+  capacity_unit: CapacityUnit;
   period: RatePeriod;
   amount: string;
   effective_from: string;

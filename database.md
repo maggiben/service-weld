@@ -58,6 +58,7 @@ CREATE TYPE rate_period       AS ENUM ('DAILY','MONTHLY');
 CREATE TYPE invoice_status    AS ENUM ('DRAFT','APPROVED','EXPORTED','CANCELLED');
 CREATE TYPE audit_action      AS ENUM ('INSERT','UPDATE','DELETE','VOID');
 CREATE TYPE exception_status  AS ENUM ('OPEN','RESOLVED','IGNORED');
+CREATE TYPE capacity_unit     AS ENUM ('M3','KG');  -- D-18: magnitude lives in capacity_m3
 ```
 
 **Why enums here:** these sets are stable and drive branching logic (state machines in `sdd.md`). Enum comparison is integer-fast and prevents the free-text chaos the spreadsheets suffered.
@@ -195,7 +196,8 @@ CREATE TABLE cylinder (
     owner_party_id bigint NOT NULL REFERENCES party(id),
     serial_number  citext NOT NULL,
     gas_code       text REFERENCES gas_type(code),
-    capacity_m3    numeric(5,2),                   -- 2,3,4,6,7,10,20
+    capacity_m3    numeric(5,2),                   -- magnitude; unit in capacity_unit (D-18)
+    capacity_unit  capacity_unit NOT NULL DEFAULT 'M3',  -- M3 | KG
     ownership_basis ownership_basis NOT NULL,
     packaging      packaging_kind NOT NULL DEFAULT 'SINGLE',
     battery_id     bigint REFERENCES cylinder_battery(id),
@@ -279,7 +281,8 @@ CREATE TABLE rental_rate (                         -- effective-dated rates (rat
     id            bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     client_party_id bigint REFERENCES client(party_id),  -- NULL = default rate
     gas_code      text REFERENCES gas_type(code),        -- NULL = any gas
-    capacity_m3   numeric(5,2),                          -- NULL = any size; e.g. 2,3,4,6,7,10,20
+    capacity_m3   numeric(5,2),                          -- NULL = any size; magnitude in capacity_unit
+    capacity_unit capacity_unit NOT NULL DEFAULT 'M3',
     period        rate_period NOT NULL DEFAULT 'DAILY',
     amount        numeric(14,2) NOT NULL CHECK (amount >= 0),
     effective_from date NOT NULL,
@@ -287,7 +290,7 @@ CREATE TABLE rental_rate (                         -- effective-dated rates (rat
     CONSTRAINT ck_rate_range CHECK (effective_to IS NULL OR effective_to >= effective_from),
     CONSTRAINT ck_rate_capacity CHECK (capacity_m3 IS NULL OR capacity_m3 > 0)
 );
-CREATE INDEX ix_rate_lookup ON rental_rate (client_party_id, gas_code, capacity_m3, effective_from DESC);
+CREATE INDEX ix_rate_lookup ON rental_rate (client_party_id, gas_code, capacity_m3, capacity_unit, effective_from DESC);
 ```
 
 **Why `rental_rate` is effective-dated:** rates change (`$85/día`, `ALQ $333,33` `» observed`) and past invoices must reprice at the **rate that was in force**; storing `effective_from/to` gives correct back-dated billing without mutating history.
@@ -371,6 +374,7 @@ CREATE TABLE cylinder_sale (
     sale_date     date NOT NULL,
     gas_code      text REFERENCES gas_type(code),
     capacity_m3   numeric(5,2),
+    capacity_unit capacity_unit NOT NULL DEFAULT 'M3',
     price         numeric(14,2) CHECK (price IS NULL OR price >= 0),
     address_snapshot text, locality_snapshot text, phone_snapshot text,
     note          text,

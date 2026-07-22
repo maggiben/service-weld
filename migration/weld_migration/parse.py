@@ -18,7 +18,6 @@ from .normalize import (
     parse_capacity,
     parse_cuit,
     parse_serial_cell,
-    sanitize_capacity_m3,
     validate_date_range,
 )
 
@@ -62,6 +61,7 @@ class StagedCylinder:
     owner_hint: str
     gas_raw: str | None = None
     capacity_m3: float | None = None
+    capacity_unit: str = "M3"
     packaging: str = "SINGLE"
     battery_code: str | None = None
     member_serials: list[str] = field(default_factory=list)
@@ -94,6 +94,7 @@ class StagedMovement:
     sale_locality: str | None = None
     sale_phone: str | None = None
     capacity_m3: float | None = None
+    capacity_unit: str = "M3"
     # accessory
     is_accessory: bool = False
     accessory_type: str | None = None
@@ -545,7 +546,8 @@ def parse_propios_workbook(path: str, workbook_label: str = "PROPIOS") -> Extrac
                 ownership_basis=basis,
                 owner_hint=owner_hint,
                 gas_raw=gas_raw,
-                capacity_m3=capacity,
+                capacity_m3=capacity.value if capacity else None,
+                capacity_unit=capacity.unit if capacity else "M3",
                 packaging=packaging,
                 battery_code=battery_code,
                 member_serials=members,
@@ -656,11 +658,9 @@ def _parse_sales(book: xlrd.Book, sh: xlrd.sheet.Sheet, workbook_label: str, res
         serial_info = parse_serial_cell(sh.cell_value(r, 1))
         client = norm_text(sh.cell_value(r, 2))
         gas_raw = norm_text(sh.cell_value(r, 3)) if sh.ncols > 3 else None
-        cap = (
-            sanitize_capacity_m3(parse_capacity(sh.cell_value(r, 4)))
-            if sh.ncols > 4
-            else None
-        )
+        parsed_cap = parse_capacity(sh.cell_value(r, 4)) if sh.ncols > 4 else None
+        cap = parsed_cap.value if parsed_cap else None
+        cap_unit = parsed_cap.unit if parsed_cap else "M3"
         addr = norm_text(sh.cell_value(r, 5)) if sh.ncols > 5 else None
         loc = norm_text(sh.cell_value(r, 6)) if sh.ncols > 6 else None
         phone = norm_text(sh.cell_value(r, 7)) if sh.ncols > 7 else None
@@ -696,6 +696,7 @@ def _parse_sales(book: xlrd.Book, sh: xlrd.sheet.Sheet, workbook_label: str, res
                 sale_locality=normalize_locality(loc) if loc else None,
                 sale_phone=phone or None,
                 capacity_m3=cap,
+                capacity_unit=cap_unit,
                 flags=serial_info["flags"],
             )
         )

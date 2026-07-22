@@ -344,20 +344,20 @@ _(AccessoryRental is modeled inside the Client aggregate for billing consistency
 
 ## 3. Value Objects
 
-| Value Object                 | Composition                                                     | Validation                                      |
-| ---------------------------- | --------------------------------------------------------------- | ----------------------------------------------- |
-| **CylinderSerialNumber**     | string/number, optional owner qualifier (`(intergas)`, `linde`) | non-empty; digits (mostly)                      |
-| **Capacity**                 | decimal + unit `m³`                                             | ∈ {2,3,4,6,7,10,20…}; immutable per cylinder    |
-| **RentalPeriod**             | (deliveryDate, returnDate) → **days** derived                   | returnDate ≥ deliveryDate; days ≥ 0             |
-| **GasCharge / FillQuantity** | gasType + amount                                                | amount > 0                                      |
-| **CUIT** (tax id)            | `NN-NNNNNNNN-N`                                                 | 11 digits + mod-11 check digit                  |
-| **Address (Domicilio)**      | street, km/ruta, locality                                       | —                                               |
-| **Locality**                 | town name                                                       | ∈ Locality enum                                 |
-| **Contact**                  | phone(s) + optional contact name                                | phone format `0XXXX-XXXXXX`                     |
-| **Money / Price**            | ARS amount                                                      | ≥ 0 (rental rate, sale price)                   |
-| **DeliveryInstruction**      | free text                                                       | e.g. weighbridge note                           |
-| **DateStamp**                | calendar date                                                   | plausible range (guard against 2047/2048 typos) |
-| **OwnershipTag**             | {OURS, SUPPLIER:name, CUSTOMER}                                 | consistent with owner                           |
+| Value Object                 | Composition                                                     | Validation                                        |
+| ---------------------------- | --------------------------------------------------------------- | ------------------------------------------------- |
+| **CylinderSerialNumber**     | string/number, optional owner qualifier (`(intergas)`, `linde`) | non-empty; digits (mostly)                        |
+| **Capacity**                 | decimal magnitude + unit `M3`\|`KG` (D-18)                      | known m³ or kg sizes; no conversion between units |
+| **RentalPeriod**             | (deliveryDate, returnDate) → **days** derived                   | returnDate ≥ deliveryDate; days ≥ 0               |
+| **GasCharge / FillQuantity** | gasType + amount                                                | amount > 0                                        |
+| **CUIT** (tax id)            | `NN-NNNNNNNN-N`                                                 | 11 digits + mod-11 check digit                    |
+| **Address (Domicilio)**      | street, km/ruta, locality                                       | —                                                 |
+| **Locality**                 | town name                                                       | ∈ Locality enum                                   |
+| **Contact**                  | phone(s) + optional contact name                                | phone format `0XXXX-XXXXXX`                       |
+| **Money / Price**            | ARS amount                                                      | ≥ 0 (rental rate, sale price)                     |
+| **DeliveryInstruction**      | free text                                                       | e.g. weighbridge note                             |
+| **DateStamp**                | calendar date                                                   | plausible range (guard against 2047/2048 typos)   |
+| **OwnershipTag**             | {OURS, SUPPLIER:name, CUSTOMER}                                 | consistent with owner                             |
 
 ---
 

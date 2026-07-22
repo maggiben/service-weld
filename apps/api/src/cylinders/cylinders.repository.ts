@@ -18,6 +18,7 @@ import {
 import { KYSELY, type DB } from "../database/database.module";
 import { resolveDb } from "../database/transaction.context";
 import type {
+  CapacityUnit,
   CylinderCondition,
   CylinderState,
   MovementState,
@@ -33,6 +34,7 @@ interface CylinderRow {
   serial_number: string;
   gas_code: string | null;
   capacity_m3: string | null;
+  capacity_unit: CapacityUnit;
   ownership_basis: OwnershipBasis;
   packaging: PackagingKind;
   battery_id: number | null;
@@ -90,6 +92,7 @@ function mapCylinder(row: CylinderRow): Cylinder {
     serial_number: row.serial_number,
     gas_code: row.gas_code as Cylinder["gas_code"],
     capacity_m3: row.capacity_m3 == null ? null : Number(row.capacity_m3),
+    capacity_unit: row.capacity_unit,
     ownership_basis: row.ownership_basis,
     packaging: row.packaging,
     battery_id: row.battery_id == null ? null : Number(row.battery_id),
@@ -146,6 +149,7 @@ export class CylindersRepository {
         "cylinder.serial_number",
         "cylinder.gas_code",
         "cylinder.capacity_m3",
+        "cylinder.capacity_unit",
         "cylinder.ownership_basis",
         "cylinder.packaging",
         "cylinder.battery_id",
@@ -374,6 +378,7 @@ export class CylindersRepository {
         "cylinder.serial_number",
         "cylinder.gas_code",
         "cylinder.capacity_m3",
+        "cylinder.capacity_unit",
         "cylinder.ownership_basis",
         "cylinder.packaging",
         "cylinder.battery_id",
@@ -648,6 +653,7 @@ export class CylindersRepository {
           gas_code: input.gas_code ?? null,
           capacity_m3:
             input.capacity_m3 == null ? null : String(input.capacity_m3),
+          capacity_unit: input.capacity_unit ?? "M3",
           ownership_basis: input.ownership_basis,
           packaging: input.packaging,
           home_territory_id: input.home_territory_id ?? null,

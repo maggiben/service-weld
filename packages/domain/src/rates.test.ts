@@ -18,6 +18,7 @@ describe("resolveEffectiveRate", () => {
       client_party_id: null,
       gas_code: null,
       capacity_m3: null,
+      capacity_unit: "M3" as const,
       period: "DAILY" as const,
       amount: 50,
       effective_from: "2020-01-01",
@@ -28,6 +29,7 @@ describe("resolveEffectiveRate", () => {
       client_party_id: 10,
       gas_code: null,
       capacity_m3: null,
+      capacity_unit: "M3" as const,
       period: "DAILY" as const,
       amount: 80,
       effective_from: "2020-01-01",
@@ -38,6 +40,7 @@ describe("resolveEffectiveRate", () => {
       client_party_id: 10,
       gas_code: "O2",
       capacity_m3: null,
+      capacity_unit: "M3" as const,
       period: "DAILY" as const,
       amount: 85,
       effective_from: "2020-01-01",
@@ -48,6 +51,7 @@ describe("resolveEffectiveRate", () => {
       client_party_id: 10,
       gas_code: "O2",
       capacity_m3: 10,
+      capacity_unit: "M3" as const,
       period: "DAILY" as const,
       amount: 120,
       effective_from: "2020-01-01",
@@ -58,6 +62,7 @@ describe("resolveEffectiveRate", () => {
       client_party_id: null,
       gas_code: null,
       capacity_m3: 6,
+      capacity_unit: "M3" as const,
       period: "DAILY" as const,
       amount: 70,
       effective_from: "2020-01-01",
@@ -93,6 +98,11 @@ describe("resolveEffectiveRate", () => {
   it("does not apply a size-specific rate to a different size", () => {
     const hit = resolveEffectiveRate(rates, 99, "CO2", "2024-01-01", 10);
     assert.equal(hit?.id, 1);
+  });
+
+  it("does not match m³ rate against kg cylinder of same magnitude", () => {
+    const hit = resolveEffectiveRate(rates, 10, "O2", "2024-01-01", 10, "KG");
+    assert.equal(hit?.id, 3); // client+gas wildcard, not size 10 M3
   });
 });
 
@@ -174,6 +184,7 @@ describe("resolveBillingUnitPrice", () => {
       client_party_id: null,
       gas_code: null,
       capacity_m3: null,
+      capacity_unit: "M3" as const,
       period: "DAILY" as const,
       amount: 85,
       // Rate starts after a long-open delivery (real REYNOSO / 11358 case).
@@ -229,6 +240,7 @@ describe("dailyUnitPrice", () => {
       client_party_id: null,
       gas_code: null,
       capacity_m3: null,
+      capacity_unit: "M3" as const,
       period: "MONTHLY",
       amount: 3000,
       effective_from: "2020-01-01",

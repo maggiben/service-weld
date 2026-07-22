@@ -11,8 +11,8 @@ Provide the canonical object model the application layer implements, independent
 - R1. Implement these **aggregate roots**: `Cylinder`, `CylinderBattery`, `Client` (with `ClientAccount`), `Accessory`, `CylinderSale`, `Party`, `DispatchTerritory`.
 - R2. Implement the central transactional entity **`MovementEvent`** (one delivery→return cycle) with two read projections: client-account view and cylinder-history view. There is exactly **one** stored event per physical movement (BR-16).
 - R3. Implement supporting entities: `AccessoryRental`, `SupplierLoanCycle`, `StockTransfer`, `DeliveryNote`, `RentalRate`, `Invoice`+`ChargeLine`.
-- R4. Model **value objects**: `CylinderSerialNumber`, `Capacity(m³)`, `RentalPeriod(days)`, `CUIT`, `Address`, `Locality`, `Contact`, `Money(ARS)`, `OwnershipTag`, `DeliveryInstruction`, `DateStamp`.
-- R5. Model **enumerations** exactly as in `003`/`schema.sql`: `party_type, ownership_basis, cylinder_state, cylinder_cond, packaging_kind, movement_kind, movement_state, accessory_type, accessory_state, accessory_rental_state, charge_basis, client_coverage, client_status, client_segment, loan_stage, rate_period, invoice_status`.
+- R4. Model **value objects**: `CylinderSerialNumber`, `Capacity(value, unit)` where unit ∈ `{M3, KG}` (D-18), `RentalPeriod(days)`, `CUIT`, `Address`, `Locality`, `Contact`, `Money(ARS)`, `OwnershipTag`, `DeliveryInstruction`, `DateStamp`.
+- R5. Model **enumerations** exactly as in `003`/`schema.sql`: `party_type, ownership_basis, cylinder_state, cylinder_cond, packaging_kind, movement_kind, movement_state, accessory_type, accessory_state, accessory_rental_state, charge_basis, client_coverage, client_status, client_segment, loan_stage, rate_period, invoice_status, capacity_unit`.
 - R6. Encode entity **relationships**: Party owns Cylinders; Client extends Party (1:1); ClientAccount composes MovementEvents & AccessoryRentals; Cylinder composes its circulation history; Battery composes member Cylinders.
 - R7. Encode entity **lifecycles/states** and expose valid transitions (see `008` inventory state machine and `sdd.md` state diagrams).
 
@@ -22,7 +22,7 @@ Provide the canonical object model the application layer implements, independent
 - C2. Cylinder identity is `(owner, serial_number)` (BR-02), not serial alone.
 - C3. Aggregate consistency boundaries: invariants that must hold transactionally live inside one aggregate (e.g., single-custody is enforced at the Cylinder/movement boundary — see `003` for the DB mechanism).
 - C4. Value objects are immutable and self-validating (e.g., `CUIT` validates format + check digit on construction).
-- C5. Money is decimal, never float; capacity is decimal m³.
+- C5. Money is decimal, never float; capacity is decimal magnitude with an explicit unit (`M3` or `KG`, D-18) — never convert between units.
 
 ## Acceptance Criteria
 

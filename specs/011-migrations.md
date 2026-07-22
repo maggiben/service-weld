@@ -15,7 +15,7 @@ Ingest the legacy data — `CILINDRO CLIENT REPARTO` (291 client sheets, Junín)
 - R5. **Recompute** rental days from dates (do not trust legacy cells); never import ERROR/derived values.
 - R6. Create **sales** (`CILINDROS VENDIDOS`), **supplier loan cycles** (`NORDELTA`, `INTERGAS N-PROPI`), **accessory rentals** (regulator/adapter/mochila notes), and **batteries** (from `bat` sheets + member serials).
 - R7. Route every unparseable/suspect row to **`migration_exception`** with a reason; produce a **reconciliation report** (rows read, imported clean, flagged, by reason).
-- R8. Be **idempotent** and **re-runnable** (dry-run mode + resumable), keyed so re-imports don't duplicate.
+- R9. Parse cylinder **capacity** from PROPIOS / sales headers as a `(magnitude, unit)` pair (D-18): explicit volume (`6 mt`, `10 mts`, `6 m3`, bare known m³ sizes) → `M3`; explicit weight (`10 KG`, `25 k`, `20 kgr`) → `KG`. Prefer volume when both appear. Do **not** discard recoverable kg sizes. Bare numbers without unit remain m³ only when they match known volume sizes.
 
 ## Constraints
 

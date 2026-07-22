@@ -15,7 +15,7 @@ import {
 } from "../common/pagination/cursor";
 import { KYSELY, type DB } from "../database/database.module";
 import { resolveDb } from "../database/transaction.context";
-import type { RatePeriod } from "../database/schema.types";
+import type { CapacityUnit, RatePeriod } from "../database/schema.types";
 
 interface RateRow {
   id: number;
@@ -23,6 +23,7 @@ interface RateRow {
   client_name: string | null;
   gas_code: string | null;
   capacity_m3: string | number | null;
+  capacity_unit: CapacityUnit;
   period: RatePeriod;
   amount: string;
   effective_from: string | Date;
@@ -48,6 +49,7 @@ function mapRate(row: RateRow): RentalRate {
     client_name: row.client_name,
     gas_code: row.gas_code as RentalRate["gas_code"],
     capacity_m3: toCapacity(row.capacity_m3),
+    capacity_unit: row.capacity_unit,
     period: row.period,
     amount: Number(row.amount),
     effective_from: toIsoDate(row.effective_from)!,
@@ -61,6 +63,7 @@ const RATE_SELECT = [
   "party.display_name as client_name",
   "rental_rate.gas_code",
   "rental_rate.capacity_m3",
+  "rental_rate.capacity_unit",
   "rental_rate.period",
   "rental_rate.amount",
   "rental_rate.effective_from",
@@ -99,6 +102,13 @@ export class RatesRepository {
         "rental_rate.capacity_m3",
         "=",
         String(query["filter[capacity_m3]"]),
+      );
+    }
+    if (query["filter[capacity_unit]"]) {
+      qb = qb.where(
+        "rental_rate.capacity_unit",
+        "=",
+        query["filter[capacity_unit]"],
       );
     }
 
@@ -166,6 +176,7 @@ export class RatesRepository {
       client_party_id: number | null;
       gas_code: string | null;
       capacity_m3: number | null;
+      capacity_unit: CapacityUnit;
       period: RatePeriod;
       amount: number;
       effective_from: string;
@@ -180,6 +191,7 @@ export class RatesRepository {
         row.client_party_id == null ? null : Number(row.client_party_id),
       gas_code: row.gas_code,
       capacity_m3: toCapacity(row.capacity_m3),
+      capacity_unit: row.capacity_unit,
       period: row.period,
       amount: Number(row.amount),
       effective_from: toIsoDate(row.effective_from as string | Date)!,
@@ -192,6 +204,7 @@ export class RatesRepository {
     const clientId = input.client_party_id ?? null;
     const gasCode = input.gas_code ?? null;
     const capacityM3 = input.capacity_m3 ?? null;
+    const capacityUnit = input.capacity_unit ?? "M3";
     const effectiveTo = input.effective_to ?? null;
 
     await this.assertNoOverlap({
@@ -199,6 +212,7 @@ export class RatesRepository {
       clientId,
       gasCode,
       capacityM3,
+      capacityUnit,
       effectiveFrom: input.effective_from,
       effectiveTo,
     });
@@ -209,6 +223,7 @@ export class RatesRepository {
         client_party_id: clientId,
         gas_code: gasCode,
         capacity_m3: capacityM3 == null ? null : String(capacityM3),
+        capacity_unit: capacityUnit,
         period: input.period,
         amount: String(input.amount),
         effective_from: input.effective_from,
@@ -234,6 +249,10 @@ export class RatesRepository {
       input.capacity_m3 !== undefined
         ? input.capacity_m3
         : existing.capacity_m3;
+    const capacityUnit =
+      input.capacity_unit !== undefined
+        ? input.capacity_unit
+        : existing.capacity_unit;
     const effectiveFrom = input.effective_from ?? existing.effective_from;
     const effectiveTo =
       input.effective_to !== undefined
@@ -247,6 +266,7 @@ export class RatesRepository {
       clientId,
       gasCode,
       capacityM3,
+      capacityUnit,
       effectiveFrom,
       effectiveTo,
     });
@@ -257,6 +277,7 @@ export class RatesRepository {
         client_party_id: clientId,
         gas_code: gasCode,
         capacity_m3: capacityM3 == null ? null : String(capacityM3),
+        capacity_unit: capacityUnit,
         period,
         amount: String(amount),
         effective_from: effectiveFrom,
@@ -275,6 +296,7 @@ export class RatesRepository {
     clientId: number | null;
     gasCode: string | null;
     capacityM3: number | null;
+    capacityUnit: CapacityUnit;
     effectiveFrom: string;
     effectiveTo: string | null;
   }): Promise<void> {
@@ -296,7 +318,8 @@ export class RatesRepository {
         params.capacityM3 == null
           ? eb("capacity_m3", "is", null)
           : eb("capacity_m3", "=", String(params.capacityM3)),
-      );
+      )
+      .where("capacity_unit", "=", params.capacityUnit);
 
     if (params.excludeId != null) {
       qb = qb.where("id", "!=", params.excludeId);
@@ -316,7 +339,7 @@ export class RatesRepository {
       ) {
         throw ApiErrors.conflict(
           "RATE_OVERLAP",
-          "Overlapping rate for the same client/gas/capacity",
+          "Overlapping rate for the same client/gas/capacity/unit",
         );
       }
     }

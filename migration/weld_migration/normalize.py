@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import re
 import uuid
+from dataclasses import dataclass
 from datetime import date, datetime, timedelta
-from typing import Any
+from typing import Any, Literal
 
 import xlrd
 
@@ -322,13 +323,24 @@ KNOWN_CAPACITIES_M3: frozenset[float] = frozenset(
     {1.0, 2.0, 3.0, 4.0, 4.5, 5.0, 6.0, 7.0, 8.0, 10.0, 20.0, 40.0}
 )
 
-# Weight annotations must never be read as m³ (e.g. "10 KG", "20 kgr", "25 k").
+# Observed weight-sold / liquefied sizes (kg) in legacy sheets (D-18).
+KNOWN_CAPACITIES_KG: frozenset[float] = frozenset(
+    {5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 40.0, 45.0, 50.0}
+)
+
+# Weight annotations (e.g. "10 KG", "20 kgr", "25 k").
 _WEIGHT_CELL_RE = re.compile(
     r"(?:"
     r"\d+(?:[.,]\d+)?\s*(?:kgr?s?\.?|kilos?|kg\.?)"
     r"|"
     r"\d+(?:[.,]\d+)?\s*k(?![a-z0-9])"  # "25 k", "20k"
     r")",
+    re.IGNORECASE,
+)
+
+_WEIGHT_CAPTURE_RE = re.compile(
+    r"(?<![a-z0-9])(\d+(?:[.,]\d+)?)\s*"
+    r"(?:kgr?s?\.?|kilos?|kg\.?|k(?![a-z0-9]))",
     re.IGNORECASE,
 )
 
@@ -340,6 +352,14 @@ _EXPLICIT_VOLUME_RE = re.compile(
 )
 
 _BARE_NUMBER_RE = re.compile(r"^\d+(?:[.,]\d+)?$")
+
+
+@dataclass(frozen=True)
+class ParsedCapacity:
+    """Cylinder capacity as magnitude + unit (D-18)."""
+
+    value: float
+    unit: Literal["M3", "KG"]
 
 
 def is_weight_cell(raw: Any) -> bool:
@@ -371,7 +391,7 @@ def _same_as_serial(value: float, serial_num: float | None) -> bool:
 
 
 def sanitize_capacity_m3(value: float | None) -> float | None:
-    """Keep only plausible cylinder sizes for DB write."""
+    """Keep only plausible m³ cylinder sizes for DB write."""
     if value is None:
         return None
     try:
@@ -380,20 +400,41 @@ def sanitize_capacity_m3(value: float | None) -> float | None:
         return None
     if v in KNOWN_CAPACITIES_M3:
         return v
-    # Explicit odd sizes with unit already filtered upstream; reject outliers.
     return None
 
 
-def parse_capacity(raw: Any, *, allow_bare: bool = True) -> float | None:
-    """Parse a single cell that may hold capacity in m³.
+def sanitize_capacity_kg(value: float | None) -> float | None:
+    """Keep only plausible kg cylinder sizes for DB write."""
+    if value is None:
+        return None
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return None
+    if v in KNOWN_CAPACITIES_KG:
+        return v
+    return None
 
-    Prefers explicit volume units; ignores weight cells; bare numbers only when
-    they match known cylinder sizes (avoids serials / junk).
+
+def sanitize_capacity(
+    value: float | None, unit: Literal["M3", "KG"]
+) -> ParsedCapacity | None:
+    cleaned = (
+        sanitize_capacity_m3(value) if unit == "M3" else sanitize_capacity_kg(value)
+    )
+    if cleaned is None:
+        return None
+    return ParsedCapacity(cleaned, unit)
+
+
+def parse_capacity(raw: Any, *, allow_bare: bool = True) -> ParsedCapacity | None:
+    """Parse a single cell that may hold capacity in m³ or kg (D-18).
+
+    Prefers explicit volume over weight; bare numbers only when they match
+    known m³ sizes (avoids serials / junk).
     """
     s = norm_text(raw)
     if not s:
-        return None
-    if is_weight_cell(s):
         return None
 
     compact = re.sub(r"\s+", " ", s)
@@ -401,10 +442,16 @@ def parse_capacity(raw: Any, *, allow_bare: bool = True) -> float | None:
     if explicit:
         v = _as_capacity_float(explicit.group(1))
         if v is not None and v <= 40:
-            return sanitize_capacity_m3(v)
+            return sanitize_capacity(v, "M3")
+
+    weight = _WEIGHT_CAPTURE_RE.search(compact)
+    if weight:
+        v = _as_capacity_float(weight.group(1))
+        if v is not None and v <= 50:
+            return sanitize_capacity(v, "KG")
 
     if allow_bare and _BARE_NUMBER_RE.match(s):
-        return sanitize_capacity_m3(_as_capacity_float(s))
+        return sanitize_capacity(_as_capacity_float(s), "M3")
 
     return None
 
@@ -412,22 +459,21 @@ def parse_capacity(raw: Any, *, allow_bare: bool = True) -> float | None:
 def extract_cylinder_capacity(
     cells: list[Any] | tuple[Any, ...],
     serial: str | None = None,
-) -> float | None:
+) -> ParsedCapacity | None:
     """Pick capacity from a PROPIOS header row.
 
     Layout is typically ``gas | serial echo | capacity|weight``. Prefer explicit
-    ``mt``/``m``/``metros`` markers; never treat weight as m³; avoid mistaking the
-    serial echo for capacity when another candidate exists.
+    ``mt``/``m``/``metros`` markers over weight; avoid mistaking the serial echo
+    for capacity when another candidate exists.
     """
     serial_num = _serial_number(serial)
-    explicit: list[float] = []
+    explicit_m3: list[float] = []
+    explicit_kg: list[float] = []
     bare: list[float] = []
 
     for raw in cells:
         s = norm_text(raw)
         if not s:
-            continue
-        if is_weight_cell(s):
             continue
 
         compact = re.sub(r"\s+", " ", s)
@@ -437,9 +483,17 @@ def extract_cylinder_capacity(
                 continue
             cleaned = sanitize_capacity_m3(v)
             if cleaned is not None:
-                explicit.append(cleaned)
+                explicit_m3.append(cleaned)
 
-        if _BARE_NUMBER_RE.match(s):
+        for match in _WEIGHT_CAPTURE_RE.finditer(compact):
+            v = _as_capacity_float(match.group(1))
+            if v is None or v > 50:
+                continue
+            cleaned = sanitize_capacity_kg(v)
+            if cleaned is not None:
+                explicit_kg.append(cleaned)
+
+        if _BARE_NUMBER_RE.match(s) and not is_weight_cell(s):
             v = _as_capacity_float(s)
             cleaned = sanitize_capacity_m3(v)
             if cleaned is not None:
@@ -448,7 +502,6 @@ def extract_cylinder_capacity(
     def _pick(values: list[float], *, prefer_non_serial: bool) -> float | None:
         if not values:
             return None
-        # Preserve first-seen order, unique.
         ordered = list(dict.fromkeys(values))
         if prefer_non_serial:
             non_serial = [v for v in ordered if not _same_as_serial(v, serial_num)]
@@ -461,19 +514,20 @@ def extract_cylinder_capacity(
                 return preferred
         return ordered[0]
 
-    picked = _pick(explicit, prefer_non_serial=True)
-    if picked is not None:
-        return picked
+    picked_m3 = _pick(explicit_m3, prefer_non_serial=True)
+    if picked_m3 is not None:
+        return ParsedCapacity(picked_m3, "M3")
 
-    # Bare known size: only accept if it is not solely the serial echo.
-    # (Serial "6" with cells [atal, 6, 7] → 7; serial "10" with [CO2, 10, 25 k] → None.)
+    picked_kg = _pick(explicit_kg, prefer_non_serial=True)
+    if picked_kg is not None:
+        return ParsedCapacity(picked_kg, "KG")
+
     non_serial_bare = [v for v in bare if not _same_as_serial(v, serial_num)]
     if non_serial_bare:
-        return _pick(non_serial_bare, prefer_non_serial=False)
+        picked = _pick(non_serial_bare, prefer_non_serial=False)
+        if picked is not None:
+            return ParsedCapacity(picked, "M3")
 
-    # Last resort: serial equals a known size and is the only bare signal — only
-    # when the cell is not just repeating the sheet name alone without unit.
-    # Too risky (sheet "10" with bare 10); skip.
     return None
 
 

@@ -149,3 +149,7 @@ export type ChargeBasis = z.infer<typeof ChargeBasis>;
 /** Immutable audit trail action (003 / schema.sql `audit_action`). */
 export const AuditAction = z.enum(["INSERT", "UPDATE", "DELETE", "VOID"]);
 export type AuditAction = z.infer<typeof AuditAction>;
+
+/** Cylinder capacity unit (D-18). Magnitude lives in capacity_m3 (legacy name). */
+export const CapacityUnit = z.enum(["M3", "KG"]);
+export type CapacityUnit = z.infer<typeof CapacityUnit>;

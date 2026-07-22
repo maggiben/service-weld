@@ -23,7 +23,7 @@ Provision and evolve the PostgreSQL schema that stores all domain data and enfor
 - C3. `audit_log` is **partitioned monthly** and **append-only** (`REVOKE UPDATE, DELETE` from the application role).
 - C4. Soft delete (`deleted_at`) applies to master data only; ledger tables (`movement_event`, `cylinder_sale`, `supplier_loan_cycle`, `audit_log`) are append-only — corrections via `VOID`.
 - C5. The application `MUST` set session GUCs before writes so audit captures the actor: `app.current_user_id`, `app.current_role_code`, `app.source`.
-- C6. Money `numeric(14,2)`; capacity `numeric(5,2)`; business dates `date`; system timestamps `timestamptz`.
+- C6. Money `numeric(14,2)`; capacity magnitude `numeric(5,2)` in column `capacity_m3` (legacy name) paired with `capacity_unit` ENUM `('M3','KG')` default `'M3'` on `cylinder` / `rental_rate` / `cylinder_sale` (D-18); business dates `date`; system timestamps `timestamptz`.
 
 ## Acceptance Criteria
 

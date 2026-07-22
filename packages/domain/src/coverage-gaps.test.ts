@@ -75,6 +75,9 @@ describe("value objects", () => {
     assert.throws(() => Capacity.of(-1));
     assert.throws(() => Capacity.of(Number.NaN));
     assert.equal(Capacity.of(10).m3, 10);
+    assert.equal(Capacity.of(25, "KG").value, 25);
+    assert.equal(Capacity.of(25, "KG").unit, "KG");
+    assert.throws(() => Capacity.of(10, "LB" as "M3"));
   });
 
   it("Money enforces ARS cents", () => {

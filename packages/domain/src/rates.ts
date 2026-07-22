@@ -1,5 +1,5 @@
 import { DomainErrors } from "./errors";
-import { Money, calendarDaysBetween } from "./value-objects";
+import { type CapacityUnit, Money, calendarDaysBetween } from "./value-objects";
 
 export type RatePeriod = "DAILY" | "MONTHLY";
 
@@ -7,8 +7,9 @@ export interface RateCandidate {
   id: number;
   client_party_id: number | null;
   gas_code: string | null;
-  /** Null = any cylinder size (m³). */
+  /** Null = any cylinder size. Magnitude is in capacity_unit (D-18). */
   capacity_m3: number | null;
+  capacity_unit: CapacityUnit;
   period: RatePeriod;
   amount: number;
   effective_from: string;
@@ -17,13 +18,14 @@ export interface RateCandidate {
 
 /**
  * Whether a rate row applies to a lookup. Null dimensions are wildcards
- * ("any gas" / "any size"); a specific dimension only matches the same value.
+ * ("any gas" / "any size"); a specific capacity matches magnitude + unit.
  */
 function rateApplies(
   rate: RateCandidate,
   clientPartyId: number,
   gasCode: string | null,
   capacityM3: number | null,
+  capacityUnit: CapacityUnit | null,
 ): boolean {
   if (rate.client_party_id != null && rate.client_party_id !== clientPartyId) {
     return false;
@@ -32,7 +34,14 @@ function rateApplies(
     if (gasCode == null || rate.gas_code !== gasCode) return false;
   }
   if (rate.capacity_m3 != null) {
-    if (capacityM3 == null || rate.capacity_m3 !== capacityM3) return false;
+    if (
+      capacityM3 == null ||
+      rate.capacity_m3 !== capacityM3 ||
+      capacityUnit == null ||
+      rate.capacity_unit !== capacityUnit
+    ) {
+      return false;
+    }
   }
   return true;
 }
@@ -58,12 +67,15 @@ export function resolveEffectiveRate(
   gasCode: string | null,
   onDate: string,
   capacityM3: number | null = null,
+  capacityUnit: CapacityUnit | null = null,
 ): RateCandidate | null {
+  // Legacy callers that only pass magnitude assume m³ (D-18).
+  const unit = capacityM3 != null ? (capacityUnit ?? "M3") : null;
   const active = rates.filter(
     (r) =>
       r.effective_from <= onDate &&
       (r.effective_to == null || r.effective_to >= onDate) &&
-      rateApplies(r, clientPartyId, gasCode, capacityM3),
+      rateApplies(r, clientPartyId, gasCode, capacityM3, unit),
   );
 
   let best: RateCandidate | null = null;
@@ -105,6 +117,7 @@ export function resolveBillingUnitPrice(params: {
   clientPartyId: number;
   gasCode: string | null;
   capacityM3?: number | null;
+  capacityUnit?: CapacityUnit | null;
   mode: "period" | "history";
   deliveryDate: string;
   periodStart: string;
@@ -112,6 +125,7 @@ export function resolveBillingUnitPrice(params: {
   dailyRateDefault?: number | null;
 }): Money | null {
   const capacityM3 = params.capacityM3 ?? null;
+  const capacityUnit = params.capacityUnit ?? null;
   const preferred = billingRateOnDate(params);
   let rate = resolveEffectiveRate(
     params.rates,
@@ -119,6 +133,7 @@ export function resolveBillingUnitPrice(params: {
     params.gasCode,
     preferred,
     capacityM3,
+    capacityUnit,
   );
   if (!rate && preferred !== params.periodEnd) {
     rate = resolveEffectiveRate(
@@ -127,6 +142,7 @@ export function resolveBillingUnitPrice(params: {
       params.gasCode,
       params.periodEnd,
       capacityM3,
+      capacityUnit,
     );
   }
   if (rate) return dailyUnitPrice(rate);

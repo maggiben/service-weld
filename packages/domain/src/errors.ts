@@ -133,7 +133,10 @@ export const DomainErrors = {
     );
   },
   invalidCapacity(): DomainError {
-    return new DomainError("INVALID_CAPACITY", "capacity_m3 must be > 0");
+    return new DomainError(
+      "INVALID_CAPACITY",
+      "capacity magnitude must be > 0 with unit M3 or KG",
+    );
   },
   invalidMoney(): DomainError {
     return new DomainError("INVALID_MONEY", "Money amount must be >= 0");

@@ -137,7 +137,7 @@
       "owner": "Propietario",
       "holder": "Titular actual",
       "gas": "Gas",
-      "capacity": "m³",
+      "capacity": "Capacidad",
       "basis": "Base",
       "state": "Estado",
       "condition": "Condición",
@@ -180,7 +180,9 @@
       "basis": "Base de propiedad",
       "basis_hint": "Se deriva del propietario (BR-07)",
       "gas": "Gas",
-      "capacity": "Capacidad (m³)",
+      "capacity": "Capacidad",
+      "capacity_unit": "Unidad",
+      "capacity_hint": "m³ para gas comprimido, kg para licuados / vendidos por peso",
       "territory": "Depósito / origen",
       "territory_hint": "Depósito base del cilindro. Las ciudades se eligen al filtrar o al crear una localidad.",
       "condition": "Condición",
@@ -231,6 +233,7 @@
   },
   "movements": {
     "title": "Movimientos",
+    "total": "{{count}} en total",
     "empty": "No hay movimientos",
     "columns": {
       "delivery": "Entrega",
@@ -329,6 +332,10 @@
       "OURS": "Nuestra",
       "SUPPLIER": "Proveedor",
       "CUSTOMER": "Cliente"
+    },
+    "capacity_unit": {
+      "M3": "m³",
+      "KG": "kg"
     },
     "condition": {
       "EMPTY": "Vacío",
@@ -734,6 +741,7 @@
       "client": "Cliente",
       "gas": "Gas",
       "capacity": "Tamaño del cilindro",
+      "capacity_unit": "Unidad",
       "capacity_hint": "Dejá en Cualquier tamaño para aplicar a todas las capacidades",
       "effective_from": "Vigente desde",
       "effective_to": "Vigente hasta",
