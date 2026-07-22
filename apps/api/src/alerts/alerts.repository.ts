@@ -275,7 +275,10 @@ export class AlertsRepository {
 
   async refresh(): Promise<RefreshAlertsResult> {
     const db = resolveDb(this.db);
-    const asOf = businessTodayIso();
+    const asOf = businessTodayIso(
+      new Date(),
+      await this.settings.getBusinessTimezone(),
+    );
     const overdueDays = await this.settings.getSupplierLoanOverdueDays();
     let created = 0;
 
@@ -361,7 +364,10 @@ export class AlertsRepository {
     if (rows.length === 0) return [];
 
     const db = resolveDb(this.db);
-    const asOf = businessTodayIso();
+    const asOf = businessTodayIso(
+      new Date(),
+      await this.settings.getBusinessTimezone(),
+    );
 
     const movementIds = rows
       .filter((r) => r.entity_table === "movement_event" && r.entity_id != null)

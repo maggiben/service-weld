@@ -41,6 +41,7 @@ tags:
   - { name: Reports }
   - { name: Search }
   - { name: MasterData }
+  - { name: Settings }
   - { name: Admin }
 ```
 
@@ -789,6 +790,23 @@ All report endpoints: **Auth** Bearer; **Response** tabular JSON `{ "data": [...
 
 ---
 
+### 4.14b Settings
+
+#### GET `/settings` · PATCH `/settings`
+
+- **Purpose:** Read/update org operational settings stored in `system_setting` (D-13 / D-14 / D-17 / US-21). **Auth:** Bearer.
+- **Permissions:** GET `supplier_loans:read`; PATCH `supplier_loans:write`. Web Configuración form gated to `admin:write`.
+- **Response / body fields** (`@weld/schemas` `SystemSettings`):
+  - `supplier_loan_overdue_days` — int 1–3650 (default 120)
+  - `business_timezone` — IANA timezone string (default `America/Argentina/Buenos_Aires`)
+  - `rental_min_days` — int 0–365 (default 0 = exact calendar days)
+  - `primary_language` — `es` | `en` (default `es`)
+  - `version` — aggregate optimistic-concurrency token (`max` of row versions)
+- **PATCH:** partial body allowed (at least one field). Send `If-Match: {version}` → `409 VERSION_CONFLICT` on stale write.
+- **Validation:** Zod (`BusinessTimezone`, `RentalMinDays`, `PrimaryLanguage`, `SupplierLoanOverdueDays`). **Errors:** `409 VERSION_CONFLICT`, `422 VALIDATION_FAILED`.
+
+---
+
 ### 4.15 Admin
 
 #### GET/POST `/admin/users` · PATCH `/admin/users/{id}` · POST `/admin/users/{id}/roles`
@@ -830,7 +848,7 @@ All report endpoints: **Auth** Bearer; **Response** tabular JSON `{ "data": [...
 | Reports/outstanding, float-aging, data-quality; audit-logs | W18, W17                 |
 | Alerts, sub-distributor transfers/dispositions             | W19                      |
 | Billing, Rates, Invoices                                   | W20                      |
-| Search, Master data, Admin, Migration                      | (platform / gaps closed) |
+| Search, Master data, Settings, Admin, Migration            | (platform / gaps closed) |
 
 ---
 

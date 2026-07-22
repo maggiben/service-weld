@@ -32,7 +32,7 @@ Legend: **D-n** decision · resolves inconsistency **I-n** / missing **M-n** fro
 
 - **Data access:** **Kysely** (typed SQL builder) over the authoritative `schema.sql`; **no ORM schema ownership** (`004` impl note). Transactions pinned to a single connection (see D-9).
 - **Async jobs / scheduler:** **pg-boss** (Postgres-backed queue) — **no Redis**; honors single-datastore constraint (`012` C1).
-- **DDL migrations:** **node-pg-migrate**, additive-only; `schema.sql` remains the baseline (`003`/`012`).
+- **DDL migrations:** additive `db/migrations/*.up.sql` only (applied by `pnpm db:migrate` / CI `psql` loop); `schema.sql` remains the baseline (`003`/`012`). Pair each change with a local-only `*.down.sql` for rollback.
 - **Frontend server cache:** **TanStack Query** as the "data-fetching/cache layer" (`006` names it generically), kept separate from Zustand and react-hook-form.
 
 ---
@@ -87,15 +87,23 @@ Legend: **D-n** decision · resolves inconsistency **I-n** / missing **M-n** fro
 
 ### D-13 — Business timezone _(resolves M-6)_
 
-- All "today" / accrual / aging / BR-05 plausibility windows use **`America/Argentina/Buenos_Aires`**.
-- Domain helpers accept an injectable `todayIso` for tests; the API supplies Buenos Aires civil date at the edge.
+- Default civil timezone: **`America/Argentina/Buenos_Aires`**.
+- Runtime source of truth: `system_setting.business_timezone` (IANA), editable via `GET/PATCH /settings` and the web **Configuración** screen (`admin:write` UI). Env `BUSINESS_TIMEZONE` remains the boot-time default when the row is missing.
+- All "today" / accrual / aging / BR-05 plausibility windows use that configured timezone.
+- Domain helper `businessTodayIso(now?, timeZone?)` accepts an injectable timezone; the API supplies the configured value at the edge (supplier loans, alerts; other call sites follow).
 
 ### D-14 — Rental day / min-day policy _(resolves M-5 for v1)_
 
-- Bill **exact calendar days** from the DB generated column / `RentalPeriod` (`return − delivery`); **no minimum day**.
-- Same-day deliver+return → **0** billable days (matches generated `rental_days`).
+- Default: bill **exact calendar days** from the DB generated column / `RentalPeriod` (`return − delivery`); **no minimum day** (`rental_min_days = 0`).
+- Same-day deliver+return → **0** billable days when min-days is `0` (matches generated `rental_days`).
+- Runtime override: `system_setting.rental_min_days` (0–365), editable via Settings API/UI. Env `RENTAL_MIN_DAYS` is the boot-time default when the row is missing. Product owner may raise the floor without a schema change (009 C2 / edge case).
 - Monthly rates: convert to a daily equivalent as `amount / 30` for charge lines (documented; adjustable later).
-- Product owner may override D-14 later without schema change.
+
+### D-17 — Org primary language _(Settings)_
+
+- Org default language: `system_setting.primary_language` ∈ `{es, en}` (default `es`, matches 000 C1 / 006 R7).
+- Editable via Settings API/UI. Per-user UI locale remains in `uiStore` (persisted); saving primary language as admin also updates the admin's session locale.
+- Does not replace per-user language switching in the shell.
 
 ---
 

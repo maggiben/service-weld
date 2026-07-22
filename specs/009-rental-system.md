@@ -50,5 +50,5 @@ Compute rental duration and charges deterministically for cylinders on hire and 
 
 - Keep rate resolution in one pure function (inputs: client, gas, capacity m³, date) with unit tests over the precedence matrix.
 - Compute billing from a period query over movements (closed + open-accrued) + accessory rentals; attach `source_table/source_id` to every charge line for traceability.
-- Define the "as-of" date and rounding policy in configuration; document defaults; test both same-day and multi-year rentals.
+- Define the "as-of" date and rounding / **min-day** policy in **system settings** (`business_timezone`, `rental_min_days` — D-13 / D-14); env vars are boot defaults only. Document defaults (`rental_min_days = 0`); test both same-day and multi-year rentals.
 - Reconcile billing output against the rental report (`007`) in an integration test to prevent divergence.

@@ -213,7 +213,12 @@ describe("WeldApiClient", () => {
     await api.listLocalities({});
     await api.createLocality({ name: "L" });
     await api.getSettings();
-    await api.updateSettings({ supplier_loan_overdue_days: 90 });
+    await api.updateSettings({
+      supplier_loan_overdue_days: 90,
+      business_timezone: "America/Argentina/Buenos_Aires",
+      rental_min_days: 0,
+      primary_language: "es",
+    });
     await api.listAdminUsers({});
     await api.getAdminUser(1);
     await api.createAdminUser({

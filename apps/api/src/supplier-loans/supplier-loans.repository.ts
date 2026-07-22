@@ -115,8 +115,11 @@ export class SupplierLoansRepository {
     const db = resolveDb(this.db);
     const limit = query.limit;
     const sort = parseSort(query.sort, ["received_from_supplier"]);
-    const asOf = businessTodayIso();
     const overdueDays = await this.settings.getSupplierLoanOverdueDays();
+    const asOf = businessTodayIso(
+      new Date(),
+      await this.settings.getBusinessTimezone(),
+    );
 
     let qb = db
       .selectFrom("supplier_loan_cycle")
@@ -227,6 +230,10 @@ export class SupplierLoansRepository {
   async getById(id: number): Promise<SupplierLoan | null> {
     const db = resolveDb(this.db);
     const overdueDays = await this.settings.getSupplierLoanOverdueDays();
+    const asOf = businessTodayIso(
+      new Date(),
+      await this.settings.getBusinessTimezone(),
+    );
     const row = (await db
       .selectFrom("supplier_loan_cycle")
       .innerJoin("cylinder", "cylinder.id", "supplier_loan_cycle.cylinder_id")
@@ -243,7 +250,7 @@ export class SupplierLoansRepository {
       .select(LOAN_SELECT)
       .where("supplier_loan_cycle.id", "=", id)
       .executeTakeFirst()) as LoanRow | undefined;
-    return row ? mapLoan(row, businessTodayIso(), overdueDays) : null;
+    return row ? mapLoan(row, asOf, overdueDays) : null;
   }
 
   async getPartyType(partyId: number): Promise<PartyType | null> {

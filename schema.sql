@@ -469,14 +469,19 @@ CREATE TABLE alert (
 );
 CREATE INDEX ix_alert_open ON alert (alert_type) WHERE resolved_at IS NULL;
 
--- Operational thresholds (US-21 supplier loan aging, etc.). Editable via API/UI.
+-- Operational system settings (D-13 / D-14 / D-17 / US-21). Editable via GET/PATCH /settings.
+-- Keys: supplier_loan_overdue_days, business_timezone, rental_min_days, primary_language.
 CREATE TABLE system_setting (
     key         text PRIMARY KEY,
     value       text NOT NULL,
     updated_at  timestamptz NOT NULL DEFAULT now(),
     version     integer NOT NULL DEFAULT 1
 );
+-- Defaults match env boot fallbacks / product decisions.
 INSERT INTO system_setting (key, value) VALUES ('supplier_loan_overdue_days', '120');
+INSERT INTO system_setting (key, value) VALUES ('business_timezone', 'America/Argentina/Buenos_Aires');
+INSERT INTO system_setting (key, value) VALUES ('rental_min_days', '0');          -- D-14: exact calendar days
+INSERT INTO system_setting (key, value) VALUES ('primary_language', 'es');       -- D-17 / 000 C1
 
 -- ---------------------------------------------------------------------
 -- 10. History tables (SCD-2)  — created after client & cylinder (LIKE)

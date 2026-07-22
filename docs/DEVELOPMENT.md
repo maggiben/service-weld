@@ -89,7 +89,13 @@ pnpm --filter @weld/www dev               # :3003 — marketing → serviceweld.
 API reads the repo-root `.env` even when started from `apps/api` via pnpm.
 
 Sign in with `BOOTSTRAP_ADMIN_USER` / `BOOTSTRAP_ADMIN_PASSWORD`. MEDICAL territory
-scope is **global** (D-2). Business timezone / rental min-day defaults: **D-13 / D-14**.
+scope is **global** (D-2). Business timezone / rental min-day / primary language:
+runtime **`system_setting`** via Configuración / `GET|PATCH /settings` (D-13 / D-14 / D-17);
+env `BUSINESS_TIMEZONE` / `RENTAL_MIN_DAYS` are boot defaults only.
+
+`pnpm db:migrate` loads repo-root `.env` (`DATABASE_URL`) and applies
+`db/migrations/*.up.sql` in order (same as CI). Do **not** point raw
+`node-pg-migrate` at that folder — `.down.sql` files would be treated as ups.
 
 ## Database is authoritative
 

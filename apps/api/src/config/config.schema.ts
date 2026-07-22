@@ -28,7 +28,7 @@ export const EnvSchema = z.object({
 
   // Business config (009 / 012).
   BUSINESS_TIMEZONE: z.string().default("America/Argentina/Buenos_Aires"),
-  RENTAL_MIN_DAYS: z.coerce.number().int().default(1),
+  RENTAL_MIN_DAYS: z.coerce.number().int().min(0).default(0),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

@@ -1,9 +1,14 @@
 import { DomainErrors } from "./errors";
 
-/** D-13 — civil "today" in America/Argentina/Buenos_Aires (also used by BR-05). */
-export function businessTodayIso(now: Date = new Date()): string {
+/** D-13 — civil "today" in the business timezone (also used by BR-05). */
+export const DEFAULT_BUSINESS_TIMEZONE = "America/Argentina/Buenos_Aires";
+
+export function businessTodayIso(
+  now: Date = new Date(),
+  timeZone: string = DEFAULT_BUSINESS_TIMEZONE,
+): string {
   return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Argentina/Buenos_Aires",
+    timeZone,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",

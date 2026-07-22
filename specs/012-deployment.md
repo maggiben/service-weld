@@ -9,7 +9,7 @@ Define the deployment topology, configuration, scheduled jobs, observability, an
 ## Requirements
 
 - R1. Deploy components: **API service** (NestJS on Node LTS; serves REST + Swagger UI at `/api/docs`), **web app** (Next.js App Router — `app.serviceweld.com`), **marketing site** (`@weld/www` — `serviceweld.com`), **field app** (Next.js App Router PWA), **PostgreSQL 15+**, **scheduler/worker** (NestJS scheduler or separate worker), **object store** (exports/backups), **notification gateway** (email/SMS/push). Reverse proxy / Cloudflare with TLS in front (apex → www, `app.` → web).
-- R2. Provide environment configuration for: DB connection/pool, identity provider/secrets, business timezone, rental rounding/min-day policy, alert thresholds (long-outstanding days, supplier-overdue days), export/accounting endpoint.
+- R2. Provide environment configuration for: DB connection/pool, identity provider/secrets, export/accounting endpoint. Business timezone, rental min-day policy, alert thresholds (supplier-overdue days), and org primary language are **runtime system settings** (`system_setting` / `/settings`) with env boot defaults (`BUSINESS_TIMEZONE`, `RENTAL_MIN_DAYS`) — D-13 / D-14 / D-17 / US-21.
 - R3. Implement **scheduled jobs** (worker): pre-create next month's `audit_log` partition; nightly aging + accrual snapshots for `007`; alert generation (long-outstanding, supplier-overdue, medical replenishment-due, pending owner returns); export retries.
 - R4. Implement **backups**: daily base backup + WAL for point-in-time recovery; periodic restore drills; export artifacts retained per fiscal policy.
 - R5. Implement **observability**: structured logs with `request_id` correlation across API/audit/notifications, metrics (request latency, error rates, job durations, sync backlog), health/readiness checks, and alerting on failures.
@@ -26,7 +26,7 @@ Define the deployment topology, configuration, scheduled jobs, observability, an
 - C2. The field app must remain usable during API/DB outages (offline cache + queue) and sync on recovery.
 - C3. Accounting/AFIP export is an **external dependency**; failures are retriable and alertable, and must not corrupt billing state (stay "approved, not exported").
 - C4. Schema evolution is additive; never destructive to ledger tables (`003` C4).
-- C5. Business timezone (Argentina) is configured centrally and used for all "today"/period boundaries.
+- C5. Business timezone is configured centrally (`system_setting.business_timezone`, default Argentina/Buenos_Aires) and used for all "today"/period boundaries (D-13).
 - C6. Local hooks and CI MUST stay aligned: a change that passes locally but would fail CI (or vice versa) is a process bug — fix the gate, do not weaken it.
 
 ## Acceptance Criteria
