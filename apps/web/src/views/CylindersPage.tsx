@@ -391,11 +391,7 @@ export default function CylindersPage() {
                 ]
               : (clientsSearch.data?.data ?? [])
           }
-          getOptionLabel={(option: Client) =>
-            option.outstanding_count != null && option.outstanding_count > 0
-              ? `${option.name} (${option.outstanding_count})`
-              : option.name
-          }
+          getOptionLabel={(option: Client) => option.name}
           isOptionEqualToValue={(a, b) => a.id === b.id}
           loading={clientsSearch.isFetching}
           value={client}

@@ -9,7 +9,7 @@ Provide accurate, performant reporting and role-aware dashboards over cylinder c
 ## Requirements
 
 - R1. Implement the report endpoints: `fleet`, `float-aging`, `outstanding`, `rental`, `loss`, `supplier-returns`, `cylinder-life/{id}`, `medical-statement`, `data-quality`.
-- R2. Implement **role-aware dashboards** with worklist widgets (my alerts, long-outstanding, supplier returns due, medical replenishment due, migration exceptions) and KPI cards (fleet by state/gas/owner, float, losses, rental revenue).
+- R2. Implement **role-aware dashboards** with worklist widgets (my alerts, long-outstanding, supplier returns due, medical replenishment due, migration exceptions) and KPI cards (fleet by state/gas/owner/locality/client, float, losses, rental revenue).
 - R3. Compute **float/aging** from open movements (`return_date IS NULL`), bucketed `>30/>90/>180/>365` days (BR-20).
 - R4. Compute **rental revenue** = Σ(`rental_days` × effective rate) for closed rentals in period + accrued-to-date for open rentals (BR-03/BR-19), grouped by client/gas/territory.
 - R5. Provide **cylinder life history** = full ordered circulation of a serial across all holders and years.
