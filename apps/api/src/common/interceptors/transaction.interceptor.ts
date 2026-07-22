@@ -30,6 +30,9 @@ async function setAuditGucs(
 /**
  * Pins a single connection + transaction for state-changing requests and sets
  * audit session GUCs (D-9 / 003 / 005 R5).
+ *
+ * Skips long-running admin migration jobs — those spawn an out-of-process
+ * Python loader with its own Postgres session (011).
  */
 @Injectable()
 export class TransactionInterceptor implements NestInterceptor {
@@ -38,8 +41,16 @@ export class TransactionInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const request = context.switchToHttp().getRequest<{
       method: string;
+      url?: string;
+      originalUrl?: string;
+      path?: string;
       user?: AuthPrincipal;
     }>();
+
+    const path = request.originalUrl ?? request.url ?? request.path ?? "";
+    if (path.includes("/admin/migration-data")) {
+      return next.handle();
+    }
 
     if (!MUTATING_METHODS.has(request.method.toUpperCase())) {
       return next.handle();

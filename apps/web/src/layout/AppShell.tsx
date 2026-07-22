@@ -20,6 +20,7 @@ import AssessmentIcon from "@mui/icons-material/Assessment";
 import SettingsIcon from "@mui/icons-material/Settings";
 import ManageAccountsIcon from "@mui/icons-material/ManageAccounts";
 import HistoryIcon from "@mui/icons-material/History";
+import ImportExportIcon from "@mui/icons-material/ImportExport";
 import Avatar from "@mui/material/Avatar";
 import Badge from "@mui/material/Badge";
 import AppBar from "@mui/material/AppBar";
@@ -152,6 +153,7 @@ const BREADCRUMB_BY_PREFIX: Record<string, string> = {
   "/billing": "nav.billing",
   "/settings": "nav.settings",
   "/admin/users": "nav.users",
+  "/admin/data": "nav.data_migration",
   "/audit-logs": "nav.audit",
 };
 
@@ -350,6 +352,14 @@ export default function AppShell({ children }: PropsWithChildren) {
                   <ManageAccountsIcon fontSize="small" />
                 </ListItemIcon>
                 {t("shell.menu.users")}
+              </MenuItem>
+            )}
+            {hasCapability("admin:write") && (
+              <MenuItem onClick={() => go("/admin/data")}>
+                <ListItemIcon>
+                  <ImportExportIcon fontSize="small" />
+                </ListItemIcon>
+                {t("shell.menu.data_migration")}
               </MenuItem>
             )}
             {hasCapability("audit:read") && (

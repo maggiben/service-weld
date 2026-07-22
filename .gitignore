@@ -66,6 +66,8 @@ migration/reconciliation_report.json
 migration/.staging/
 migration/.venv/
 migration/venv/
+migration/data/
+migration/exports/
 __pycache__/
 *.py[cod]
 .pytest_cache/

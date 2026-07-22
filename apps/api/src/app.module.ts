@@ -19,6 +19,7 @@ import { MastersModule } from "./masters/masters.module";
 import { SettingsModule } from "./settings/settings.module";
 import { AdminUsersModule } from "./admin-users/admin-users.module";
 import { AuditLogsModule } from "./audit-logs/audit-logs.module";
+import { MigrationDataModule } from "./migration-data/migration-data.module";
 import { TransactionInterceptor } from "./common/interceptors/transaction.interceptor";
 import { DatabaseModule } from "./database/database.module";
 import { HealthModule } from "./health/health.module";
@@ -55,6 +56,7 @@ const envFiles = [
     SettingsModule,
     AdminUsersModule,
     AuditLogsModule,
+    MigrationDataModule,
   ],
   providers: [TransactionInterceptor],
 })

@@ -18,6 +18,11 @@ import {
   UpdateSystemSettingsInput,
   BusinessTimezone,
 } from "./settings";
+import {
+  MigrationDataStatus,
+  MigrationRunRequest,
+  MigrationWorkbookSlot,
+} from "./migration-data";
 
 /** Known-valid CUITs covering check-digit branches (mod 11→0, mod 10→9, normal). */
 const VALID = ["20-12345678-6", "00-00000000-0", "00-00000001-9"] as const;
@@ -162,5 +167,31 @@ describe("geo schemas", () => {
       },
     });
     assert.equal(list.data[0]?.name, "Pergamino");
+  });
+});
+
+describe("migration-data schemas", () => {
+  it("parses run request defaults and status shape", () => {
+    assert.equal(MigrationRunRequest.parse({}).dry_run, true);
+    assert.equal(MigrationWorkbookSlot.parse("junin"), "junin");
+    const status = MigrationDataStatus.parse({
+      uploads: [],
+      ready_to_run: false,
+      missing_slots: ["junin", "chacabuco", "propios"],
+      snapshots: [],
+      last_report: null,
+      last_report_at: null,
+      busy: false,
+      workbook_guide: [
+        {
+          slot: "junin",
+          title: "Junín",
+          filename_hint: "CILINDRO CLIENT REPARTO.xls",
+          description: "Client ledgers Junín",
+          required: true,
+        },
+      ],
+    });
+    assert.equal(status.missing_slots.length, 3);
   });
 });

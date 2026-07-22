@@ -18,7 +18,8 @@
     "billing": "Billing",
     "settings": "Configuration",
     "users": "Users & permissions",
-    "audit": "Audit log"
+    "audit": "Audit log",
+    "data_migration": "Import / export data"
   },
   "shell": {
     "signed_in_as": "Signed in as {{username}}",
@@ -26,7 +27,8 @@
     "menu": {
       "settings": "Configuration",
       "users": "Users & permissions",
-      "audit": "Audit log"
+      "audit": "Audit log",
+      "data_migration": "Import / export data"
     }
   },
   "login": {
@@ -951,5 +953,52 @@
       "to": "To",
       "all": "All"
     }
+  },
+  "migration_data": {
+    "title": "Import / export data",
+    "subtitle": "Migrate legacy Excel workbooks into Weld, export live data for double-checking, and keep restore points with sync / rollback.",
+    "tab_import": "1. Import",
+    "tab_export": "2. Export (double-check)",
+    "tab_versions": "3. Versions",
+    "import_help": "Upload each workbook into its own slot. Do not mix files: Junín, Chacabuco, and Propios are distinct migrator inputs.",
+    "xls_only": "Only legacy .xls (Excel 97–2003 / BIFF) files are accepted. Modern .xlsx files are not valid for this migration.",
+    "expect_file": "Expected file: {{name}}",
+    "upload": "Upload .xls",
+    "replace": "Replace",
+    "uploaded": "Ready",
+    "missing": "Missing",
+    "missing_slots": "Missing files: {{slots}}",
+    "version_label": "Version label (optional)",
+    "version_label_help": "Used when creating the pre-Sync snapshot so you can recognize this run later.",
+    "dry_run": "Simulate (no writes)",
+    "sync": "Sync (apply)",
+    "sync_confirm_title": "Apply migration?",
+    "sync_confirm_body": "A database snapshot is taken first, then the three workbooks are loaded. The migration exception queue is regenerated. Prefer running a simulation first.",
+    "sync_ok": "Sync OK. Snapshot: {{snapshot}}",
+    "dry_run_ok": "Simulation OK — clean: {{clean}}, flagged: {{flagged}}",
+    "upload_ok": "File uploaded",
+    "last_report": "Last reconciliation report",
+    "export_help": "After Sync, download these live-system Excel files to compare against the original workbooks (double-check).",
+    "export_all": "Full package (ZIP)",
+    "export_all_help": "Clients + cylinders + movements + exceptions in one ZIP.",
+    "export_clients": "Clients",
+    "export_clients_help": "Imported / current client master.",
+    "export_cylinders": "Cylinders",
+    "export_cylinders_help": "Fleet with serial, gas, capacity, and state.",
+    "export_movements": "Movements",
+    "export_movements_help": "Up to 100,000 custody events (newest first).",
+    "export_exceptions": "Migration exceptions",
+    "export_exceptions_help": "Rows the migrator could not import cleanly.",
+    "download": "Download",
+    "export_ok": "Download ready",
+    "versions_help": "Each Sync keeps a pre-run snapshot. Mark working versions as good and use Rollback if a run goes wrong.",
+    "no_snapshots": "No snapshots yet. They appear after Sync.",
+    "marked_good": "Good version",
+    "mark_good": "Mark good",
+    "unmark_good": "Unmark",
+    "rollback": "Rollback",
+    "rollback_ok": "Database restored from snapshot",
+    "rollback_confirm_title": "Restore snapshot?",
+    "rollback_confirm_body": "This replaces the current database state with the chosen snapshot. Changes after that snapshot are lost."
   }
 }

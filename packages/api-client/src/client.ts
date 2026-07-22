@@ -100,6 +100,15 @@ import type {
   UpdateAdminUserInput,
   AuditLogListQuery,
   AuditLogListResponse,
+  MigrationDataStatus,
+  MigrationExportDataset,
+  MigrationMarkGoodRequest,
+  MigrationRollbackRequest,
+  MigrationRunRequest,
+  MigrationRunResult,
+  MigrationSnapshot,
+  MigrationUploadedFile,
+  MigrationWorkbookSlot,
 } from "@weld/schemas";
 import { ErrorEnvelope } from "@weld/schemas";
 import { ApiClientError } from "./errors";
@@ -767,6 +776,106 @@ export class WeldApiClient {
     return this.request<{ ok: true }>("DELETE", `/admin/users/${id}`);
   }
 
+  getMigrationDataStatus(): Promise<MigrationDataStatus> {
+    return this.request<MigrationDataStatus>(
+      "GET",
+      "/admin/migration-data/status",
+    );
+  }
+
+  uploadMigrationWorkbook(
+    slot: MigrationWorkbookSlot,
+    file: Blob,
+    filename: string,
+  ): Promise<MigrationUploadedFile> {
+    const form = new FormData();
+    form.append("file", file, filename);
+    return this.requestForm<MigrationUploadedFile>(
+      "POST",
+      `/admin/migration-data/uploads/${slot}`,
+      form,
+    );
+  }
+
+  dryRunMigration(
+    input: Partial<MigrationRunRequest> = {},
+  ): Promise<MigrationRunResult> {
+    return this.request<MigrationRunResult>(
+      "POST",
+      "/admin/migration-data/dry-run",
+      {
+        body: input,
+      },
+    );
+  }
+
+  syncMigration(
+    input: Partial<MigrationRunRequest> = {},
+  ): Promise<MigrationRunResult> {
+    return this.request<MigrationRunResult>(
+      "POST",
+      "/admin/migration-data/sync",
+      {
+        body: input,
+      },
+    );
+  }
+
+  rollbackMigration(
+    input: MigrationRollbackRequest,
+  ): Promise<Record<string, unknown>> {
+    return this.request<Record<string, unknown>>(
+      "POST",
+      "/admin/migration-data/rollback",
+      { body: input },
+    );
+  }
+
+  markMigrationSnapshotGood(
+    input: MigrationMarkGoodRequest,
+  ): Promise<MigrationSnapshot> {
+    return this.request<MigrationSnapshot>(
+      "POST",
+      "/admin/migration-data/snapshots/mark-good",
+      { body: input },
+    );
+  }
+
+  async downloadMigrationExport(
+    dataset: MigrationExportDataset,
+  ): Promise<{ blob: Blob; filename: string }> {
+    const headers: Record<string, string> = { Accept: "*/*" };
+    const access = this.tokens.getAccessToken();
+    if (access) headers.Authorization = `Bearer ${access}`;
+    const response = await this.fetchImpl(
+      `${this.baseUrl}/admin/migration-data/export/${dataset}`,
+      { method: "GET", headers },
+    );
+    if (!response.ok) {
+      const text = await response.text();
+      let json: unknown = null;
+      try {
+        json = text ? JSON.parse(text) : null;
+      } catch {
+        json = null;
+      }
+      const parsed = ErrorEnvelope.safeParse(json);
+      if (parsed.success) {
+        throw ApiClientError.fromEnvelope(response.status, parsed.data);
+      }
+      throw new ApiClientError(
+        "HTTP_ERROR",
+        `Request failed with ${response.status}`,
+        response.status,
+      );
+    }
+    const disposition = response.headers.get("content-disposition") ?? "";
+    const match = /filename="?([^";]+)"?/i.exec(disposition);
+    const filename = match?.[1] ?? `weld-${dataset}.xlsx`;
+    const blob = await response.blob();
+    return { blob, filename };
+  }
+
   listAuditLogs(
     query: Partial<AuditLogListQuery> & Record<string, QueryValue> = {},
   ): Promise<AuditLogListResponse> {
@@ -869,6 +978,60 @@ export class WeldApiClient {
 
     if (response.status === 204) {
       return undefined as T;
+    }
+
+    const text = await response.text();
+    const json = text ? (JSON.parse(text) as unknown) : null;
+
+    if (!response.ok) {
+      const parsed = ErrorEnvelope.safeParse(json);
+      if (parsed.success) {
+        throw ApiClientError.fromEnvelope(response.status, parsed.data);
+      }
+      throw new ApiClientError(
+        "HTTP_ERROR",
+        `Request failed with ${response.status}`,
+        response.status,
+      );
+    }
+
+    return json as T;
+  }
+
+  private async requestForm<T>(
+    method: string,
+    path: string,
+    form: FormData,
+    options: { auth?: boolean; retried?: boolean } = {},
+  ): Promise<T> {
+    const headers: Record<string, string> = { Accept: "application/json" };
+    const useAuth = options.auth !== false;
+    if (useAuth) {
+      const access = this.tokens.getAccessToken();
+      if (access) headers.Authorization = `Bearer ${access}`;
+    }
+
+    const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
+      method,
+      headers,
+      body: form,
+    });
+
+    if (
+      response.status === 401 &&
+      useAuth &&
+      !options.retried &&
+      this.tokens.getRefreshToken()
+    ) {
+      try {
+        await this.refresh();
+        return this.requestForm<T>(method, path, form, {
+          ...options,
+          retried: true,
+        });
+      } catch {
+        this.tokens.clearTokens();
+      }
     }
 
     const text = await response.text();

@@ -18,7 +18,8 @@
     "billing": "Facturación",
     "settings": "Configuración",
     "users": "Usuarios y permisos",
-    "audit": "Registro de auditoría"
+    "audit": "Registro de auditoría",
+    "data_migration": "Importar / exportar datos"
   },
   "shell": {
     "signed_in_as": "Sesión: {{username}}",
@@ -26,7 +27,8 @@
     "menu": {
       "settings": "Configuración",
       "users": "Usuarios y permisos",
-      "audit": "Registro de auditoría"
+      "audit": "Registro de auditoría",
+      "data_migration": "Importar / exportar datos"
     }
   },
   "login": {
@@ -951,5 +953,52 @@
       "to": "Hasta",
       "all": "Todas"
     }
+  },
+  "migration_data": {
+    "title": "Importar / exportar datos",
+    "subtitle": "Migrá los Excel históricos a Weld, exportá el resultado para doble chequeo y guardá versiones con sync / rollback.",
+    "tab_import": "1. Importar",
+    "tab_export": "2. Exportar (doble chequeo)",
+    "tab_versions": "3. Versiones",
+    "import_help": "Subí cada libro en su casillero. No mezcles archivos: Junín, Chacabuco y Propios son entradas distintas del migrador.",
+    "xls_only": "Solo se aceptan archivos .xls (Excel 97–2003 / BIFF). Los .xlsx nuevos no son válidos para esta migración.",
+    "expect_file": "Archivo esperado: {{name}}",
+    "upload": "Subir .xls",
+    "replace": "Reemplazar",
+    "uploaded": "Listo",
+    "missing": "Falta",
+    "missing_slots": "Faltan archivos: {{slots}}",
+    "version_label": "Etiqueta de versión (opcional)",
+    "version_label_help": "Se usa al crear el snapshot previo al Sync, para reconocer esta corrida después.",
+    "dry_run": "Simular (sin escribir)",
+    "sync": "Sync (aplicar)",
+    "sync_confirm_title": "¿Aplicar migración?",
+    "sync_confirm_body": "Se crea un snapshot de la base y luego se cargan los tres Excel. La cola de excepciones de migración se regenera. Preferí correr primero una simulación.",
+    "sync_ok": "Sync OK. Snapshot: {{snapshot}}",
+    "dry_run_ok": "Simulación OK — limpios: {{clean}}, marcados: {{flagged}}",
+    "upload_ok": "Archivo cargado",
+    "last_report": "Último reporte de reconciliación",
+    "export_help": "Después del Sync, descargá estos Excel del sistema vivo para comparar contra los libros originales (doble chequeo).",
+    "export_all": "Paquete completo (ZIP)",
+    "export_all_help": "Clientes + cilindros + movimientos + excepciones en un solo ZIP.",
+    "export_clients": "Clientes",
+    "export_clients_help": "Maestro de clientes importados / actuales.",
+    "export_cylinders": "Cilindros",
+    "export_cylinders_help": "Flota con serial, gas, capacidad y estado.",
+    "export_movements": "Movimientos",
+    "export_movements_help": "Hasta 100.000 eventos de custodia (más recientes primero).",
+    "export_exceptions": "Excepciones de migración",
+    "export_exceptions_help": "Filas que el migrador no pudo importar limpiamente.",
+    "download": "Descargar",
+    "export_ok": "Descarga lista",
+    "versions_help": "Cada Sync guarda un snapshot previo. Marcá como «buena» la versión que funciona y usá Rollback si una corrida sale mal.",
+    "no_snapshots": "Todavía no hay snapshots. Aparecen al hacer Sync.",
+    "marked_good": "Versión buena",
+    "mark_good": "Marcar buena",
+    "unmark_good": "Quitar marca",
+    "rollback": "Rollback",
+    "rollback_ok": "Base restaurada desde el snapshot",
+    "rollback_confirm_title": "¿Restaurar snapshot?",
+    "rollback_confirm_body": "Esto reemplaza el estado actual de la base con el snapshot elegido. Los cambios posteriores a ese snapshot se pierden."
   }
 }

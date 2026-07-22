@@ -99,8 +99,83 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--junin", type=Path, default=DEFAULT_FILES["JUNIN"])
     parser.add_argument("--chacabuco", type=Path, default=DEFAULT_FILES["CHACABUCO"])
     parser.add_argument("--propios", type=Path, default=DEFAULT_FILES["PROPIOS"])
+    parser.add_argument(
+        "--export",
+        choices=["clients", "cylinders", "movements", "exceptions", "all"],
+        help="Export live DB tables to .xlsx for double-check (no import)",
+    )
+    parser.add_argument(
+        "--export-dir",
+        type=Path,
+        default=ROOT / "migration" / "exports",
+        help="Directory for --export output",
+    )
+    parser.add_argument(
+        "--create-snapshot",
+        metavar="LABEL",
+        help="pg_dump snapshot before a sync (writes under --snapshots-dir)",
+    )
+    parser.add_argument(
+        "--rollback-snapshot",
+        metavar="ID",
+        help="Restore DB from a prior snapshot id",
+    )
+    parser.add_argument(
+        "--mark-snapshot-good",
+        metavar="ID",
+        help="Mark a snapshot as a known-good version",
+    )
+    parser.add_argument(
+        "--list-snapshots",
+        action="store_true",
+        help="List available snapshots as JSON",
+    )
+    parser.add_argument(
+        "--snapshots-dir",
+        type=Path,
+        default=Path(os.environ.get("MIGRATION_DATA_DIR", str(ROOT / "migration" / "data")))
+        / "snapshots",
+    )
     args = parser.parse_args(argv)
     database_url = _resolve_database_url(args.database_url)
+
+    if args.list_snapshots:
+        from weld_migration.snapshot import list_snapshots
+
+        print(json.dumps({"snapshots": list_snapshots(args.snapshots_dir)}, indent=2))
+        return 0
+
+    if args.mark_snapshot_good:
+        from weld_migration.snapshot import mark_snapshot_good
+
+        meta = mark_snapshot_good(args.snapshots_dir, args.mark_snapshot_good, True)
+        print(json.dumps(meta, indent=2))
+        return 0
+
+    if args.create_snapshot is not None:
+        from weld_migration.snapshot import create_snapshot
+
+        meta = create_snapshot(database_url, args.snapshots_dir, args.create_snapshot)
+        print(json.dumps(meta, indent=2))
+        return 0
+
+    if args.rollback_snapshot:
+        from weld_migration.snapshot import rollback_snapshot
+
+        result = rollback_snapshot(database_url, args.snapshots_dir, args.rollback_snapshot)
+        print(json.dumps(result, indent=2))
+        return 0
+
+    if args.export:
+        from weld_migration.export_xlsx import export_all, export_dataset
+
+        if args.export == "all":
+            report = export_all(database_url, args.export_dir)
+        else:
+            out = args.export_dir / f"{args.export}.xlsx"
+            report = export_dataset(database_url, args.export, out)
+        print(json.dumps(report, indent=2, default=str))
+        return 0
 
     if args.backfill_capacity:
         print(f"Backfill capacity from: {args.propios.name}", flush=True)
