@@ -359,6 +359,31 @@ export class MigrationDataService implements OnModuleInit {
       `.execute(this.db);
       const partiesRemoved = Number(deleted.rows[0]?.count ?? 0);
 
+      // Restore schema.sql seed suppliers / sub-distributors (011 R2). Purge must
+      // not leave only SELF — otherwise Sync owns SUPPLIER cylinders as SELF (BR-07).
+      await sql`
+        INSERT INTO party (party_type, display_name)
+        SELECT v.party_type::party_type, v.display_name
+        FROM (
+          VALUES
+            ('SUPPLIER', 'Linde'),
+            ('SUPPLIER', 'Intergas'),
+            ('SUPPLIER', 'Nordelta'),
+            ('SUPPLIER', 'DSJ'),
+            ('SUBDISTRIBUTOR', 'Ceres'),
+            ('SUBDISTRIBUTOR', 'Pantiga'),
+            ('SUBDISTRIBUTOR', 'Ezequiel'),
+            ('SUBDISTRIBUTOR', 'Tito'),
+            ('SUBDISTRIBUTOR', 'Buroni')
+        ) AS v(party_type, display_name)
+        WHERE NOT EXISTS (
+          SELECT 1 FROM party p
+          WHERE p.party_type = v.party_type::party_type
+            AND p.display_name = v.display_name
+            AND p.deleted_at IS NULL
+        )
+      `.execute(this.db);
+
       if (existsSync(this.reportPath)) {
         try {
           writeFileSync(

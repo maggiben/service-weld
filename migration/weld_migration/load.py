@@ -25,6 +25,10 @@ from .normalize import (
 )
 from .parse import ExtractResult, StagedClient, StagedCylinder, StagedMovement
 
+# Canonical parties from schema.sql seed — restored after purge / missing DBs (011 R2).
+SEED_SUPPLIERS = ("Linde", "Intergas", "Nordelta", "DSJ")
+SEED_SUBDISTRIBUTORS = ("Ceres", "Pantiga", "Ezequiel", "Tito", "Buroni")
+
 
 class _Savepoint:
     """Per-row savepoint so one bad insert doesn't abort the whole migration txn."""
@@ -88,6 +92,7 @@ class Loader:
                         # Fresh exception queue per run (011 report is for this run).
                         conn.execute("TRUNCATE migration_exception RESTART IDENTITY")
                         self._ensure_gas_aliases(conn)
+                        self._ensure_seed_parties(conn)
                         self._load_cylinders(conn, extracted.cylinders)
                         self._load_clients(conn, extracted.clients)
                         self._load_movements(conn, extracted.movements)
@@ -322,6 +327,46 @@ class Loader:
                 (alias, code),
             )
             self.gas_alias[alias.casefold()] = code
+
+    def _ensure_seed_parties(self, conn: psycopg.Connection) -> None:
+        """Re-create schema seed suppliers/subdistributors if missing (post-purge)."""
+        for party_type, names in (
+            ("SUPPLIER", SEED_SUPPLIERS),
+            ("SUBDISTRIBUTOR", SEED_SUBDISTRIBUTORS),
+        ):
+            for name in names:
+                key = name.casefold()
+                existing = self.origin_parties.get(key)
+                if existing is not None and self.party_type.get(existing) == party_type:
+                    continue
+                try:
+                    with self._sp(conn):
+                        row = conn.execute(
+                            """
+                            INSERT INTO party(party_type, display_name)
+                            VALUES (%s, %s)
+                            RETURNING id
+                            """,
+                            (party_type, name),
+                        ).fetchone()
+                except psycopg.Error:
+                    row = conn.execute(
+                        """
+                        SELECT id FROM party
+                        WHERE party_type = %s
+                          AND lower(display_name::text) = lower(%s)
+                          AND deleted_at IS NULL
+                        LIMIT 1
+                        """,
+                        (party_type, name),
+                    ).fetchone()
+                if not row:
+                    continue
+                pid = row["id"]
+                self.party_by_name[key] = pid
+                self.party_type[pid] = party_type
+                self.origin_parties[key] = pid
+                self.stats["seed_party_ensured"] += 1
 
     def _ensure_locality(
         self, conn: psycopg.Connection, name: str | None, territory_id: int | None
