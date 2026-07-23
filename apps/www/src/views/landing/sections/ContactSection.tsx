@@ -95,12 +95,10 @@ export function ContactSection() {
           value={COMPANY.email}
           href={`mailto:${COMPANY.email}`}
         />
-        {/* TODO(013): publish business hours once confirmed */}
         <ContactRow
           Icon={ScheduleOutlinedIcon}
           label={translate("contact.hoursLabel")}
-          value={translate("contact.hoursPending")}
-          pending
+          value={COMPANY.hours.display}
         />
         <Box>
           <Typography

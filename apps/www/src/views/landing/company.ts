@@ -6,7 +6,6 @@
  * - https://www.diariodemocracia.com/regionales/chacabuco/330545-inauguraron-un-nuevo-local-de-venta-de-gases-indus/
  *
  * Social / contact provided by the business for publication on the marketing site.
- * Business hours: not yet confirmed — omitted from live contact fields.
  */
 
 export const COMPANY = {
@@ -19,6 +18,12 @@ export const COMPANY = {
     tel: "+542352543810",
   },
   email: "mymgases@hotmail.com",
+  /** Local business hours (Argentina). */
+  hours: {
+    display: "8:00 a 18:00 hs",
+    opening: "08:00",
+    closing: "18:00",
+  },
   address: {
     streetAddress: "Acceso Juan XXIII 274",
     addressLocality: "Chacabuco",
@@ -116,6 +121,7 @@ export function buildLocalBusinessJsonLd(opts: {
     url: opts.url,
     telephone: COMPANY.phone.tel,
     email: COMPANY.email,
+    openingHours: `Mo-Fr ${COMPANY.hours.opening}-${COMPANY.hours.closing}`,
     image: [
       `${opts.url.replace(/\/$/, "")}${COMPANY.images.logoMark}`,
       `${opts.url.replace(/\/$/, "")}${COMPANY.images.hero}`,

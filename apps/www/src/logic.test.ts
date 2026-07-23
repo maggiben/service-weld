@@ -31,6 +31,7 @@ describe("landing company helpers", () => {
     );
     assert.equal(COMPANY.phone.display, "02352 54-3810");
     assert.equal(COMPANY.email, "mymgases@hotmail.com");
+    assert.equal(COMPANY.hours.display, "8:00 a 18:00 hs");
   });
 
   it("builds LocalBusiness JSON-LD", () => {
