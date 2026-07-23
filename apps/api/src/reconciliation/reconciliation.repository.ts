@@ -88,22 +88,22 @@ export class ReconciliationRepository {
     });
 
     if (query.min_days != null) {
-      mapped = mapped.filter((r) => r.accrued_days >= query.min_days!);
+      mapped = mapped.filter((row) => row.accrued_days >= query.min_days!);
     }
 
-    mapped.sort((a, b) => {
+    mapped.sort((left, right) => {
       const dir = sort.direction === "asc" ? 1 : -1;
       if (sort.field === "delivery_date") {
-        return a.delivery_date.localeCompare(b.delivery_date) * dir;
+        return left.delivery_date.localeCompare(right.delivery_date) * dir;
       }
-      return (a.accrued_days - b.accrued_days) * dir;
+      return (left.accrued_days - right.accrued_days) * dir;
     });
 
     let start = 0;
     if (query.cursor) {
       const cursor = decodeCursor(query.cursor);
       const cursorId = Number(cursor.movement_id ?? 0);
-      start = mapped.findIndex((r) => r.movement_id === cursorId) + 1;
+      start = mapped.findIndex((row) => row.movement_id === cursorId) + 1;
       if (start < 0) start = 0;
     }
 
@@ -131,7 +131,9 @@ export class ReconciliationRepository {
     const db = resolveDb(this.db);
 
     const serials = [
-      ...new Set(input.serial_numbers.map((s) => s.trim()).filter(Boolean)),
+      ...new Set(
+        input.serial_numbers.map((item) => item.trim()).filter(Boolean),
+      ),
     ];
     const ids = [...new Set(input.cylinder_ids)];
 
@@ -220,12 +222,12 @@ export class ReconciliationRepository {
       ...new Set(
         rows
           .filter(
-            (r) =>
-              r.cylinder_id != null &&
-              (r.system_state === "AT_CLIENT" ||
-                r.system_state === "AT_SUPPLIER"),
+            (row) =>
+              row.cylinder_id != null &&
+              (row.system_state === "AT_CLIENT" ||
+                row.system_state === "AT_SUPPLIER"),
           )
-          .map((r) => r.cylinder_id!),
+          .map((row) => row.cylinder_id!),
       ),
     ];
     if (holderIds.length > 0) {
@@ -241,10 +243,10 @@ export class ReconciliationRepository {
         .where("movement_event.cylinder_id", "in", holderIds)
         .execute();
       const holderByCylinder = new Map<number, string>();
-      for (const h of holders) {
-        const id = Number(h.cylinder_id);
+      for (const head of holders) {
+        const id = Number(head.cylinder_id);
         if (!holderByCylinder.has(id)) {
-          holderByCylinder.set(id, h.holder_name);
+          holderByCylinder.set(id, head.holder_name);
         }
       }
       for (const row of rows) {
@@ -254,13 +256,13 @@ export class ReconciliationRepository {
       }
     }
 
-    const matched = rows.filter((r) => r.kind === "MATCHED").length;
+    const matched = rows.filter((row) => row.kind === "MATCHED").length;
     const present_elsewhere = rows.filter(
-      (r) => r.kind === "PRESENT_ELSEWHERE",
+      (row) => row.kind === "PRESENT_ELSEWHERE",
     ).length;
-    const absent_here = rows.filter((r) => r.kind === "ABSENT_HERE").length;
+    const absent_here = rows.filter((row) => row.kind === "ABSENT_HERE").length;
     const unknown_serial = rows.filter(
-      (r) => r.kind === "UNKNOWN_SERIAL",
+      (row) => row.kind === "UNKNOWN_SERIAL",
     ).length;
 
     return {

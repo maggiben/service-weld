@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useSessionStore } from "@/store/sessionStore";
 
 export function RequireAuth({ children }: { children: React.ReactNode }) {
-  const isAuthenticated = useSessionStore((s) => s.isAuthenticated());
+  const isAuthenticated = useSessionStore((state) => state.isAuthenticated());
   const pathname = usePathname();
   const router = useRouter();
 
@@ -21,7 +21,7 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
 }
 
 export function RedirectIfAuthed({ children }: { children: React.ReactNode }) {
-  const isAuthenticated = useSessionStore((s) => s.isAuthenticated());
+  const isAuthenticated = useSessionStore((state) => state.isAuthenticated());
   const router = useRouter();
 
   useEffect(() => {

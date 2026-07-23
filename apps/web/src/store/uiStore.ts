@@ -93,7 +93,8 @@ export const useUiStore = create<UiState>()(
           preferredThemeForMode(mode, lastLightThemeId, lastDarkThemeId),
         );
       },
-      toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
+      toggleSidebar: () =>
+        set((state) => ({ sidebarOpen: !state.sidebarOpen })),
     }),
     {
       name: "weld.ui",

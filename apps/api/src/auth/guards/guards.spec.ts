@@ -73,12 +73,12 @@ describe("TerritoryScopeGuard", () => {
     expect(plantCtx.request[TERRITORY_SCOPE_KEY]).toBeNull();
   });
 
-  it("requires territories for scoped roles", () => {
-    expect(() =>
-      guard.canActivate(
-        httpContext(principal({ roles: ["CLERK"], territories: [] })) as never,
-      ),
-    ).toThrow(ApiError);
+  it("treats empty territory assignment as all territories for scoped roles", () => {
+    const emptyCtx = httpContext(
+      principal({ roles: ["CLERK"], territories: [] }),
+    );
+    expect(guard.canActivate(emptyCtx as never)).toBe(true);
+    expect(emptyCtx.request[TERRITORY_SCOPE_KEY]).toBeNull();
 
     const ctx = httpContext(
       principal({

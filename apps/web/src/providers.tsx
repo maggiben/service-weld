@@ -28,8 +28,8 @@ export function AppProviders({ children }: PropsWithChildren) {
         },
       }),
   );
-  const themeId = useUiStore((s) => s.themeId);
-  const locale = useUiStore((s) => s.locale);
+  const themeId = useUiStore((state) => state.themeId);
+  const locale = useUiStore((state) => state.locale);
   const { i18n } = useTranslation();
   const theme = useMemo(() => buildTheme(resolveThemeId(themeId)), [themeId]);
 

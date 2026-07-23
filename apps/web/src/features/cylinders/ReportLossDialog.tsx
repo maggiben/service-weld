@@ -26,7 +26,7 @@ interface Props {
 }
 
 export function ReportLossDialog({ open, cylinder, onClose }: Props) {
-  const { t } = useTranslation();
+  const { t: translate } = useTranslation();
   const queryClient = useQueryClient();
   const [outcome, setOutcome] = useState<"LOST" | "BROKEN">("LOST");
   const [occurredOn, setOccurredOn] = useState(dayjs().format("YYYY-MM-DD"));
@@ -68,50 +68,54 @@ export function ReportLossDialog({ open, cylinder, onClose }: Props) {
     onError: (err) => {
       if (err instanceof ApiClientError) {
         if (err.code === "ALREADY_TERMINAL") {
-          setError(t("errors.already_terminal"));
+          setError(translate("errors.already_terminal"));
           return;
         }
         setError(err.message);
         return;
       }
-      setError(t("errors.generic"));
+      setError(translate("errors.generic"));
     },
   });
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
-      <DialogTitle>{t("cylinders.loss.title")}</DialogTitle>
+      <DialogTitle>{translate("cylinders.loss.title")}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
           {cylinder && (
             <Typography variant="body2" color="text.secondary">
-              {t("cylinders.loss.summary", {
+              {translate("cylinders.loss.summary", {
                 serial: cylinder.serial_number,
-                state: t(`enums.cylinder_state.${cylinder.state}`),
+                state: translate(`enums.cylinder_state.${cylinder.state}`),
               })}
             </Typography>
           )}
           {error && <Alert severity="error">{error}</Alert>}
           {supplierAlert && (
             <Alert severity="warning">
-              {t("cylinders.loss.supplier_alert")}
+              {translate("cylinders.loss.supplier_alert")}
             </Alert>
           )}
           <TextField
             select
             fullWidth
-            label={t("cylinders.loss.outcome")}
+            label={translate("cylinders.loss.outcome")}
             value={outcome}
-            onChange={(e) => setOutcome(e.target.value as "LOST" | "BROKEN")}
+            onChange={(event) =>
+              setOutcome(event.target.value as "LOST" | "BROKEN")
+            }
             disabled={supplierAlert}
           >
-            <MenuItem value="LOST">{t("enums.cylinder_state.LOST")}</MenuItem>
+            <MenuItem value="LOST">
+              {translate("enums.cylinder_state.LOST")}
+            </MenuItem>
             <MenuItem value="BROKEN">
-              {t("enums.cylinder_state.BROKEN")}
+              {translate("enums.cylinder_state.BROKEN")}
             </MenuItem>
           </TextField>
           <DatePicker
-            label={t("cylinders.loss.occurred_on")}
+            label={translate("cylinders.loss.occurred_on")}
             value={dayjs(occurredOn)}
             disabled={supplierAlert}
             onChange={(value: Dayjs | null) => {
@@ -123,16 +127,18 @@ export function ReportLossDialog({ open, cylinder, onClose }: Props) {
             fullWidth
             multiline
             minRows={2}
-            label={t("cylinders.loss.note")}
+            label={translate("cylinders.loss.note")}
             value={note}
             disabled={supplierAlert}
-            onChange={(e) => setNote(e.target.value)}
+            onChange={(event) => setNote(event.target.value)}
           />
         </Stack>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>
-          {supplierAlert ? t("actions.close") : t("actions.cancel")}
+          {supplierAlert
+            ? translate("actions.close")
+            : translate("actions.cancel")}
         </Button>
         {!supplierAlert && (
           <Button
@@ -141,7 +147,7 @@ export function ReportLossDialog({ open, cylinder, onClose }: Props) {
             disabled={!cylinder || mutation.isPending}
             onClick={() => mutation.mutate()}
           >
-            {t("cylinders.loss.confirm")}
+            {translate("cylinders.loss.confirm")}
           </Button>
         )}
       </DialogActions>

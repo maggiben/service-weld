@@ -43,17 +43,17 @@ export async function verifyPassword(
   const parts = stored.split("$");
   if (parts.length !== 6 || parts[0] !== "scrypt") return false;
 
-  const n = Number(parts[1]);
-  const r = Number(parts[2]);
-  const p = Number(parts[3]);
+  const num = Number(parts[1]);
+  const row = Number(parts[2]);
+  const part = Number(parts[3]);
   const saltHex = parts[4];
   const hashHex = parts[5];
   if (
     !saltHex ||
     !hashHex ||
-    Number.isNaN(n) ||
-    Number.isNaN(r) ||
-    Number.isNaN(p)
+    Number.isNaN(num) ||
+    Number.isNaN(row) ||
+    Number.isNaN(part)
   ) {
     return false;
   }
@@ -61,9 +61,9 @@ export async function verifyPassword(
   const salt = Buffer.from(saltHex, "hex");
   const expected = Buffer.from(hashHex, "hex");
   const derived = await scryptAsync(password, salt, expected.length, {
-    N: n,
-    r,
-    p,
+    N: num,
+    r: row,
+    p: part,
   });
 
   if (derived.length !== expected.length) return false;

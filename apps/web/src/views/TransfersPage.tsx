@@ -50,8 +50,10 @@ type PartyOption = {
 };
 
 export default function TransfersPage() {
-  const { t } = useTranslation();
-  const canWrite = useSessionStore((s) => s.hasCapability("transfers:write"));
+  const { t: translate } = useTranslation();
+  const canWrite = useSessionStore((state) =>
+    state.hasCapability("transfers:write"),
+  );
   const queryClient = useQueryClient();
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
     page: 0,
@@ -118,44 +120,44 @@ export default function TransfersPage() {
 
   const structuredParties = useMemo<PartyOption[]>(
     () =>
-      SEED_TRANSFER_PARTIES.map((p) => ({
-        id: p.id,
-        name: p.name,
-        party_type: p.party_type,
+      SEED_TRANSFER_PARTIES.map((part) => ({
+        id: part.id,
+        name: part.name,
+        party_type: part.party_type,
       })),
     [],
   );
 
   const fromOptions = useMemo(() => {
-    const q = fromQuery.trim().toLowerCase();
+    const query = fromQuery.trim().toLowerCase();
     const nodes = structuredParties.filter(
-      (p) => !q || p.name.toLowerCase().includes(q),
+      (part) => !query || part.name.toLowerCase().includes(query),
     );
     const clients: PartyOption[] = (fromClientsSearch.data?.data ?? []).map(
-      (c) => ({
-        id: c.id,
-        name: c.name,
+      (client) => ({
+        id: client.id,
+        name: client.name,
         party_type: "CUSTOMER",
       }),
     );
-    const seen = new Set(nodes.map((p) => p.id));
-    return [...nodes, ...clients.filter((c) => !seen.has(c.id))];
+    const seen = new Set(nodes.map((part) => part.id));
+    return [...nodes, ...clients.filter((client) => !seen.has(client.id))];
   }, [structuredParties, fromQuery, fromClientsSearch.data]);
 
   const toOptions = useMemo(() => {
-    const q = toQuery.trim().toLowerCase();
+    const query = toQuery.trim().toLowerCase();
     const nodes = structuredParties.filter(
-      (p) => !q || p.name.toLowerCase().includes(q),
+      (part) => !query || part.name.toLowerCase().includes(query),
     );
     const clients: PartyOption[] = (toClientsSearch.data?.data ?? []).map(
-      (c) => ({
-        id: c.id,
-        name: c.name,
+      (client) => ({
+        id: client.id,
+        name: client.name,
         party_type: "CUSTOMER",
       }),
     );
-    const seen = new Set(nodes.map((p) => p.id));
-    return [...nodes, ...clients.filter((c) => !seen.has(c.id))];
+    const seen = new Set(nodes.map((part) => part.id));
+    return [...nodes, ...clients.filter((client) => !seen.has(client.id))];
   }, [structuredParties, toQuery, toClientsSearch.data]);
 
   useEffect(() => {
@@ -208,17 +210,17 @@ export default function TransfersPage() {
     onError: (err) => {
       if (err instanceof ApiClientError) {
         if (err.code === "SAME_PARTY") {
-          setError(t("errors.same_party"));
+          setError(translate("errors.same_party"));
           return;
         }
         if (err.code === "DATE_ORDER") {
-          setError(t("errors.date_order"));
+          setError(translate("errors.date_order"));
           return;
         }
         setError(err.message);
         return;
       }
-      setError(t("errors.generic"));
+      setError(translate("errors.generic"));
     },
   });
 
@@ -235,13 +237,13 @@ export default function TransfersPage() {
     onError: (err) => {
       if (err instanceof ApiClientError) {
         if (err.code === "DATE_ORDER") {
-          setCloseError(t("errors.date_order"));
+          setCloseError(translate("errors.date_order"));
           return;
         }
         setCloseError(err.message);
         return;
       }
-      setCloseError(t("errors.generic"));
+      setCloseError(translate("errors.generic"));
     },
   });
 
@@ -249,13 +251,13 @@ export default function TransfersPage() {
     () => [
       {
         field: "custody_status",
-        headerName: t("transfers.columns.status"),
+        headerName: translate("transfers.columns.status"),
         width: 140,
         sortable: false,
         renderCell: (params) => (
           <Chip
             size="small"
-            label={t(`transfers.custody_status.${params.value}`)}
+            label={translate(`transfers.custody_status.${params.value}`)}
             color={transferCustodyChipColor(
               params.value as TransferCustodyStatus,
             )}
@@ -265,24 +267,24 @@ export default function TransfersPage() {
       },
       {
         field: "transfer_date",
-        headerName: t("transfers.columns.exit_date"),
+        headerName: translate("transfers.columns.exit_date"),
         width: 120,
       },
       {
         field: "return_date",
-        headerName: t("transfers.columns.entry_date"),
+        headerName: translate("transfers.columns.entry_date"),
         width: 120,
         valueFormatter: (value: string | null) => value ?? "—",
       },
       {
         field: "cylinder_serial",
-        headerName: t("transfers.columns.cylinder"),
+        headerName: translate("transfers.columns.cylinder"),
         flex: 1,
         minWidth: 110,
       },
       {
         field: "from_party_name",
-        headerName: t("transfers.columns.from"),
+        headerName: translate("transfers.columns.from"),
         flex: 1,
         minWidth: 130,
         renderCell: (params) => (
@@ -290,7 +292,7 @@ export default function TransfersPage() {
             <Typography variant="body2">{params.value}</Typography>
             {params.row.from_party_type && (
               <Typography variant="caption" color="text.secondary">
-                {partyTypeLabel(t, params.row.from_party_type)}
+                {partyTypeLabel(translate, params.row.from_party_type)}
               </Typography>
             )}
           </Stack>
@@ -298,7 +300,7 @@ export default function TransfersPage() {
       },
       {
         field: "to_party_name",
-        headerName: t("transfers.columns.to"),
+        headerName: translate("transfers.columns.to"),
         flex: 1,
         minWidth: 130,
         renderCell: (params) => (
@@ -306,7 +308,7 @@ export default function TransfersPage() {
             <Typography variant="body2">{params.value}</Typography>
             {params.row.to_party_type && (
               <Typography variant="caption" color="text.secondary">
-                {partyTypeLabel(t, params.row.to_party_type)}
+                {partyTypeLabel(translate, params.row.to_party_type)}
               </Typography>
             )}
           </Stack>
@@ -314,7 +316,7 @@ export default function TransfersPage() {
       },
       {
         field: "note",
-        headerName: t("transfers.columns.note"),
+        headerName: translate("transfers.columns.note"),
         flex: 1.2,
         minWidth: 140,
       },
@@ -336,14 +338,14 @@ export default function TransfersPage() {
                       setCloseTarget(params.row);
                     }}
                   >
-                    {t("transfers.actions.mark_entry")}
+                    {translate("transfers.actions.mark_entry")}
                   </Button>
                 ),
             } satisfies GridColDef<StockTransfer>,
           ]
         : []),
     ],
-    [t, canWrite],
+    [translate, canWrite],
   );
 
   const canSave =
@@ -358,9 +360,9 @@ export default function TransfersPage() {
     >
       <Stack direction="row" justifyContent="space-between" alignItems="center">
         <Box>
-          <Typography variant="h5">{t("transfers.title")}</Typography>
+          <Typography variant="h5">{translate("transfers.title")}</Typography>
           <Typography variant="body2" color="text.secondary">
-            {t("transfers.subtitle")}
+            {translate("transfers.subtitle")}
           </Typography>
         </Box>
         {canWrite && (
@@ -372,13 +374,13 @@ export default function TransfersPage() {
               setDrawerOpen(true);
             }}
           >
-            {t("actions.new_transfer")}
+            {translate("actions.new_transfer")}
           </Button>
         )}
       </Stack>
 
       {transfersQuery.isError && (
-        <Alert severity="error">{t("errors.load_failed")}</Alert>
+        <Alert severity="error">{translate("errors.load_failed")}</Alert>
       )}
 
       <Box sx={{ flex: 1, minHeight: 360 }}>
@@ -418,7 +420,9 @@ export default function TransfersPage() {
         PaperProps={{ sx: { width: { xs: "100%", sm: 420 }, p: 3 } }}
       >
         <Stack spacing={2}>
-          <Typography variant="h6">{t("transfers.form.title")}</Typography>
+          <Typography variant="h6">
+            {translate("transfers.form.title")}
+          </Typography>
           {error && <Alert severity="error">{error}</Alert>}
 
           <Autocomplete
@@ -426,7 +430,7 @@ export default function TransfersPage() {
             getOptionLabel={(option: Cylinder) =>
               `${option.serial_number}${option.owner_name ? ` · ${option.owner_name}` : ""}`
             }
-            isOptionEqualToValue={(a, b) => a.id === b.id}
+            isOptionEqualToValue={(left, right) => left.id === right.id}
             loading={cylindersSearch.isFetching}
             onInputChange={(_, value) => setCylinderQuery(value)}
             value={selectedCylinder}
@@ -434,7 +438,7 @@ export default function TransfersPage() {
             renderInput={(params) => (
               <TextField
                 {...params}
-                label={t("transfers.form.cylinder")}
+                label={translate("transfers.form.cylinder")}
                 required
               />
             )}
@@ -443,7 +447,7 @@ export default function TransfersPage() {
           <Autocomplete
             options={fromOptions}
             getOptionLabel={(option) => option.name}
-            isOptionEqualToValue={(a, b) => a.id === b.id}
+            isOptionEqualToValue={(left, right) => left.id === right.id}
             loading={fromClientsSearch.isFetching}
             filterOptions={(opts) => opts}
             onInputChange={(_, value) => setFromQuery(value)}
@@ -454,7 +458,7 @@ export default function TransfersPage() {
                 <Stack>
                   <Typography variant="body2">{option.name}</Typography>
                   <Typography variant="caption" color="text.secondary">
-                    {partyTypeLabel(t, option.party_type)}
+                    {partyTypeLabel(translate, option.party_type)}
                   </Typography>
                 </Stack>
               </li>
@@ -462,9 +466,9 @@ export default function TransfersPage() {
             renderInput={(params) => (
               <TextField
                 {...params}
-                label={t("transfers.form.from")}
+                label={translate("transfers.form.from")}
                 required
-                helperText={t("transfers.form.party_hint")}
+                helperText={translate("transfers.form.party_hint")}
               />
             )}
           />
@@ -472,7 +476,7 @@ export default function TransfersPage() {
           <Autocomplete
             options={toOptions}
             getOptionLabel={(option) => option.name}
-            isOptionEqualToValue={(a, b) => a.id === b.id}
+            isOptionEqualToValue={(left, right) => left.id === right.id}
             loading={toClientsSearch.isFetching}
             filterOptions={(opts) => opts}
             onInputChange={(_, value) => setToQuery(value)}
@@ -483,50 +487,54 @@ export default function TransfersPage() {
                 <Stack>
                   <Typography variant="body2">{option.name}</Typography>
                   <Typography variant="caption" color="text.secondary">
-                    {partyTypeLabel(t, option.party_type)}
+                    {partyTypeLabel(translate, option.party_type)}
                   </Typography>
                 </Stack>
               </li>
             )}
             renderInput={(params) => (
-              <TextField {...params} label={t("transfers.form.to")} required />
+              <TextField
+                {...params}
+                label={translate("transfers.form.to")}
+                required
+              />
             )}
           />
 
           <TextField
-            label={t("transfers.form.exit_date")}
+            label={translate("transfers.form.exit_date")}
             type="date"
             value={transferDate}
-            onChange={(e) => setTransferDate(e.target.value)}
+            onChange={(event) => setTransferDate(event.target.value)}
             InputLabelProps={{ shrink: true }}
-            helperText={t("transfers.form.exit_date_hint")}
+            helperText={translate("transfers.form.exit_date_hint")}
             required
           />
           <TextField
-            label={t("transfers.form.entry_date")}
+            label={translate("transfers.form.entry_date")}
             type="date"
             value={returnDate}
-            onChange={(e) => setReturnDate(e.target.value)}
+            onChange={(event) => setReturnDate(event.target.value)}
             InputLabelProps={{ shrink: true }}
-            helperText={t("transfers.form.entry_date_hint")}
+            helperText={translate("transfers.form.entry_date_hint")}
           />
           <TextField
-            label={t("transfers.form.note")}
+            label={translate("transfers.form.note")}
             value={note}
-            onChange={(e) => setNote(e.target.value)}
+            onChange={(event) => setNote(event.target.value)}
             multiline
             minRows={2}
           />
           <Stack direction="row" spacing={1} justifyContent="flex-end">
             <Button onClick={() => setDrawerOpen(false)}>
-              {t("actions.cancel")}
+              {translate("actions.cancel")}
             </Button>
             <Button
               variant="contained"
               disabled={createMutation.isPending || !canSave}
               onClick={() => createMutation.mutate()}
             >
-              {t("actions.save")}
+              {translate("actions.save")}
             </Button>
           </Stack>
         </Stack>
@@ -538,21 +546,21 @@ export default function TransfersPage() {
         fullWidth
         maxWidth="xs"
       >
-        <DialogTitle>{t("transfers.close.title")}</DialogTitle>
+        <DialogTitle>{translate("transfers.close.title")}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
             {closeError && <Alert severity="error">{closeError}</Alert>}
             <Typography variant="body2" color="text.secondary">
-              {t("transfers.close.summary", {
+              {translate("transfers.close.summary", {
                 serial: closeTarget?.cylinder_serial ?? "",
                 to: closeTarget?.to_party_name ?? "",
               })}
             </Typography>
             <TextField
-              label={t("transfers.form.entry_date")}
+              label={translate("transfers.form.entry_date")}
               type="date"
               value={closeDate}
-              onChange={(e) => setCloseDate(e.target.value)}
+              onChange={(event) => setCloseDate(event.target.value)}
               InputLabelProps={{ shrink: true }}
               fullWidth
               required
@@ -561,14 +569,14 @@ export default function TransfersPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setCloseTarget(null)}>
-            {t("actions.cancel")}
+            {translate("actions.cancel")}
           </Button>
           <Button
             variant="contained"
             disabled={closeMutation.isPending || !closeDate}
             onClick={() => closeMutation.mutate()}
           >
-            {t("transfers.actions.mark_entry")}
+            {translate("transfers.actions.mark_entry")}
           </Button>
         </DialogActions>
       </Dialog>

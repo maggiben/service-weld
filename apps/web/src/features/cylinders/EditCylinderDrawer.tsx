@@ -36,7 +36,7 @@ interface Props {
 }
 
 export function EditCylinderDrawer({ open, cylinder, onClose }: Props) {
-  const { t } = useTranslation();
+  const { t: translate } = useTranslation();
   const queryClient = useQueryClient();
   const { territories } = useLocations();
   const [conflictError, setConflictError] = useState<string | null>(null);
@@ -90,19 +90,22 @@ export function EditCylinderDrawer({ open, cylinder, onClose }: Props) {
         error instanceof ApiClientError &&
         error.code === "VERSION_CONFLICT"
       ) {
-        setConflictError(t("errors.version_conflict"));
+        setConflictError(translate("errors.version_conflict"));
         return;
       }
       if (!applyServerErrors(error, setError, "gas_code")) {
         setConflictError(
-          error instanceof ApiClientError ? error.message : t("errors.generic"),
+          error instanceof ApiClientError
+            ? error.message
+            : translate("errors.generic"),
         );
       }
     },
   });
 
   const handleClose = () => {
-    if (isDirty && !window.confirm(t("cylinders.form.unsaved_confirm"))) return;
+    if (isDirty && !window.confirm(translate("cylinders.form.unsaved_confirm")))
+      return;
     onClose();
   };
 
@@ -141,11 +144,13 @@ export function EditCylinderDrawer({ open, cylinder, onClose }: Props) {
         }}
       >
         <Typography variant="h6" sx={{ mb: 1 }}>
-          {t("cylinders.form.title_edit")}
+          {translate("cylinders.form.title_edit")}
         </Typography>
         {cylinder && (
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            {t("cylinders.detail.title", { serial: cylinder.serial_number })}
+            {translate("cylinders.detail.title", {
+              serial: cylinder.serial_number,
+            })}
           </Typography>
         )}
 
@@ -156,7 +161,7 @@ export function EditCylinderDrawer({ open, cylinder, onClose }: Props) {
         )}
 
         <Alert severity="info" sx={{ mb: 2 }}>
-          {t("cylinders.form.edit_hint")}
+          {translate("cylinders.form.edit_hint")}
         </Alert>
 
         <Stack spacing={2} sx={{ flex: 1, overflow: "auto" }}>
@@ -165,18 +170,20 @@ export function EditCylinderDrawer({ open, cylinder, onClose }: Props) {
             control={control}
             render={({ field }) => (
               <FormControl fullWidth error={Boolean(errors.gas_code)}>
-                <InputLabel>{t("cylinders.form.gas")}</InputLabel>
+                <InputLabel>{translate("cylinders.form.gas")}</InputLabel>
                 <Select
-                  label={t("cylinders.form.gas")}
+                  label={translate("cylinders.form.gas")}
                   value={field.value ?? ""}
-                  onChange={(e) => field.onChange(e.target.value || null)}
+                  onChange={(event) =>
+                    field.onChange(event.target.value || null)
+                  }
                 >
                   <MenuItem value="">
-                    <em>{t("cylinders.form.gas_none")}</em>
+                    <em>{translate("cylinders.form.gas_none")}</em>
                   </MenuItem>
                   {GAS_CODES.map((code) => (
                     <MenuItem key={code} value={code}>
-                      {t(`enums.gas.${code}`, { defaultValue: code })}
+                      {translate(`enums.gas.${code}`, { defaultValue: code })}
                     </MenuItem>
                   ))}
                 </Select>
@@ -192,24 +199,26 @@ export function EditCylinderDrawer({ open, cylinder, onClose }: Props) {
             control={control}
             render={({ field }) => (
               <FormControl fullWidth>
-                <InputLabel>{t("cylinders.form.capacity_unit")}</InputLabel>
+                <InputLabel>
+                  {translate("cylinders.form.capacity_unit")}
+                </InputLabel>
                 <Select
-                  label={t("cylinders.form.capacity_unit")}
+                  label={translate("cylinders.form.capacity_unit")}
                   value={field.value ?? "M3"}
-                  onChange={(e) =>
+                  onChange={(event) =>
                     field.onChange(
-                      e.target.value as FormValues["capacity_unit"],
+                      event.target.value as FormValues["capacity_unit"],
                     )
                   }
                 >
                   {CapacityUnit.options.map((unit) => (
                     <MenuItem key={unit} value={unit}>
-                      {t(`enums.capacity_unit.${unit}`)}
+                      {translate(`enums.capacity_unit.${unit}`)}
                     </MenuItem>
                   ))}
                 </Select>
                 <FormHelperText>
-                  {t("cylinders.form.capacity_hint")}
+                  {translate("cylinders.form.capacity_hint")}
                 </FormHelperText>
               </FormControl>
             )}
@@ -222,13 +231,15 @@ export function EditCylinderDrawer({ open, cylinder, onClose }: Props) {
               <TextField
                 {...field}
                 value={field.value ?? ""}
-                onChange={(e) =>
+                onChange={(event) =>
                   field.onChange(
-                    e.target.value === "" ? null : Number(e.target.value),
+                    event.target.value === ""
+                      ? null
+                      : Number(event.target.value),
                   )
                 }
                 type="number"
-                label={t("cylinders.form.capacity")}
+                label={translate("cylinders.form.capacity")}
                 fullWidth
                 error={Boolean(errors.capacity_m3)}
                 helperText={errors.capacity_m3?.message}
@@ -241,17 +252,17 @@ export function EditCylinderDrawer({ open, cylinder, onClose }: Props) {
             control={control}
             render={({ field }) => (
               <FormControl fullWidth>
-                <InputLabel>{t("cylinders.form.territory")}</InputLabel>
+                <InputLabel>{translate("cylinders.form.territory")}</InputLabel>
                 <Select
-                  label={t("cylinders.form.territory")}
+                  label={translate("cylinders.form.territory")}
                   value={field.value ?? ""}
-                  onChange={(e) => {
-                    const value = e.target.value;
+                  onChange={(event) => {
+                    const value = event.target.value;
                     field.onChange(value === "" ? null : Number(value));
                   }}
                 >
                   <MenuItem value="">
-                    <em>{t("cylinders.form.territory_none")}</em>
+                    <em>{translate("cylinders.form.territory_none")}</em>
                   </MenuItem>
                   {territories.map((territory) => (
                     <MenuItem key={territory.id} value={territory.id}>
@@ -260,7 +271,7 @@ export function EditCylinderDrawer({ open, cylinder, onClose }: Props) {
                   ))}
                 </Select>
                 <FormHelperText>
-                  {t("cylinders.form.territory_hint")}
+                  {translate("cylinders.form.territory_hint")}
                 </FormHelperText>
               </FormControl>
             )}
@@ -273,11 +284,13 @@ export function EditCylinderDrawer({ open, cylinder, onClose }: Props) {
               <TextField
                 {...field}
                 value={field.value ?? ""}
-                onChange={(e) =>
-                  field.onChange(e.target.value === "" ? null : e.target.value)
+                onChange={(event) =>
+                  field.onChange(
+                    event.target.value === "" ? null : event.target.value,
+                  )
                 }
                 type="date"
-                label={t("cylinders.form.acquisition_date")}
+                label={translate("cylinders.form.acquisition_date")}
                 fullWidth
                 InputLabelProps={{ shrink: true }}
                 error={Boolean(errors.acquisition_date)}
@@ -288,13 +301,13 @@ export function EditCylinderDrawer({ open, cylinder, onClose }: Props) {
         </Stack>
 
         <Stack direction="row" spacing={1} sx={{ mt: 3 }}>
-          <Button onClick={handleClose}>{t("actions.cancel")}</Button>
+          <Button onClick={handleClose}>{translate("actions.cancel")}</Button>
           <Button
             type="submit"
             variant="contained"
             disabled={isSubmitting || update.isPending || !isDirty}
           >
-            {t("actions.save")}
+            {translate("actions.save")}
           </Button>
         </Stack>
       </Box>

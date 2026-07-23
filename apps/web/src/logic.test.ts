@@ -105,7 +105,7 @@ describe("displayRentalDays", () => {
 });
 
 describe("alertDisplay", () => {
-  const t = ((key: string, opts?: Record<string, unknown>) => {
+  const translate = ((key: string, opts?: Record<string, unknown>) => {
     if (opts?.serial) return `cyl:${opts.serial}`;
     if (opts?.name) return `name:${opts.name}`;
     if (opts?.count != null) return `days:${opts.count}`;
@@ -138,7 +138,7 @@ describe("alertDisplay", () => {
   }
 
   it("formats known types and hrefs", () => {
-    assert.match(formatAlertDetail(alert(), t), /cyl:S1/);
+    assert.match(formatAlertDetail(alert(), translate), /cyl:S1/);
     assert.match(
       formatAlertDetail(
         alert({
@@ -148,12 +148,15 @@ describe("alertDisplay", () => {
           gas_code: null,
           movement_kind: null,
         }),
-        t,
+        translate,
       ),
       /.*/,
     );
     assert.match(
-      formatAlertDetail(alert({ alert_type: "SUPPLIER_LOAN_OVERDUE" }), t),
+      formatAlertDetail(
+        alert({ alert_type: "SUPPLIER_LOAN_OVERDUE" }),
+        translate,
+      ),
       /Sup/,
     );
     assert.match(
@@ -166,12 +169,12 @@ describe("alertDisplay", () => {
           cylinder_serial: null,
           days_open: null,
         }),
-        t,
+        translate,
       ),
       /.*/,
     );
     assert.match(
-      formatAlertDetail(alert({ alert_type: "SUPPLIER_LIABILITY" }), t),
+      formatAlertDetail(alert({ alert_type: "SUPPLIER_LIABILITY" }), translate),
       /cyl:S1/,
     );
     assert.match(
@@ -183,16 +186,22 @@ describe("alertDisplay", () => {
           counterparty_name: null,
           gas_code: null,
         }),
-        t,
+        translate,
       ),
       /.*/,
     );
     assert.equal(
-      formatAlertDetail(alert({ alert_type: "OTHER", summary: "x" }), t),
+      formatAlertDetail(
+        alert({ alert_type: "OTHER", summary: "x" }),
+        translate,
+      ),
       "x",
     );
     assert.equal(
-      formatAlertDetail(alert({ alert_type: "OTHER", summary: undefined }), t),
+      formatAlertDetail(
+        alert({ alert_type: "OTHER", summary: undefined }),
+        translate,
+      ),
       "",
     );
     assert.equal(alertEntityHref(alert()), "/cylinders/9");

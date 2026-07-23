@@ -25,7 +25,7 @@ interface Props {
 }
 
 export function ReturnDialog({ open, movement, onClose }: Props) {
-  const { t } = useTranslation();
+  const { t: translate } = useTranslation();
   const queryClient = useQueryClient();
   const [returnDate, setReturnDate] = useState(dayjs().format("YYYY-MM-DD"));
   const [error, setError] = useState<string | null>(null);
@@ -67,28 +67,28 @@ export function ReturnDialog({ open, movement, onClose }: Props) {
     onError: (err) => {
       if (err instanceof ApiClientError) {
         if (err.code === "RETURN_BEFORE_DELIVERY") {
-          setError(t("errors.return_before_delivery"));
+          setError(translate("errors.return_before_delivery"));
           return;
         }
         if (err.code === "NOT_OPEN") {
-          setError(t("errors.not_open"));
+          setError(translate("errors.not_open"));
           return;
         }
         setError(err.message);
         return;
       }
-      setError(t("errors.generic"));
+      setError(translate("errors.generic"));
     },
   });
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
-      <DialogTitle>{t("movements.return.title")}</DialogTitle>
+      <DialogTitle>{translate("movements.return.title")}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
           {movement && (
             <Typography variant="body2" color="text.secondary">
-              {t("movements.return.summary", {
+              {translate("movements.return.summary", {
                 serial: movement.cylinder_serial,
                 holder: movement.holder_name,
                 delivery: movement.delivery_date,
@@ -99,7 +99,7 @@ export function ReturnDialog({ open, movement, onClose }: Props) {
           {error && <Alert severity="error">{error}</Alert>}
 
           <DatePicker
-            label={t("movements.return.return_date")}
+            label={translate("movements.return.return_date")}
             value={dayjs(returnDate)}
             minDate={movement ? dayjs(movement.delivery_date) : undefined}
             onChange={(value: Dayjs | null) => {
@@ -110,19 +110,19 @@ export function ReturnDialog({ open, movement, onClose }: Props) {
 
           <Alert severity={invalid ? "warning" : "info"}>
             {invalid
-              ? t("movements.return.invalid_preview")
-              : t("movements.return.preview", { days: previewDays })}
+              ? translate("movements.return.invalid_preview")
+              : translate("movements.return.preview", { days: previewDays })}
           </Alert>
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t("actions.cancel")}</Button>
+        <Button onClick={onClose}>{translate("actions.cancel")}</Button>
         <Button
           variant="contained"
           disabled={invalid || mutation.isPending}
           onClick={() => mutation.mutate()}
         >
-          {t("movements.return.confirm")}
+          {translate("movements.return.confirm")}
         </Button>
       </DialogActions>
     </Dialog>

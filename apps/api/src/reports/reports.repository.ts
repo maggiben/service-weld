@@ -64,10 +64,10 @@ export class ReportsRepository {
         qb = qb.where("cylinder.gas_code", "=", query["filter[gas_code]"]);
       }
       const rows = await qb.groupBy(["cylinder.state"]).execute();
-      return rows.map((r) => ({
-        group_key: r.state,
-        state: r.state,
-        count: Number(r.count),
+      return rows.map((row) => ({
+        group_key: row.state,
+        state: row.state,
+        count: Number(row.count),
       }));
     }
 
@@ -88,10 +88,10 @@ export class ReportsRepository {
         qb = qb.where("cylinder.gas_code", "=", query["filter[gas_code]"]);
       }
       const rows = await qb.groupBy(["cylinder.gas_code"]).execute();
-      return rows.map((r) => ({
-        group_key: r.gas_code ?? "UNKNOWN",
-        gas_code: r.gas_code as FleetRow["gas_code"],
-        count: Number(r.count),
+      return rows.map((row) => ({
+        group_key: row.gas_code ?? "UNKNOWN",
+        gas_code: row.gas_code as FleetRow["gas_code"],
+        count: Number(row.count),
       }));
     }
 
@@ -126,11 +126,12 @@ export class ReportsRepository {
         .groupBy(["client.locality_id", "locality.name"])
         .orderBy("count", "desc")
         .execute();
-      return rows.map((r) => ({
-        group_key: r.locality_id != null ? String(r.locality_id) : "UNASSIGNED",
-        locality_id: r.locality_id == null ? null : Number(r.locality_id),
-        locality_name: r.locality_name ?? null,
-        count: Number(r.count),
+      return rows.map((row) => ({
+        group_key:
+          row.locality_id != null ? String(row.locality_id) : "UNASSIGNED",
+        locality_id: row.locality_id == null ? null : Number(row.locality_id),
+        locality_name: row.locality_name ?? null,
+        count: Number(row.count),
       }));
     }
 
@@ -162,11 +163,11 @@ export class ReportsRepository {
         .groupBy(["movement_event.holder_party_id", "party.display_name"])
         .orderBy("count", "desc")
         .execute();
-      return rows.map((r) => ({
-        group_key: String(r.client_party_id),
-        client_party_id: Number(r.client_party_id),
-        client_name: r.client_name,
-        count: Number(r.count),
+      return rows.map((row) => ({
+        group_key: String(row.client_party_id),
+        client_party_id: Number(row.client_party_id),
+        client_name: row.client_name,
+        count: Number(row.count),
       }));
     }
 
@@ -189,11 +190,11 @@ export class ReportsRepository {
     const rows = await qb
       .groupBy(["cylinder.owner_party_id", "party.display_name"])
       .execute();
-    return rows.map((r) => ({
-      group_key: String(r.owner_party_id),
-      owner_party_id: Number(r.owner_party_id),
-      owner_name: r.owner_name,
-      count: Number(r.count),
+    return rows.map((row) => ({
+      group_key: String(row.owner_party_id),
+      owner_party_id: Number(row.owner_party_id),
+      owner_name: row.owner_name,
+      count: Number(row.count),
     }));
   }
 
@@ -243,17 +244,19 @@ export class ReportsRepository {
       };
     });
 
-    mapped = mapped.filter((r) => matchesAgingFilter(r.days_out, query.bucket));
-    mapped.sort((a, b) => {
+    mapped = mapped.filter((row) =>
+      matchesAgingFilter(row.days_out, query.bucket),
+    );
+    mapped.sort((left, right) => {
       const dir = sort.direction === "asc" ? 1 : -1;
-      return (a.days_out - b.days_out) * dir;
+      return (left.days_out - right.days_out) * dir;
     });
 
     let start = 0;
     if (query.cursor) {
       const cursor = decodeCursor(query.cursor);
       const id = Number(cursor.movement_id ?? 0);
-      const idx = mapped.findIndex((r) => r.movement_id === id);
+      const idx = mapped.findIndex((row) => row.movement_id === id);
       start = idx >= 0 ? idx + 1 : 0;
     }
     const pageRows = mapped.slice(start, start + limit + 1);
@@ -326,17 +329,17 @@ export class ReportsRepository {
 
     const rows = await qb.execute();
     const rates = await db.selectFrom("rental_rate").selectAll().execute();
-    const candidates = rates.map((r) => ({
-      id: Number(r.id),
+    const candidates = rates.map((rate) => ({
+      id: Number(rate.id),
       client_party_id:
-        r.client_party_id == null ? null : Number(r.client_party_id),
-      gas_code: r.gas_code,
-      capacity_m3: r.capacity_m3 == null ? null : Number(r.capacity_m3),
-      capacity_unit: (r.capacity_unit ?? "M3") as "M3" | "KG",
-      period: r.period as "DAILY" | "MONTHLY",
-      amount: Number(r.amount),
-      effective_from: isoDate(r.effective_from)!,
-      effective_to: isoDate(r.effective_to),
+        rate.client_party_id == null ? null : Number(rate.client_party_id),
+      gas_code: rate.gas_code,
+      capacity_m3: rate.capacity_m3 == null ? null : Number(rate.capacity_m3),
+      capacity_unit: (rate.capacity_unit ?? "M3") as "M3" | "KG",
+      period: rate.period as "DAILY" | "MONTHLY",
+      amount: Number(rate.amount),
+      effective_from: isoDate(rate.effective_from)!,
+      effective_to: isoDate(rate.effective_to),
     }));
 
     const agg = new Map<
@@ -392,7 +395,9 @@ export class ReportsRepository {
       agg.set(key, cur);
     }
 
-    return [...agg.values()].sort((a, b) => b.revenue - a.revenue);
+    return [...agg.values()].sort(
+      (left, right) => right.revenue - left.revenue,
+    );
   }
 
   async loss(query: LossReportQuery): Promise<LossReportRow[]> {
@@ -436,16 +441,16 @@ export class ReportsRepository {
     }
 
     const rows = await qb.execute();
-    return rows.map((r) => ({
-      owner_party_id: Number(r.owner_party_id),
-      owner_name: r.owner_name,
-      ownership_basis: r.ownership_basis,
-      state: r.state as "LOST" | "BROKEN",
-      count: Number(r.count),
+    return rows.map((row) => ({
+      owner_party_id: Number(row.owner_party_id),
+      owner_name: row.owner_name,
+      ownership_basis: row.ownership_basis,
+      state: row.state as "LOST" | "BROKEN",
+      count: Number(row.count),
       liability:
-        r.ownership_basis === "SUPPLIER"
+        row.ownership_basis === "SUPPLIER"
           ? "SUPPLIER"
-          : r.ownership_basis === "CUSTOMER"
+          : row.ownership_basis === "CUSTOMER"
             ? "CUSTOMER"
             : "OURS",
     }));
@@ -500,18 +505,18 @@ export class ReportsRepository {
     });
 
     if (query.min_days != null) {
-      mapped = mapped.filter((r) => r.days_open >= query.min_days!);
+      mapped = mapped.filter((row) => row.days_open >= query.min_days!);
     }
-    mapped.sort((a, b) => {
+    mapped.sort((left, right) => {
       const dir = sort.direction === "asc" ? 1 : -1;
-      return (a.days_open - b.days_open) * dir;
+      return (left.days_open - right.days_open) * dir;
     });
 
     let start = 0;
     if (query.cursor) {
       const cursor = decodeCursor(query.cursor);
       const id = Number(cursor.loan_id ?? 0);
-      const idx = mapped.findIndex((r) => r.loan_id === id);
+      const idx = mapped.findIndex((row) => row.loan_id === id);
       start = idx >= 0 ? idx + 1 : 0;
     }
     const pageRows = mapped.slice(start, start + limit + 1);
@@ -630,12 +635,12 @@ export class ReportsRepository {
       }),
     ];
 
-    merged.sort((a, b) => {
-      const dateCmp = b.delivery_date.localeCompare(a.delivery_date);
+    merged.sort((left, right) => {
+      const dateCmp = right.delivery_date.localeCompare(left.delivery_date);
       if (dateCmp !== 0) return dateCmp;
-      const aId = a.movement_id ?? a.loan_id ?? 0;
-      const bId = b.movement_id ?? b.loan_id ?? 0;
-      const sourceCmp = b.event_source.localeCompare(a.event_source);
+      const aId = left.movement_id ?? left.loan_id ?? 0;
+      const bId = right.movement_id ?? right.loan_id ?? 0;
+      const sourceCmp = right.event_source.localeCompare(left.event_source);
       if (sourceCmp !== 0) return sourceCmp;
       return bId - aId;
     });
@@ -676,10 +681,11 @@ export class ReportsRepository {
         .execute();
 
       const o2Moves = moves.filter(
-        (m) => m.gas_code === "O2" || m.gas_code === "O2_MED",
+        (member) => member.gas_code === "O2" || member.gas_code === "O2_MED",
       );
       const rental_days = o2Moves.reduce(
-        (sum, m) => sum + (m.rental_days == null ? 0 : Number(m.rental_days)),
+        (sum, member) =>
+          sum + (member.rental_days == null ? 0 : Number(member.rental_days)),
         0,
       );
 
@@ -700,7 +706,9 @@ export class ReportsRepository {
       });
     }
 
-    return result.sort((a, b) => a.client_name.localeCompare(b.client_name));
+    return result.sort((left, right) =>
+      left.client_name.localeCompare(right.client_name),
+    );
   }
 
   async dataQuality(query: DataQualityQuery): Promise<{

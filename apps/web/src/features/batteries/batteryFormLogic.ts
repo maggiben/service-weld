@@ -21,21 +21,21 @@ export function chipLabel(option: MemberOption): string {
   return `${option.serial_number} (#${option.id})`;
 }
 
-export function fromCylinder(c: Cylinder): MemberOption {
+export function fromCylinder(item: Cylinder): MemberOption {
   return {
-    id: c.id,
-    serial_number: c.serial_number,
-    gas_code: c.gas_code,
-    owner_name: c.owner_name,
-    owner_party_id: c.owner_party_id,
+    id: item.id,
+    serial_number: item.serial_number,
+    gas_code: item.gas_code,
+    owner_name: item.owner_name,
+    owner_party_id: item.owner_party_id,
   };
 }
 
 export function fromBatteryMembers(battery: Battery): MemberOption[] {
-  return (battery.members ?? []).map((m) => ({
-    id: m.cylinder_id,
-    serial_number: m.serial_number ?? String(m.cylinder_id),
-    gas_code: m.gas_code,
+  return (battery.members ?? []).map((member) => ({
+    id: member.cylinder_id,
+    serial_number: member.serial_number ?? String(member.cylinder_id),
+    gas_code: member.gas_code,
     owner_name: battery.owner_name,
     owner_party_id: battery.owner_party_id,
   }));
@@ -47,10 +47,10 @@ export function parseIdTokens(input: string): number[] {
     ...new Set(
       input
         .split(/[,\s]+/)
-        .map((s) => s.trim())
+        .map((item) => item.trim())
         .filter(Boolean)
         .map(Number)
-        .filter((n) => Number.isFinite(n) && n > 0),
+        .filter((item) => Number.isFinite(item) && item > 0),
     ),
   ];
 }
@@ -60,22 +60,22 @@ export function parseIdTokens(input: string): number[] {
  * Existing members of `allowBatteryId` stay selectable while editing.
  */
 export function isPackableCandidate(
-  c: Pick<Cylinder, "packaging" | "battery_id" | "state" | "owner_party_id">,
+  item: Pick<Cylinder, "packaging" | "battery_id" | "state" | "owner_party_id">,
   ownerPartyId: number | "" | undefined,
   allowBatteryId: number | null,
 ): boolean {
-  if (c.packaging === "BATTERY") return false;
+  if (item.packaging === "BATTERY") return false;
   if (
-    c.packaging === "BATTERY_MEMBER" &&
-    (allowBatteryId == null || c.battery_id !== allowBatteryId)
+    item.packaging === "BATTERY_MEMBER" &&
+    (allowBatteryId == null || item.battery_id !== allowBatteryId)
   ) {
     return false;
   }
-  if (!STOCK_STATES.has(c.state) && c.packaging !== "BATTERY_MEMBER") {
+  if (!STOCK_STATES.has(item.state) && item.packaging !== "BATTERY_MEMBER") {
     return false;
   }
   if (ownerPartyId !== "" && ownerPartyId != null) {
-    return c.owner_party_id === ownerPartyId;
+    return item.owner_party_id === ownerPartyId;
   }
   return true;
 }
@@ -127,9 +127,9 @@ export function mergeMemberOptions(
   cylinders: Cylinder[],
 ): MemberOption[] {
   const byId = new Map<number, MemberOption>();
-  for (const m of members) byId.set(m.id, m);
-  for (const c of cylinders) {
-    if (!byId.has(c.id)) byId.set(c.id, fromCylinder(c));
+  for (const member of members) byId.set(member.id, member);
+  for (const item of cylinders) {
+    if (!byId.has(item.id)) byId.set(item.id, fromCylinder(item));
   }
   return [...byId.values()];
 }
@@ -137,12 +137,13 @@ export function mergeMemberOptions(
 /** Map API / client errors to user-facing copy (i18n key or raw message). */
 export function batteryFormErrorMessage(
   err: unknown,
-  t: (key: string) => string,
+  translate: (key: string) => string,
 ): string {
   if (err instanceof ApiClientError) {
-    if (err.code === "TOO_FEW_MEMBERS") return t("errors.too_few_members");
+    if (err.code === "TOO_FEW_MEMBERS")
+      return translate("errors.too_few_members");
     if (err.code === "MEMBER_ALREADY_PACKED") {
-      return t("errors.member_already_packed");
+      return translate("errors.member_already_packed");
     }
     return err.message;
   }
@@ -152,9 +153,9 @@ export function batteryFormErrorMessage(
     "code" in err &&
     (err as { code: string }).code === "TOO_FEW_MEMBERS"
   ) {
-    return t("errors.too_few_members");
+    return translate("errors.too_few_members");
   }
-  return t("errors.generic");
+  return translate("errors.generic");
 }
 
 export type ResolveMemberCallbacks = {
@@ -188,7 +189,7 @@ export async function resolveMemberTokens(
 
     for (const id of ids) {
       if (seen.has(id)) continue;
-      const existingMember = existing.find((m) => m.id === id);
+      const existingMember = existing.find((member) => member.id === id);
       if (existingMember) {
         seen.add(id);
         resolved.push(existingMember);

@@ -39,8 +39,10 @@ import { useSessionStore } from "../store/sessionStore";
 const TYPES: AccessoryType[] = ["REGULATOR", "ADAPTER", "PORTABLE_O2_BACKPACK"];
 
 export default function AccessoriesPage() {
-  const { t } = useTranslation();
-  const canWrite = useSessionStore((s) => s.hasCapability("accessories:write"));
+  const { t: translate } = useTranslation();
+  const canWrite = useSessionStore((state) =>
+    state.hasCapability("accessories:write"),
+  );
   const queryClient = useQueryClient();
   const [tab, setTab] = useState(0);
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
@@ -130,7 +132,9 @@ export default function AccessoriesPage() {
     },
     onError: (err) => {
       setError(
-        err instanceof ApiClientError ? err.message : t("errors.generic"),
+        err instanceof ApiClientError
+          ? err.message
+          : translate("errors.generic"),
       );
     },
   });
@@ -157,11 +161,13 @@ export default function AccessoriesPage() {
         err instanceof ApiClientError &&
         err.code === "ACCESSORY_ALREADY_ON_LOAN"
       ) {
-        setError(t("errors.accessory_already_on_loan"));
+        setError(translate("errors.accessory_already_on_loan"));
         return;
       }
       setError(
-        err instanceof ApiClientError ? err.message : t("errors.generic"),
+        err instanceof ApiClientError
+          ? err.message
+          : translate("errors.generic"),
       );
     },
   });
@@ -185,57 +191,60 @@ export default function AccessoriesPage() {
     () => [
       {
         field: "accessory_type",
-        headerName: t("accessories.columns.type"),
+        headerName: translate("accessories.columns.type"),
         width: 160,
-        valueFormatter: (v: AccessoryType) => t(`enums.accessory_type.${v}`),
+        valueFormatter: (value: AccessoryType) =>
+          translate(`enums.accessory_type.${value}`),
       },
       {
         field: "identifier",
-        headerName: t("accessories.columns.identifier"),
+        headerName: translate("accessories.columns.identifier"),
         flex: 1,
         minWidth: 120,
       },
       {
         field: "state",
-        headerName: t("accessories.columns.state"),
+        headerName: translate("accessories.columns.state"),
         width: 120,
-        valueFormatter: (v: string) => t(`enums.accessory_state.${v}`),
+        valueFormatter: (value: string) =>
+          translate(`enums.accessory_state.${value}`),
       },
       {
         field: "owner_name",
-        headerName: t("accessories.columns.owner"),
+        headerName: translate("accessories.columns.owner"),
         flex: 1,
         minWidth: 120,
       },
     ],
-    [t],
+    [translate],
   );
 
   const rentalColumns = useMemo<GridColDef<AccessoryRental>[]>(
     () => [
       {
         field: "accessory_type",
-        headerName: t("accessories.columns.type"),
+        headerName: translate("accessories.columns.type"),
         width: 140,
-        valueFormatter: (v: AccessoryType | undefined) =>
-          v ? t(`enums.accessory_type.${v}`) : "—",
+        valueFormatter: (value: AccessoryType | undefined) =>
+          value ? translate(`enums.accessory_type.${value}`) : "—",
       },
       {
         field: "client_name",
-        headerName: t("accessories.rentals.columns.client"),
+        headerName: translate("accessories.rentals.columns.client"),
         flex: 1,
         minWidth: 140,
       },
       {
         field: "start_date",
-        headerName: t("accessories.rentals.columns.start"),
+        headerName: translate("accessories.rentals.columns.start"),
         width: 120,
       },
       {
         field: "charge_basis",
-        headerName: t("accessories.rentals.columns.basis"),
+        headerName: translate("accessories.rentals.columns.basis"),
         width: 120,
-        valueFormatter: (v: ChargeBasis) => t(`enums.charge_basis.${v}`),
+        valueFormatter: (value: ChargeBasis) =>
+          translate(`enums.charge_basis.${value}`),
       },
       {
         field: "actions",
@@ -248,12 +257,12 @@ export default function AccessoriesPage() {
               size="small"
               onClick={() => returnMutation.mutate(params.row)}
             >
-              {t("actions.return")}
+              {translate("actions.return")}
             </Button>
           ) : null,
       },
     ],
-    [t, canWrite, returnMutation],
+    [translate, canWrite, returnMutation],
   );
 
   const activeQueryError =
@@ -264,7 +273,7 @@ export default function AccessoriesPage() {
       sx={{ display: "flex", flexDirection: "column", gap: 2, height: "100%" }}
     >
       <Stack direction="row" justifyContent="space-between" alignItems="center">
-        <Typography variant="h5">{t("accessories.title")}</Typography>
+        <Typography variant="h5">{translate("accessories.title")}</Typography>
         {canWrite && (
           <Stack direction="row" spacing={1}>
             <Button
@@ -275,7 +284,7 @@ export default function AccessoriesPage() {
                 setError(null);
               }}
             >
-              {t("actions.new_accessory")}
+              {translate("actions.new_accessory")}
             </Button>
             <Button
               variant="contained"
@@ -284,7 +293,7 @@ export default function AccessoriesPage() {
                 setError(null);
               }}
             >
-              {t("actions.rent_accessory")}
+              {translate("actions.rent_accessory")}
             </Button>
           </Stack>
         )}
@@ -292,18 +301,18 @@ export default function AccessoriesPage() {
 
       <Tabs
         value={tab}
-        onChange={(_, v) => {
-          setTab(v);
+        onChange={(_, value) => {
+          setTab(value);
           setCursors([undefined]);
-          setPaginationModel((p) => ({ ...p, page: 0 }));
+          setPaginationModel((part) => ({ ...part, page: 0 }));
         }}
       >
-        <Tab label={t("accessories.tabs.inventory")} />
-        <Tab label={t("accessories.tabs.rentals")} />
+        <Tab label={translate("accessories.tabs.inventory")} />
+        <Tab label={translate("accessories.tabs.rentals")} />
       </Tabs>
 
       {activeQueryError && (
-        <Alert severity="error">{t("errors.load_failed")}</Alert>
+        <Alert severity="error">{translate("errors.load_failed")}</Alert>
       )}
 
       <Box sx={{ flex: 1, minHeight: 360 }}>
@@ -359,33 +368,35 @@ export default function AccessoriesPage() {
         <Stack spacing={2}>
           <Typography variant="h6">
             {drawer === "create"
-              ? t("accessories.form.title")
-              : t("accessories.rent.title")}
+              ? translate("accessories.form.title")
+              : translate("accessories.rent.title")}
           </Typography>
           {error && <Alert severity="error">{error}</Alert>}
           {drawer === "create" && (
             <>
               <TextField
                 select
-                label={t("accessories.form.type")}
+                label={translate("accessories.form.type")}
                 value={type}
-                onChange={(e) => setType(e.target.value as AccessoryType)}
+                onChange={(event) =>
+                  setType(event.target.value as AccessoryType)
+                }
               >
-                {TYPES.map((x) => (
-                  <MenuItem key={x} value={x}>
-                    {t(`enums.accessory_type.${x}`)}
+                {TYPES.map((option) => (
+                  <MenuItem key={option} value={option}>
+                    {translate(`enums.accessory_type.${option}`)}
                   </MenuItem>
                 ))}
               </TextField>
               <TextField
-                label={t("accessories.form.identifier")}
+                label={translate("accessories.form.identifier")}
                 value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
+                onChange={(event) => setIdentifier(event.target.value)}
               />
               <TextField
-                label={t("accessories.form.owner_id")}
+                label={translate("accessories.form.owner_id")}
                 value={ownerId}
-                onChange={(e) => setOwnerId(e.target.value)}
+                onChange={(event) => setOwnerId(event.target.value)}
                 type="number"
               />
               <Button
@@ -393,48 +404,50 @@ export default function AccessoriesPage() {
                 onClick={() => createMutation.mutate()}
                 disabled={createMutation.isPending}
               >
-                {t("actions.save")}
+                {translate("actions.save")}
               </Button>
             </>
           )}
           {drawer === "rent" && (
             <>
               <TextField
-                label={t("accessories.rent.accessory_id")}
+                label={translate("accessories.rent.accessory_id")}
                 value={accessoryId}
-                onChange={(e) => setAccessoryId(e.target.value)}
+                onChange={(event) => setAccessoryId(event.target.value)}
                 type="number"
               />
               <TextField
                 select
-                label={t("accessories.rent.client")}
+                label={translate("accessories.rent.client")}
                 value={clientId}
-                onChange={(e) => setClientId(e.target.value)}
+                onChange={(event) => setClientId(event.target.value)}
               >
-                {(clientsQuery.data?.data ?? []).map((c) => (
-                  <MenuItem key={c.id} value={c.id}>
-                    {c.name}
+                {(clientsQuery.data?.data ?? []).map((client) => (
+                  <MenuItem key={client.id} value={client.id}>
+                    {client.name}
                   </MenuItem>
                 ))}
               </TextField>
               <TextField
-                label={t("accessories.rent.start")}
+                label={translate("accessories.rent.start")}
                 type="date"
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                onChange={(event) => setStartDate(event.target.value)}
                 InputLabelProps={{ shrink: true }}
               />
               <TextField
                 select
-                label={t("accessories.rent.basis")}
+                label={translate("accessories.rent.basis")}
                 value={basis}
-                onChange={(e) => setBasis(e.target.value as ChargeBasis)}
+                onChange={(event) =>
+                  setBasis(event.target.value as ChargeBasis)
+                }
               >
                 <MenuItem value="RENTAL">
-                  {t("enums.charge_basis.RENTAL")}
+                  {translate("enums.charge_basis.RENTAL")}
                 </MenuItem>
                 <MenuItem value="FREE_LOAN">
-                  {t("enums.charge_basis.FREE_LOAN")}
+                  {translate("enums.charge_basis.FREE_LOAN")}
                 </MenuItem>
               </TextField>
               <Button
@@ -442,7 +455,7 @@ export default function AccessoriesPage() {
                 onClick={() => rentMutation.mutate()}
                 disabled={rentMutation.isPending}
               >
-                {t("actions.save")}
+                {translate("actions.save")}
               </Button>
             </>
           )}

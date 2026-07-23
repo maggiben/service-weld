@@ -9,9 +9,9 @@ function memoryTokens(): TokenStore {
   return {
     getAccessToken: () => access,
     getRefreshToken: () => refresh,
-    setTokens: (a, r) => {
-      access = a;
-      refresh = r;
+    setTokens: (left, row) => {
+      access = left;
+      refresh = row;
     },
     clearTokens: () => {
       access = null;

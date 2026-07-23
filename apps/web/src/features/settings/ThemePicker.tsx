@@ -22,8 +22,8 @@ function ThemeThumbnail({
   selected: boolean;
   onSelect: () => void;
 }) {
-  const { t } = useTranslation();
-  const p = preset.preview;
+  const { t: translate } = useTranslation();
+  const part = preset.preview;
 
   return (
     <Box
@@ -31,7 +31,7 @@ function ThemeThumbnail({
       type="button"
       onClick={onSelect}
       aria-pressed={selected}
-      aria-label={t(`settings.themes.${preset.nameKey}`)}
+      aria-label={translate(`settings.themes.${preset.nameKey}`)}
       sx={{
         appearance: "none",
         border: "2px solid",
@@ -60,7 +60,7 @@ function ThemeThumbnail({
       <Box
         sx={{
           height: 112,
-          bgcolor: p.background,
+          bgcolor: part.background,
           display: "flex",
           flexDirection: "column",
           position: "relative",
@@ -69,8 +69,8 @@ function ThemeThumbnail({
         <Box
           sx={{
             height: 22,
-            bgcolor: p.appBar,
-            color: p.appBarText,
+            bgcolor: part.appBar,
+            color: part.appBarText,
             display: "flex",
             alignItems: "center",
             px: 1,
@@ -83,7 +83,7 @@ function ThemeThumbnail({
               width: 10,
               height: 10,
               borderRadius: 0.5,
-              bgcolor: alpha(p.appBarText, 0.85),
+              bgcolor: alpha(part.appBarText, 0.85),
               flexShrink: 0,
             }}
           />
@@ -92,7 +92,7 @@ function ThemeThumbnail({
               height: 4,
               width: 36,
               borderRadius: 1,
-              bgcolor: alpha(p.appBarText, 0.75),
+              bgcolor: alpha(part.appBarText, 0.75),
             }}
           />
           <Box sx={{ flex: 1 }} />
@@ -101,7 +101,7 @@ function ThemeThumbnail({
               width: 8,
               height: 8,
               borderRadius: "50%",
-              bgcolor: alpha(p.appBarText, 0.7),
+              bgcolor: alpha(part.appBarText, 0.7),
             }}
           />
         </Box>
@@ -109,8 +109,8 @@ function ThemeThumbnail({
           <Box
             sx={{
               width: 28,
-              bgcolor: p.sidebar,
-              borderRight: `1px solid ${p.border}`,
+              bgcolor: part.sidebar,
+              borderRight: `1px solid ${part.border}`,
               py: 0.75,
               px: 0.5,
               display: "flex",
@@ -118,14 +118,16 @@ function ThemeThumbnail({
               gap: 0.5,
             }}
           >
-            {[0.9, 0.55, 0.55, 0.4].map((opacity, i) => (
+            {[0.9, 0.55, 0.55, 0.4].map((opacity, item) => (
               <Box
-                key={i}
+                key={item}
                 sx={{
                   height: 5,
                   borderRadius: 0.5,
                   bgcolor:
-                    i === 0 ? alpha(p.primary, 0.85) : alpha(p.text, opacity),
+                    item === 0
+                      ? alpha(part.primary, 0.85)
+                      : alpha(part.text, opacity),
                 }}
               />
             ))}
@@ -134,8 +136,8 @@ function ThemeThumbnail({
             <Box
               sx={{
                 height: "100%",
-                bgcolor: p.paper,
-                border: `1px solid ${p.border}`,
+                bgcolor: part.paper,
+                border: `1px solid ${part.border}`,
                 borderRadius: 0.75,
                 p: 0.75,
                 display: "flex",
@@ -148,7 +150,7 @@ function ThemeThumbnail({
                   height: 6,
                   width: "55%",
                   borderRadius: 0.5,
-                  bgcolor: p.text,
+                  bgcolor: part.text,
                 }}
               />
               <Box
@@ -156,7 +158,7 @@ function ThemeThumbnail({
                   height: 4,
                   width: "80%",
                   borderRadius: 0.5,
-                  bgcolor: p.textMuted,
+                  bgcolor: part.textMuted,
                 }}
               />
               <Box
@@ -164,7 +166,7 @@ function ThemeThumbnail({
                   height: 4,
                   width: "65%",
                   borderRadius: 0.5,
-                  bgcolor: p.textMuted,
+                  bgcolor: part.textMuted,
                 }}
               />
               <Box sx={{ flex: 1 }} />
@@ -174,7 +176,7 @@ function ThemeThumbnail({
                     height: 12,
                     width: 28,
                     borderRadius: 0.5,
-                    bgcolor: p.primary,
+                    bgcolor: part.primary,
                   }}
                 />
                 <Box
@@ -182,7 +184,7 @@ function ThemeThumbnail({
                     height: 12,
                     width: 20,
                     borderRadius: 0.5,
-                    bgcolor: alpha(p.secondary, 0.85),
+                    bgcolor: alpha(part.secondary, 0.85),
                   }}
                 />
               </Box>
@@ -192,10 +194,10 @@ function ThemeThumbnail({
       </Box>
       <Box sx={{ px: 1.25, py: 1 }}>
         <Typography variant="subtitle2" color="text.primary">
-          {t(`settings.themes.${preset.nameKey}`)}
+          {translate(`settings.themes.${preset.nameKey}`)}
         </Typography>
         <Typography variant="caption" color="text.secondary">
-          {t(`settings.themes.${preset.nameKey}_hint`)}
+          {translate(`settings.themes.${preset.nameKey}_hint`)}
         </Typography>
       </Box>
     </Box>
@@ -203,15 +205,17 @@ function ThemeThumbnail({
 }
 
 function ThemeGroup({ mode }: { mode: ThemeMode }) {
-  const { t } = useTranslation();
-  const themeId = resolveThemeId(useUiStore((s) => s.themeId));
-  const setThemeId = useUiStore((s) => s.setThemeId);
+  const { t: translate } = useTranslation();
+  const themeId = resolveThemeId(useUiStore((state) => state.themeId));
+  const setThemeId = useUiStore((state) => state.setThemeId);
   const presets = listThemePresets(mode);
 
   return (
     <Box>
       <Typography variant="subtitle1" sx={{ mb: 1.5 }}>
-        {t(mode === "light" ? "settings.themes.light" : "settings.themes.dark")}
+        {translate(
+          mode === "light" ? "settings.themes.light" : "settings.themes.dark",
+        )}
       </Typography>
       <Box
         sx={{
@@ -238,16 +242,16 @@ function ThemeGroup({ mode }: { mode: ThemeMode }) {
 }
 
 export function ThemePicker() {
-  const { t } = useTranslation();
+  const { t: translate } = useTranslation();
 
   return (
     <Stack spacing={3}>
       <Box>
         <Typography variant="h6" gutterBottom>
-          {t("settings.themes.title")}
+          {translate("settings.themes.title")}
         </Typography>
         <Typography color="text.secondary">
-          {t("settings.themes.subtitle")}
+          {translate("settings.themes.subtitle")}
         </Typography>
       </Box>
       <ThemeGroup mode="light" />

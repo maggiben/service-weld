@@ -15,13 +15,13 @@ import { LandingSection } from "./LandingSection";
 const BULLETS = ["gases", "rental", "exchange", "refill", "supplies"] as const;
 
 export function AboutSection() {
-  const { t } = useTranslation("landing");
+  const { t: translate } = useTranslation("landing");
 
   return (
     <LandingSection
       id="about"
-      eyebrow={t("about.eyebrow")}
-      title={t("about.title")}
+      eyebrow={translate("about.eyebrow")}
+      title={translate("about.title")}
       bgcolor="background.paper"
     >
       <Stack
@@ -35,7 +35,7 @@ export function AboutSection() {
             color="text.secondary"
             sx={{ fontSize: "1.05rem", lineHeight: 1.75, mb: 2 }}
           >
-            {t("about.body")}
+            {translate("about.body")}
           </Typography>
           <List disablePadding dense>
             {BULLETS.map((key) => (
@@ -48,7 +48,7 @@ export function AboutSection() {
                   <CheckCircleOutlineIcon color="primary" fontSize="small" />
                 </ListItemIcon>
                 <ListItemText
-                  primary={t(`about.bullets.${key}`)}
+                  primary={translate(`about.bullets.${key}`)}
                   slotProps={{
                     primary: {
                       variant: "body1",
@@ -76,7 +76,7 @@ export function AboutSection() {
           <Box
             component="img"
             src={COMPANY.images.about}
-            alt={t("about.imageAlt")}
+            alt={translate("about.imageAlt")}
             width={900}
             height={900}
             loading="lazy"

@@ -16,9 +16,10 @@ Define the deployment topology, configuration, scheduled jobs, observability, an
 - R6. Implement **CI/CD**: run the full test suite (`010`) incl. schema load + invariant tests, format/typecheck, unit tests, and the **≥80% global coverage gate** (`pnpm run test:coverage`); apply DDL migrations on deploy; zero-downtime rollout where possible.
 - R7. Enforce **security** in ops: TLS everywhere, secrets in a manager (never in images), least-privilege DB roles (app role has no `UPDATE/DELETE` on `audit_log`), MFA for privileged users.
 - R8. Enforce **local git hooks** (Husky, `core.hooksPath=.husky`, installed via `prepare` / `scripts/install-hooks.mjs`) that mirror CI intent:
-  - **pre-commit:** `pnpm run check:secrets` → lint-staged (Prettier) → `pnpm run typecheck`.
+  - **pre-commit:** `pnpm run check:secrets` → `pnpm run check:deps` → `pnpm run check:id-length` (value bindings ≥2 characters; only `_` allowed as a short unused placeholder) → lint-staged (Prettier) → `pnpm run typecheck`.
   - **pre-push:** `pnpm run test:coverage` (≥80% lines/branches/functions/statements on every workspace package — `010` R9).
   - Commits MUST NOT be created without these checks having passed; `--no-verify` / skipping hooks is forbidden unless the user explicitly requests a bypass.
+  - **Identifier length:** locals, parameters, catch bindings, value imports, and function declaration names in `apps/` and `packages/` MUST be ≥2 characters (`scripts/check-id-length.mjs`). Type-only names are exempt. Do not introduce **single-letter** bindings (e.g. `e`, `t`, `s`) — pick a name that reflects the value in context (`event`, `translate`, `state`). Two-letter names like `id` / `db` / `qb` / `eb` are fine; never invent numbered clones (`database2`, `state3`).
 
 ## Constraints
 

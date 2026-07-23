@@ -43,8 +43,10 @@ import { useSessionStore } from "../store/sessionStore";
 const GASES: GasCode[] = ["O2", "O2_MED", "CO2", "N2", "AR", "ATAL", "ACET"];
 
 export default function RatesPage() {
-  const { t } = useTranslation();
-  const canWrite = useSessionStore((s) => s.hasCapability("rates:write"));
+  const { t: translate } = useTranslation();
+  const canWrite = useSessionStore((state) =>
+    state.hasCapability("rates:write"),
+  );
   const queryClient = useQueryClient();
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
     page: 0,
@@ -173,13 +175,13 @@ export default function RatesPage() {
     onError: (err) => {
       if (err instanceof ApiClientError) {
         if (err.code === "RATE_OVERLAP") {
-          setError(t("errors.rate_overlap"));
+          setError(translate("errors.rate_overlap"));
           return;
         }
         setError(err.message);
         return;
       }
-      setError(t("errors.generic"));
+      setError(translate("errors.generic"));
     },
   });
 
@@ -187,51 +189,52 @@ export default function RatesPage() {
     () => [
       {
         field: "effective_from",
-        headerName: t("rates.columns.from"),
+        headerName: translate("rates.columns.from"),
         width: 120,
       },
       {
         field: "effective_to",
-        headerName: t("rates.columns.to"),
+        headerName: translate("rates.columns.to"),
         width: 120,
         valueGetter: (_v, row) => row.effective_to ?? "—",
       },
       {
         field: "client_name",
-        headerName: t("rates.columns.client"),
+        headerName: translate("rates.columns.client"),
         flex: 1,
         minWidth: 140,
-        valueGetter: (_v, row) => row.client_name ?? t("rates.global"),
+        valueGetter: (_v, row) => row.client_name ?? translate("rates.global"),
       },
       {
         field: "gas_code",
-        headerName: t("rates.columns.gas"),
+        headerName: translate("rates.columns.gas"),
         width: 100,
-        valueGetter: (_v, row) => row.gas_code ?? t("rates.any_gas"),
+        valueGetter: (_v, row) => row.gas_code ?? translate("rates.any_gas"),
       },
       {
         field: "capacity_m3",
-        headerName: t("rates.columns.capacity"),
+        headerName: translate("rates.columns.capacity"),
         width: 110,
         valueGetter: (_v, row: RentalRate) =>
           row.capacity_m3 != null
             ? formatCapacity(row.capacity_m3, row.capacity_unit)
-            : t("rates.any_capacity"),
+            : translate("rates.any_capacity"),
       },
       {
         field: "period",
-        headerName: t("rates.columns.period"),
+        headerName: translate("rates.columns.period"),
         width: 110,
-        valueFormatter: (value: string) => t(`enums.rate_period.${value}`),
+        valueFormatter: (value: string) =>
+          translate(`enums.rate_period.${value}`),
       },
       {
         field: "amount",
-        headerName: t("rates.columns.amount"),
+        headerName: translate("rates.columns.amount"),
         width: 110,
         type: "number",
       },
     ],
-    [t],
+    [translate],
   );
 
   return (
@@ -241,20 +244,20 @@ export default function RatesPage() {
         justifyContent="space-between"
         alignItems={{ md: "center" }}
       >
-        <Typography variant="h5">{t("rates.title")}</Typography>
+        <Typography variant="h5">{translate("rates.title")}</Typography>
         {canWrite && (
           <Button
             variant="contained"
             startIcon={<AddIcon />}
             onClick={openCreate}
           >
-            {t("actions.new_rate")}
+            {translate("actions.new_rate")}
           </Button>
         )}
       </Stack>
 
       {ratesQuery.isError && (
-        <Alert severity="error">{t("errors.load_failed")}</Alert>
+        <Alert severity="error">{translate("errors.load_failed")}</Alert>
       )}
 
       <Box sx={{ flex: 1, minHeight: 400 }}>
@@ -294,38 +297,44 @@ export default function RatesPage() {
       >
         <Stack spacing={2}>
           <Typography variant="h6">
-            {isEditing ? t("rates.form.title_edit") : t("rates.form.title")}
+            {isEditing
+              ? translate("rates.form.title_edit")
+              : translate("rates.form.title")}
           </Typography>
           {error && <Alert severity="error">{error}</Alert>}
           <TextField
-            label={t("rates.form.amount")}
+            label={translate("rates.form.amount")}
             type="number"
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            onChange={(event) => setAmount(event.target.value)}
             fullWidth
           />
           <TextField
             select
-            label={t("rates.form.period")}
+            label={translate("rates.form.period")}
             value={period}
-            onChange={(e) => setPeriod(e.target.value as RatePeriod)}
+            onChange={(event) => setPeriod(event.target.value as RatePeriod)}
             fullWidth
           >
-            <MenuItem value="DAILY">{t("enums.rate_period.DAILY")}</MenuItem>
+            <MenuItem value="DAILY">
+              {translate("enums.rate_period.DAILY")}
+            </MenuItem>
             <MenuItem value="MONTHLY">
-              {t("enums.rate_period.MONTHLY")}
+              {translate("enums.rate_period.MONTHLY")}
             </MenuItem>
           </TextField>
           <TextField
             select
-            label={t("rates.form.client")}
+            label={translate("rates.form.client")}
             value={clientId}
-            onChange={(e) =>
-              setClientId(e.target.value === "" ? "" : Number(e.target.value))
+            onChange={(event) =>
+              setClientId(
+                event.target.value === "" ? "" : Number(event.target.value),
+              )
             }
             fullWidth
           >
-            <MenuItem value="">{t("rates.global")}</MenuItem>
+            <MenuItem value="">{translate("rates.global")}</MenuItem>
             {(clientsQuery.data?.data ?? []).map((client) => (
               <MenuItem key={client.id} value={client.id}>
                 {client.name}
@@ -334,12 +343,12 @@ export default function RatesPage() {
           </TextField>
           <TextField
             select
-            label={t("rates.form.gas")}
+            label={translate("rates.form.gas")}
             value={gas}
-            onChange={(e) => setGas(e.target.value as GasCode | "")}
+            onChange={(event) => setGas(event.target.value as GasCode | "")}
             fullWidth
           >
-            <MenuItem value="">{t("rates.any_gas")}</MenuItem>
+            <MenuItem value="">{translate("rates.any_gas")}</MenuItem>
             {GASES.map((code) => (
               <MenuItem key={code} value={code}>
                 {code}
@@ -348,28 +357,34 @@ export default function RatesPage() {
           </TextField>
           <TextField
             select
-            label={t("rates.form.capacity_unit")}
+            label={translate("rates.form.capacity_unit")}
             value={capacityUnit}
-            onChange={(e) => {
-              setCapacityUnit(e.target.value as CapacityUnit);
+            onChange={(event) => {
+              setCapacityUnit(event.target.value as CapacityUnit);
               setCapacity("");
             }}
             fullWidth
           >
-            <MenuItem value="M3">{t("enums.capacity_unit.M3")}</MenuItem>
-            <MenuItem value="KG">{t("enums.capacity_unit.KG")}</MenuItem>
+            <MenuItem value="M3">
+              {translate("enums.capacity_unit.M3")}
+            </MenuItem>
+            <MenuItem value="KG">
+              {translate("enums.capacity_unit.KG")}
+            </MenuItem>
           </TextField>
           <TextField
             select
-            label={t("rates.form.capacity")}
+            label={translate("rates.form.capacity")}
             value={capacity}
-            onChange={(e) =>
-              setCapacity(e.target.value === "" ? "" : Number(e.target.value))
+            onChange={(event) =>
+              setCapacity(
+                event.target.value === "" ? "" : Number(event.target.value),
+              )
             }
             fullWidth
-            helperText={t("rates.form.capacity_hint")}
+            helperText={translate("rates.form.capacity_hint")}
           >
-            <MenuItem value="">{t("rates.any_capacity")}</MenuItem>
+            <MenuItem value="">{translate("rates.any_capacity")}</MenuItem>
             {(capacityUnit === "KG"
               ? CYLINDER_CAPACITY_KG_OPTIONS
               : CYLINDER_CAPACITY_OPTIONS
@@ -380,41 +395,43 @@ export default function RatesPage() {
             ))}
           </TextField>
           <DatePicker
-            label={t("rates.form.effective_from")}
+            label={translate("rates.form.effective_from")}
             value={dayjs(effectiveFrom)}
-            onChange={(v: Dayjs | null) => {
-              if (v) setEffectiveFrom(v.format("YYYY-MM-DD"));
+            onChange={(value: Dayjs | null) => {
+              if (value) setEffectiveFrom(value.format("YYYY-MM-DD"));
             }}
             slotProps={{
               textField: {
                 fullWidth: true,
-                helperText: t("rates.form.effective_from_hint"),
+                helperText: translate("rates.form.effective_from_hint"),
               },
             }}
           />
           <DatePicker
-            label={t("rates.form.effective_to")}
+            label={translate("rates.form.effective_to")}
             value={effectiveTo ? dayjs(effectiveTo) : null}
-            onChange={(v: Dayjs | null) => {
-              setEffectiveTo(v ? v.format("YYYY-MM-DD") : null);
+            onChange={(value: Dayjs | null) => {
+              setEffectiveTo(value ? value.format("YYYY-MM-DD") : null);
             }}
             slotProps={{
               textField: {
                 fullWidth: true,
-                helperText: t("rates.form.effective_to_hint"),
+                helperText: translate("rates.form.effective_to_hint"),
               },
               field: { clearable: true },
             }}
           />
-          <Alert severity="info">{t("rates.form.precedence_hint")}</Alert>
+          <Alert severity="info">
+            {translate("rates.form.precedence_hint")}
+          </Alert>
           <Stack direction="row" spacing={1} justifyContent="flex-end">
-            <Button onClick={closeDrawer}>{t("actions.cancel")}</Button>
+            <Button onClick={closeDrawer}>{translate("actions.cancel")}</Button>
             <Button
               variant="contained"
               disabled={saveMutation.isPending || !amount}
               onClick={() => saveMutation.mutate()}
             >
-              {t("actions.save")}
+              {translate("actions.save")}
             </Button>
           </Stack>
         </Stack>

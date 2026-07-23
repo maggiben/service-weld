@@ -1,5 +1,4 @@
 import { CanActivate, ExecutionContext, Injectable } from "@nestjs/common";
-import { ApiErrors } from "../../common/errors/api-error";
 import {
   hasGlobalTerritoryAccess,
   isTerritoryScoped,
@@ -31,11 +30,9 @@ export class TerritoryScopeGuard implements CanActivate {
     }
 
     const territoryIds = user.territories.map((territory) => territory.id);
-    if (territoryIds.length === 0) {
-      throw ApiErrors.forbidden("No territory scope assigned");
-    }
-
-    request[TERRITORY_SCOPE_KEY] = territoryIds;
+    // No rows assigned → all territories (same as global roles).
+    request[TERRITORY_SCOPE_KEY] =
+      territoryIds.length === 0 ? null : territoryIds;
     return true;
   }
 }

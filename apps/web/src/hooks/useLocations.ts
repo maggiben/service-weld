@@ -13,7 +13,7 @@ export type LocationFilterValue =
  */
 export function useLocations() {
   const territoryScopes = useSessionStore(
-    (s) => s.user?.territory_scopes ?? [],
+    (state) => state.user?.territory_scopes ?? [],
   );
 
   const territoriesQuery = useQuery({
@@ -33,19 +33,28 @@ export function useLocations() {
     const apiTerritories = territoriesQuery.data?.data ?? [];
     const territories =
       apiTerritories.length > 0
-        ? apiTerritories.map((t) => ({ id: t.id, name: t.name }))
+        ? apiTerritories.map((territory) => ({
+            id: territory.id,
+            name: territory.name,
+          }))
         : territoryScopes.length > 0
           ? territoryScopes
           : ([...SEED_TERRITORIES] as Array<{ id: number; name: string }>);
 
-    const localities = [...(localitiesQuery.data?.data ?? [])].sort((a, b) => {
-      const byClients = (b.client_count ?? 0) - (a.client_count ?? 0);
-      if (byClients !== 0) return byClients;
-      return a.name.localeCompare(b.name, "es");
-    });
+    const localities = [...(localitiesQuery.data?.data ?? [])].sort(
+      (left, right) => {
+        const byClients = (right.client_count ?? 0) - (left.client_count ?? 0);
+        if (byClients !== 0) return byClients;
+        return left.name.localeCompare(right.name, "es");
+      },
+    );
 
-    const territoryNameById = new Map(territories.map((t) => [t.id, t.name]));
-    const localityNameById = new Map(localities.map((l) => [l.id, l.name]));
+    const territoryNameById = new Map(
+      territories.map((territory) => [territory.id, territory.name]),
+    );
+    const localityNameById = new Map(
+      localities.map((locality) => [locality.id, locality.name]),
+    );
 
     const territoryLabel = (id: number | null | undefined): string => {
       if (id == null) return "—";

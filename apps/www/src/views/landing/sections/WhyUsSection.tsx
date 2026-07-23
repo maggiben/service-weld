@@ -16,14 +16,14 @@ const REASONS = [
 ] as const;
 
 export function WhyUsSection() {
-  const { t } = useTranslation("landing");
+  const { t: translate } = useTranslation("landing");
 
   return (
     <LandingSection
       id="why"
-      eyebrow={t("why.eyebrow")}
-      title={t("why.title")}
-      subtitle={t("why.subtitle")}
+      eyebrow={translate("why.eyebrow")}
+      title={translate("why.title")}
+      subtitle={translate("why.subtitle")}
       bgcolor="background.paper"
     >
       <Grid container spacing={3}>
@@ -42,14 +42,14 @@ export function WhyUsSection() {
                 variant="h6"
                 sx={{ mt: 0.5, mb: 1, fontWeight: 650 }}
               >
-                {t(`why.items.${key}.title`)}
+                {translate(`why.items.${key}.title`)}
               </Typography>
               <Typography
                 variant="body2"
                 color="text.secondary"
                 sx={{ lineHeight: 1.65 }}
               >
-                {t(`why.items.${key}.body`)}
+                {translate(`why.items.${key}.body`)}
               </Typography>
             </Box>
           </Grid>

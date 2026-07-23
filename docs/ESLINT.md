@@ -1,26 +1,38 @@
-# ESLint — Phase 1 placeholder
+# ESLint
 
-ESLint packages (`eslint`, `typescript-eslint`) are deferred until the next
-`pnpm install` can write to the package store without sandbox EPERM issues.
+Used for **IDE squiggles** and an optional CLI check. Prettier only formats —
+it cannot flag single-letter identifiers.
 
-Until then:
+## What is enforced
 
-- `pnpm lint` remains a no-op stub per package
-- Prefer `pnpm typecheck` + Prettier (`pnpm format:check`) as the local gate
-- CI already runs typecheck + build
+Rule `id-length` (min **2**, exception `_`, `properties: "never"`), matching
+`pnpm run check:id-length` / the pre-commit hook (`012` R8 / D-16):
 
-When wiring for real, add at the workspace root:
+- No single-letter locals/params (`e`, `t`, `s`, …)
+- Two-letter names OK (`id`, `db`, `qb`, `eb`)
+- Object property keys are not checked
 
-```js
-// eslint.config.js (flat config)
-import js from "@eslint/js";
-import tseslint from "typescript-eslint";
+Config: `eslint.config.mjs` (flat). Packages: `eslint`, `typescript-eslint`,
+`@eslint/js` (root `devDependencies`).
 
-export default tseslint.config(
-  js.configs.recommended,
-  ...tseslint.configs.recommended,
-  { ignores: ["**/dist/**", "**/node_modules/**", "**/.turbo/**"] },
-);
+## IDE (Cursor / VS Code)
+
+1. Install the **ESLint** extension (`dbaeumer.vscode-eslint`) — recommended in
+   `.vscode/extensions.json`.
+2. Workspace settings in `.vscode/settings.json` enable flat config for TS/TSX.
+3. Open a file under `apps/` or `packages/` — single-letter bindings should
+   underline in red.
+
+Reload the window if diagnostics do not appear after install (`Developer:
+Reload Window`).
+
+## CLI
+
+```
+pnpm run lint:eslint
 ```
 
-and set each package's `"lint": "eslint ."` script.
+Root `pnpm lint` still runs Prettier + typecheck; add `lint:eslint` there when
+you want it in the default lint gate. Pre-commit continues to use
+`check:id-length` (AST scan) so commits stay gated even without the ESLint
+extension.

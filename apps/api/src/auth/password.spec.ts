@@ -18,9 +18,9 @@ describe("password", () => {
   it("refresh token helpers", () => {
     const token = generateRefreshToken();
     expect(token.length).toBeGreaterThan(20);
-    const a = hashRefreshToken(token);
-    const b = hashRefreshToken(token);
-    expect(a).toBe(b);
-    expect(a).not.toBe(token);
+    const left = hashRefreshToken(token);
+    const right = hashRefreshToken(token);
+    expect(left).toBe(right);
+    expect(left).not.toBe(token);
   });
 });

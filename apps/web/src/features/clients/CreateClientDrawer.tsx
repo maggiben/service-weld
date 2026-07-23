@@ -63,10 +63,10 @@ export function CreateClientDrawer({
   client = null,
   onDeleted,
 }: CreateClientDrawerProps) {
-  const { t } = useTranslation();
+  const { t: translate } = useTranslation();
   const queryClient = useQueryClient();
   const isAdmin = useSessionStore(
-    (s) => s.user?.roles.includes("ADMIN") ?? false,
+    (state) => state.user?.roles.includes("ADMIN") ?? false,
   );
   const { territories, localities, refetch: refetchLocations } = useLocations();
   const [conflictError, setConflictError] = useState<string | null>(null);
@@ -159,12 +159,12 @@ export function CreateClientDrawer({
     onError: (error) => {
       if (error instanceof ApiClientError && error.httpStatus === 409) {
         if (error.code === "DUPLICATE_CUIT") {
-          setConflictError(t("errors.duplicate_cuit"));
+          setConflictError(translate("errors.duplicate_cuit"));
           return;
         }
       }
       if (!applyServerErrors(error, setError, "name")) {
-        setConflictError(t("errors.generic"));
+        setConflictError(translate("errors.generic"));
       }
     },
   });
@@ -183,16 +183,16 @@ export function CreateClientDrawer({
     onError: (error) => {
       if (error instanceof ApiClientError && error.httpStatus === 409) {
         if (error.code === "DUPLICATE_CUIT") {
-          setConflictError(t("errors.duplicate_cuit"));
+          setConflictError(translate("errors.duplicate_cuit"));
           return;
         }
         if (error.code === "VERSION_CONFLICT") {
-          setConflictError(t("errors.version_conflict"));
+          setConflictError(translate("errors.version_conflict"));
           return;
         }
       }
       if (!applyServerErrors(error, setError, "name")) {
-        setConflictError(t("errors.generic"));
+        setConflictError(translate("errors.generic"));
       }
     },
   });
@@ -218,22 +218,22 @@ export function CreateClientDrawer({
     },
     onError: (error) => {
       if (error instanceof Error && error.message === "empty") {
-        setCreateCityError(t("clients.form.city_name_required"));
+        setCreateCityError(translate("clients.form.city_name_required"));
         return;
       }
       if (error instanceof Error && error.message === "territory") {
-        setCreateCityError(t("clients.form.city_depot_required"));
+        setCreateCityError(translate("clients.form.city_depot_required"));
         return;
       }
       if (error instanceof ApiClientError) {
         if (error.code === "DUPLICATE_LOCALITY") {
-          setCreateCityError(t("errors.duplicate_location"));
+          setCreateCityError(translate("errors.duplicate_location"));
           return;
         }
         setCreateCityError(error.message);
         return;
       }
-      setCreateCityError(t("errors.generic"));
+      setCreateCityError(translate("errors.generic"));
     },
   });
 
@@ -256,11 +256,11 @@ export function CreateClientDrawer({
         error instanceof ApiClientError &&
         error.code === "VERSION_CONFLICT"
       ) {
-        setConflictError(t("errors.version_conflict"));
+        setConflictError(translate("errors.version_conflict"));
         setConfirmAction(null);
         return;
       }
-      setConflictError(t("errors.generic"));
+      setConflictError(translate("errors.generic"));
       setConfirmAction(null);
     },
   });
@@ -279,22 +279,22 @@ export function CreateClientDrawer({
     onError: (error) => {
       if (error instanceof ApiClientError) {
         if (error.code === "HAS_OPEN_MOVEMENTS") {
-          setConflictError(t("errors.has_open_movements"));
+          setConflictError(translate("errors.has_open_movements"));
           setConfirmAction(null);
           return;
         }
         if (error.code === "HAS_OPEN_ACCESSORIES") {
-          setConflictError(t("errors.has_open_accessories"));
+          setConflictError(translate("errors.has_open_accessories"));
           setConfirmAction(null);
           return;
         }
         if (error.code === "VERSION_CONFLICT") {
-          setConflictError(t("errors.version_conflict"));
+          setConflictError(translate("errors.version_conflict"));
           setConfirmAction(null);
           return;
         }
       }
-      setConflictError(t("errors.generic"));
+      setConflictError(translate("errors.generic"));
       setConfirmAction(null);
     },
   });
@@ -308,7 +308,7 @@ export function CreateClientDrawer({
   const confirmPending = statusMutation.isPending || deleteMutation.isPending;
 
   const handleClose = () => {
-    if (isDirty && !window.confirm(t("clients.form.unsaved_confirm"))) {
+    if (isDirty && !window.confirm(translate("clients.form.unsaved_confirm"))) {
       return;
     }
     onClose();
@@ -351,7 +351,7 @@ export function CreateClientDrawer({
           }}
         >
           <Typography variant="h6" sx={{ mb: 2 }}>
-            {t(
+            {translate(
               isEdit ? "clients.form.title_edit" : "clients.form.title_create",
             )}
           </Typography>
@@ -369,7 +369,7 @@ export function CreateClientDrawer({
               render={({ field }) => (
                 <TextField
                   {...field}
-                  label={t("clients.form.name")}
+                  label={translate("clients.form.name")}
                   required
                   fullWidth
                   error={Boolean(errors.name)}
@@ -388,7 +388,7 @@ export function CreateClientDrawer({
                   onChange={(event) =>
                     field.onChange(event.target.value || null)
                   }
-                  label={t("clients.form.cuit")}
+                  label={translate("clients.form.cuit")}
                   fullWidth
                   error={Boolean(errors.cuit)}
                   helperText={errors.cuit?.message}
@@ -406,7 +406,7 @@ export function CreateClientDrawer({
                   onChange={(event) =>
                     field.onChange(event.target.value || null)
                   }
-                  label={t("clients.form.address_street")}
+                  label={translate("clients.form.address_street")}
                   fullWidth
                   error={Boolean(errors.address_street)}
                   helperText={errors.address_street?.message}
@@ -422,9 +422,9 @@ export function CreateClientDrawer({
                   fullWidth
                   error={Boolean(errors.locality_id || errors.territory_id)}
                 >
-                  <InputLabel>{t("clients.form.territory")}</InputLabel>
+                  <InputLabel>{translate("clients.form.territory")}</InputLabel>
                   <Select
-                    label={t("clients.form.territory")}
+                    label={translate("clients.form.territory")}
                     value={field.value ?? ""}
                     onChange={(event) => {
                       const value = event.target.value;
@@ -445,7 +445,7 @@ export function CreateClientDrawer({
                     }}
                   >
                     <MenuItem value="">
-                      {t("clients.form.locality_none")}
+                      {translate("clients.form.locality_none")}
                     </MenuItem>
                     {cityOptions.map((locality) => (
                       <MenuItem key={locality.id} value={locality.id}>
@@ -457,13 +457,13 @@ export function CreateClientDrawer({
                       </MenuItem>
                     ))}
                     <MenuItem value={CREATE_CITY_VALUE}>
-                      {t("clients.form.create_city")}
+                      {translate("clients.form.create_city")}
                     </MenuItem>
                   </Select>
                   <FormHelperText>
                     {errors.locality_id?.message ||
                       errors.territory_id?.message ||
-                      t("clients.form.territory_hint")}
+                      translate("clients.form.territory_hint")}
                   </FormHelperText>
                 </FormControl>
               )}
@@ -474,11 +474,11 @@ export function CreateClientDrawer({
               control={control}
               render={({ field }) => (
                 <FormControl fullWidth error={Boolean(errors.coverage)}>
-                  <InputLabel>{t("clients.form.coverage")}</InputLabel>
-                  <Select {...field} label={t("clients.form.coverage")}>
+                  <InputLabel>{translate("clients.form.coverage")}</InputLabel>
+                  <Select {...field} label={translate("clients.form.coverage")}>
                     {COVERAGE_VALUES.map((value) => (
                       <MenuItem key={value} value={value}>
-                        {t(`enums.coverage.${value}`)}
+                        {translate(`enums.coverage.${value}`)}
                       </MenuItem>
                     ))}
                   </Select>
@@ -494,20 +494,20 @@ export function CreateClientDrawer({
               control={control}
               render={({ field }) => (
                 <FormControl fullWidth error={Boolean(errors.segment)}>
-                  <InputLabel>{t("clients.form.segment")}</InputLabel>
+                  <InputLabel>{translate("clients.form.segment")}</InputLabel>
                   <Select
-                    label={t("clients.form.segment")}
+                    label={translate("clients.form.segment")}
                     value={field.value ?? ""}
                     onChange={(event) =>
                       field.onChange(event.target.value || null)
                     }
                   >
                     <MenuItem value="">
-                      {t("clients.form.segment_none")}
+                      {translate("clients.form.segment_none")}
                     </MenuItem>
                     {SEGMENT_VALUES.map((value) => (
                       <MenuItem key={value} value={value}>
-                        {t(`enums.segment.${value}`)}
+                        {translate(`enums.segment.${value}`)}
                       </MenuItem>
                     ))}
                   </Select>
@@ -528,7 +528,7 @@ export function CreateClientDrawer({
                   onChange={(event) =>
                     field.onChange(event.target.value || null)
                   }
-                  label={t("clients.form.delivery_instructions")}
+                  label={translate("clients.form.delivery_instructions")}
                   fullWidth
                   multiline
                   minRows={2}
@@ -546,7 +546,7 @@ export function CreateClientDrawer({
               justifyContent="space-between"
             >
               <Typography variant="subtitle2">
-                {t("clients.form.contacts")}
+                {translate("clients.form.contacts")}
               </Typography>
               <Button
                 size="small"
@@ -555,7 +555,7 @@ export function CreateClientDrawer({
                   append({ name: "", phone: "", is_primary: false })
                 }
               >
-                {t("clients.form.add_contact")}
+                {translate("clients.form.add_contact")}
               </Button>
             </Stack>
 
@@ -573,7 +573,7 @@ export function CreateClientDrawer({
                     <TextField
                       {...contactField}
                       value={contactField.value ?? ""}
-                      label={t("clients.form.contact_name")}
+                      label={translate("clients.form.contact_name")}
                       fullWidth
                       error={Boolean(errors.contacts?.[index]?.name)}
                       helperText={errors.contacts?.[index]?.name?.message}
@@ -587,7 +587,7 @@ export function CreateClientDrawer({
                     <TextField
                       {...contactField}
                       value={contactField.value ?? ""}
-                      label={t("clients.form.contact_phone")}
+                      label={translate("clients.form.contact_phone")}
                       fullWidth
                       error={Boolean(errors.contacts?.[index]?.phone)}
                       helperText={errors.contacts?.[index]?.phone?.message}
@@ -607,13 +607,13 @@ export function CreateClientDrawer({
                           }
                         />
                       }
-                      label={t("clients.form.contact_primary")}
+                      label={translate("clients.form.contact_primary")}
                     />
                   )}
                 />
                 {fields.length > 1 && (
                   <IconButton
-                    aria-label={t("clients.form.remove_contact")}
+                    aria-label={translate("clients.form.remove_contact")}
                     onClick={() => remove(index)}
                   >
                     <DeleteIcon />
@@ -629,7 +629,7 @@ export function CreateClientDrawer({
               <>
                 <Divider />
                 <Typography variant="subtitle2">
-                  {t("clients.form.danger_zone")}
+                  {translate("clients.form.danger_zone")}
                 </Typography>
                 <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                   <Button
@@ -640,7 +640,7 @@ export function CreateClientDrawer({
                       setConfirmAction(isInactive ? "reactivate" : "deactivate")
                     }
                   >
-                    {t(
+                    {translate(
                       isInactive ? "actions.reactivate" : "actions.deactivate",
                     )}
                   </Button>
@@ -651,7 +651,7 @@ export function CreateClientDrawer({
                       disabled={pending}
                       onClick={() => setConfirmAction("remove")}
                     >
-                      {t("actions.remove")}
+                      {translate("actions.remove")}
                     </Button>
                   )}
                 </Stack>
@@ -665,13 +665,13 @@ export function CreateClientDrawer({
             justifyContent="flex-end"
             sx={{ pt: 2 }}
           >
-            <Button onClick={handleClose}>{t("actions.cancel")}</Button>
+            <Button onClick={handleClose}>{translate("actions.cancel")}</Button>
             <Button
               type="submit"
               variant="contained"
               disabled={isSubmitting || pending}
             >
-              {t("actions.save")}
+              {translate("actions.save")}
             </Button>
           </Stack>
         </Box>
@@ -682,18 +682,20 @@ export function CreateClientDrawer({
         onClose={() => !confirmPending && setConfirmAction(null)}
       >
         <DialogTitle>
-          {confirmAction === "deactivate" && t("clients.deactivate_title")}
-          {confirmAction === "reactivate" && t("clients.reactivate_title")}
-          {confirmAction === "remove" && t("clients.remove_title")}
+          {confirmAction === "deactivate" &&
+            translate("clients.deactivate_title")}
+          {confirmAction === "reactivate" &&
+            translate("clients.reactivate_title")}
+          {confirmAction === "remove" && translate("clients.remove_title")}
         </DialogTitle>
         <DialogContent>
           <DialogContentText>
             {confirmAction === "deactivate" &&
-              t("clients.deactivate_confirm", { name: client?.name })}
+              translate("clients.deactivate_confirm", { name: client?.name })}
             {confirmAction === "reactivate" &&
-              t("clients.reactivate_confirm", { name: client?.name })}
+              translate("clients.reactivate_confirm", { name: client?.name })}
             {confirmAction === "remove" &&
-              t("clients.remove_confirm", { name: client?.name })}
+              translate("clients.remove_confirm", { name: client?.name })}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
@@ -701,7 +703,7 @@ export function CreateClientDrawer({
             onClick={() => setConfirmAction(null)}
             disabled={confirmPending}
           >
-            {t("actions.cancel")}
+            {translate("actions.cancel")}
           </Button>
           <Button
             color={
@@ -727,9 +729,9 @@ export function CreateClientDrawer({
               }
             }}
           >
-            {confirmAction === "deactivate" && t("actions.deactivate")}
-            {confirmAction === "reactivate" && t("actions.reactivate")}
-            {confirmAction === "remove" && t("actions.remove")}
+            {confirmAction === "deactivate" && translate("actions.deactivate")}
+            {confirmAction === "reactivate" && translate("actions.reactivate")}
+            {confirmAction === "remove" && translate("actions.remove")}
           </Button>
         </DialogActions>
       </Dialog>
@@ -740,7 +742,7 @@ export function CreateClientDrawer({
         fullWidth
         maxWidth="xs"
       >
-        <DialogTitle>{t("clients.form.create_city_title")}</DialogTitle>
+        <DialogTitle>{translate("clients.form.create_city_title")}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
             {createCityError && (
@@ -748,15 +750,15 @@ export function CreateClientDrawer({
             )}
             <TextField
               autoFocus
-              label={t("clients.form.city_name")}
+              label={translate("clients.form.city_name")}
               value={createCityName}
               onChange={(event) => setCreateCityName(event.target.value)}
               fullWidth
             />
             <FormControl fullWidth required>
-              <InputLabel>{t("clients.form.city_depot")}</InputLabel>
+              <InputLabel>{translate("clients.form.city_depot")}</InputLabel>
               <Select
-                label={t("clients.form.city_depot")}
+                label={translate("clients.form.city_depot")}
                 value={createCityTerritoryId}
                 onChange={(event) => {
                   const value = event.target.value;
@@ -770,21 +772,21 @@ export function CreateClientDrawer({
                 ))}
               </Select>
               <FormHelperText>
-                {t("clients.form.city_depot_hint")}
+                {translate("clients.form.city_depot_hint")}
               </FormHelperText>
             </FormControl>
           </Stack>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setCreateCityOpen(false)}>
-            {t("actions.cancel")}
+            {translate("actions.cancel")}
           </Button>
           <Button
             variant="contained"
             disabled={createCityMutation.isPending}
             onClick={() => createCityMutation.mutate()}
           >
-            {t("actions.save")}
+            {translate("actions.save")}
           </Button>
         </DialogActions>
       </Dialog>

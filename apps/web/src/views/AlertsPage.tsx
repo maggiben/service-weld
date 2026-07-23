@@ -43,11 +43,13 @@ const ALERT_TYPES = [
 ] as const;
 
 export default function AlertsPage() {
-  const { t } = useTranslation();
+  const { t: translate } = useTranslation();
   const router = useRouter();
-  const canWrite = useSessionStore((s) => s.hasCapability("alerts:write"));
-  const setUnread = useNotificationStore((s) => s.setUnreadFromAlerts);
-  const pushToast = useNotificationStore((s) => s.pushToast);
+  const canWrite = useSessionStore((state) =>
+    state.hasCapability("alerts:write"),
+  );
+  const setUnread = useNotificationStore((state) => state.setUnreadFromAlerts);
+  const pushToast = useNotificationStore((state) => state.pushToast);
   const queryClient = useQueryClient();
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
     page: 0,
@@ -114,7 +116,7 @@ export default function AlertsPage() {
       await queryClient.invalidateQueries({ queryKey: ["alerts"] });
       setUnread(result.open_count);
       pushToast(
-        t("alerts.refreshed", {
+        translate("alerts.refreshed", {
           created: result.created,
           open: result.open_count,
         }),
@@ -126,7 +128,7 @@ export default function AlertsPage() {
     mutationFn: (id: number) => api.resolveAlert(id),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["alerts"] });
-      pushToast(t("alerts.resolved"));
+      pushToast(translate("alerts.resolved"));
     },
   });
 
@@ -134,28 +136,28 @@ export default function AlertsPage() {
     () => [
       {
         field: "alert_type",
-        headerName: t("alerts.columns.type"),
+        headerName: translate("alerts.columns.type"),
         width: 200,
-        valueFormatter: (v: string) =>
-          t(`enums.alert_type.${v}`, { defaultValue: v }),
+        valueFormatter: (value: string) =>
+          translate(`enums.alert_type.${value}`, { defaultValue: value }),
       },
       {
         field: "movement_kind",
-        headerName: t("alerts.columns.kind"),
+        headerName: translate("alerts.columns.kind"),
         width: 110,
-        valueFormatter: (v: string | null | undefined) =>
-          v ? t(`enums.movement_kind.${v}`) : "—",
+        valueFormatter: (value: string | null | undefined) =>
+          value ? translate(`enums.movement_kind.${value}`) : "—",
       },
       {
         field: "cylinder_serial",
-        headerName: t("alerts.columns.cylinder"),
+        headerName: translate("alerts.columns.cylinder"),
         width: 130,
         renderCell: (params) =>
           params.row.cylinder_id != null && params.value ? (
             <Link
               component={NextLink}
               href={`/cylinders/${params.row.cylinder_id}`}
-              onClick={(e) => e.stopPropagation()}
+              onClick={(event) => event.stopPropagation()}
               underline="hover"
             >
               {params.value}
@@ -166,7 +168,7 @@ export default function AlertsPage() {
       },
       {
         field: "client_name",
-        headerName: t("alerts.columns.client"),
+        headerName: translate("alerts.columns.client"),
         flex: 1,
         minWidth: 140,
         valueGetter: (_v, row) => row.client_name ?? row.counterparty_name,
@@ -178,7 +180,7 @@ export default function AlertsPage() {
               <Link
                 component={NextLink}
                 href={`/clients/${params.row.client_party_id}`}
-                onClick={(e) => e.stopPropagation()}
+                onClick={(event) => event.stopPropagation()}
                 underline="hover"
               >
                 {name}
@@ -190,34 +192,36 @@ export default function AlertsPage() {
       },
       {
         field: "client_phone",
-        headerName: t("alerts.columns.phone"),
+        headerName: translate("alerts.columns.phone"),
         width: 130,
-        valueFormatter: (v: string | null | undefined) => v ?? "—",
+        valueFormatter: (value: string | null | undefined) => value ?? "—",
       },
       {
         field: "days_open",
-        headerName: t("alerts.columns.days"),
+        headerName: translate("alerts.columns.days"),
         width: 80,
-        valueFormatter: (v: number | null | undefined) =>
-          v == null ? "—" : String(v),
+        valueFormatter: (value: number | null | undefined) =>
+          value == null ? "—" : String(value),
       },
       {
         field: "gas_code",
-        headerName: t("alerts.columns.gas"),
+        headerName: translate("alerts.columns.gas"),
         width: 90,
-        valueFormatter: (v: string | null | undefined) =>
-          v ? t(`enums.gas.${v}`, { defaultValue: v }) : "—",
+        valueFormatter: (value: string | null | undefined) =>
+          value
+            ? translate(`enums.gas.${value}`, { defaultValue: value })
+            : "—",
       },
       {
         field: "last_contacted_at",
-        headerName: t("alerts.columns.last_contact"),
+        headerName: translate("alerts.columns.last_contact"),
         width: 120,
-        valueFormatter: (v: string | null | undefined) =>
-          v ? v.slice(0, 10) : "—",
+        valueFormatter: (value: string | null | undefined) =>
+          value ? value.slice(0, 10) : "—",
       },
       {
         field: "contact_note",
-        headerName: t("alerts.columns.notes"),
+        headerName: translate("alerts.columns.notes"),
         flex: 1,
         minWidth: 160,
         renderCell: (params) => {
@@ -242,13 +246,13 @@ export default function AlertsPage() {
       },
       {
         field: "severity",
-        headerName: t("alerts.columns.severity"),
+        headerName: translate("alerts.columns.severity"),
         width: 100,
         renderCell: (params) => (
           <Chip
             size="small"
             color={alertSeverityColor(params.value)}
-            label={t(`alerts.severity.${params.value}`, {
+            label={translate(`alerts.severity.${params.value}`, {
               defaultValue: String(params.value),
             })}
           />
@@ -263,11 +267,11 @@ export default function AlertsPage() {
           <Stack
             direction="row"
             spacing={0.5}
-            onClick={(e) => e.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
           >
             {canWrite && (
               <Button size="small" onClick={() => setContactAlert(params.row)}>
-                {t("alerts.actions.contact")}
+                {translate("alerts.actions.contact")}
               </Button>
             )}
             {canWrite && !params.row.resolved_at ? (
@@ -275,14 +279,14 @@ export default function AlertsPage() {
                 size="small"
                 onClick={() => resolveMutation.mutate(params.row.id)}
               >
-                {t("actions.resolve")}
+                {translate("actions.resolve")}
               </Button>
             ) : null}
           </Stack>
         ),
       },
     ],
-    [t, canWrite, resolveMutation],
+    [translate, canWrite, resolveMutation],
   );
 
   return (
@@ -296,9 +300,9 @@ export default function AlertsPage() {
         gap={2}
       >
         <Box>
-          <Typography variant="h5">{t("alerts.title")}</Typography>
+          <Typography variant="h5">{translate("alerts.title")}</Typography>
           <Typography variant="body2" color="text.secondary">
-            {t("alerts.subtitle")}
+            {translate("alerts.subtitle")}
           </Typography>
         </Box>
         {canWrite && (
@@ -307,49 +311,49 @@ export default function AlertsPage() {
             disabled={refreshMutation.isPending}
             onClick={() => refreshMutation.mutate()}
           >
-            {t("actions.refresh_alerts")}
+            {translate("actions.refresh_alerts")}
           </Button>
         )}
       </Stack>
 
       <Stack direction="row" flexWrap="wrap" gap={1.5} alignItems="center">
         <FormControl size="small" sx={{ minWidth: 220 }}>
-          <InputLabel>{t("alerts.filters.type")}</InputLabel>
+          <InputLabel>{translate("alerts.filters.type")}</InputLabel>
           <Select
-            label={t("alerts.filters.type")}
+            label={translate("alerts.filters.type")}
             value={typeFilter}
-            onChange={(e) => {
-              setTypeFilter(e.target.value);
+            onChange={(event) => {
+              setTypeFilter(event.target.value);
               resetPaging();
             }}
           >
-            <MenuItem value="">{t("clients.filters.all")}</MenuItem>
+            <MenuItem value="">{translate("clients.filters.all")}</MenuItem>
             {ALERT_TYPES.map((type) => (
               <MenuItem key={type} value={type}>
-                {t(`enums.alert_type.${type}`)}
+                {translate(`enums.alert_type.${type}`)}
               </MenuItem>
             ))}
           </Select>
         </FormControl>
         <FormControl size="small" sx={{ minWidth: 160 }}>
-          <InputLabel>{t("alerts.filters.kind")}</InputLabel>
+          <InputLabel>{translate("alerts.filters.kind")}</InputLabel>
           <Select
-            label={t("alerts.filters.kind")}
+            label={translate("alerts.filters.kind")}
             value={kindFilter}
-            onChange={(e) => {
-              setKindFilter(e.target.value as MovementKind | "");
-              if (e.target.value && typeFilter !== "LONG_OUTSTANDING") {
+            onChange={(event) => {
+              setKindFilter(event.target.value as MovementKind | "");
+              if (event.target.value && typeFilter !== "LONG_OUTSTANDING") {
                 setTypeFilter("LONG_OUTSTANDING");
               }
               resetPaging();
             }}
           >
-            <MenuItem value="">{t("clients.filters.all")}</MenuItem>
+            <MenuItem value="">{translate("clients.filters.all")}</MenuItem>
             <MenuItem value="RENTAL">
-              {t("enums.movement_kind.RENTAL")}
+              {translate("enums.movement_kind.RENTAL")}
             </MenuItem>
             <MenuItem value="REFILL">
-              {t("enums.movement_kind.REFILL")}
+              {translate("enums.movement_kind.REFILL")}
             </MenuItem>
           </Select>
         </FormControl>
@@ -359,7 +363,7 @@ export default function AlertsPage() {
             color="text.secondary"
             sx={{ maxWidth: 420 }}
           >
-            {t("alerts.filters.kind_hint_rental")}
+            {translate("alerts.filters.kind_hint_rental")}
           </Typography>
         )}
         {kindFilter === "REFILL" && (
@@ -368,13 +372,13 @@ export default function AlertsPage() {
             color="text.secondary"
             sx={{ maxWidth: 420 }}
           >
-            {t("alerts.filters.kind_hint_refill")}
+            {translate("alerts.filters.kind_hint_refill")}
           </Typography>
         )}
       </Stack>
 
       {alertsQuery.isError && (
-        <AlertMui severity="error">{t("errors.load_failed")}</AlertMui>
+        <AlertMui severity="error">{translate("errors.load_failed")}</AlertMui>
       )}
 
       <Box sx={{ flex: 1, minHeight: 360 }}>

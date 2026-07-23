@@ -333,7 +333,7 @@ export function getThemePreset(themeId: ThemeId): ThemePreset {
 
 export function listThemePresets(mode?: ThemeMode): ThemePreset[] {
   const presets = THEME_IDS.map((id) => THEME_PRESETS[id]);
-  return mode ? presets.filter((p) => p.mode === mode) : presets;
+  return mode ? presets.filter((part) => part.mode === mode) : presets;
 }
 
 export function preferredThemeForMode(

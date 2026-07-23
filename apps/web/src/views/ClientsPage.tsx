@@ -45,7 +45,7 @@ function ClientsEmptyOverlay({
   canCreate: boolean;
   onCreate: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t: translate } = useTranslation();
   return (
     <Stack
       alignItems="center"
@@ -53,10 +53,12 @@ function ClientsEmptyOverlay({
       spacing={2}
       sx={{ height: "100%", py: 4 }}
     >
-      <Typography color="text.secondary">{t("clients.empty")}</Typography>
+      <Typography color="text.secondary">
+        {translate("clients.empty")}
+      </Typography>
       {canCreate && (
         <Button variant="contained" startIcon={<AddIcon />} onClick={onCreate}>
-          {t("actions.new_client")}
+          {translate("actions.new_client")}
         </Button>
       )}
     </Stack>
@@ -64,10 +66,12 @@ function ClientsEmptyOverlay({
 }
 
 export default function ClientsPage() {
-  const { t } = useTranslation();
-  const locale = useUiStore((s) => s.locale);
+  const { t: translate } = useTranslation();
+  const locale = useUiStore((state) => state.locale);
   const router = useRouter();
-  const canWrite = useSessionStore((s) => s.hasCapability("clients:write"));
+  const canWrite = useSessionStore((state) =>
+    state.hasCapability("clients:write"),
+  );
   const { localities, localityLabel } = useLocations();
 
   const cityOptions = useMemo(
@@ -153,39 +157,43 @@ export default function ClientsPage() {
     () => [
       {
         field: "name",
-        headerName: t("clients.columns.name"),
+        headerName: translate("clients.columns.name"),
         flex: 1,
         minWidth: 180,
       },
       {
         field: "locality_id",
-        headerName: t("clients.columns.territory"),
+        headerName: translate("clients.columns.territory"),
         width: 160,
         sortable: false,
         valueFormatter: (value: number | null) => localityLabel(value),
       },
       {
         field: "coverage",
-        headerName: t("clients.columns.coverage"),
+        headerName: translate("clients.columns.coverage"),
         width: 160,
-        valueFormatter: (value: string) => t(`enums.coverage.${value}`),
+        valueFormatter: (value: string) => translate(`enums.coverage.${value}`),
       },
       {
         field: "segment",
-        headerName: t("clients.columns.segment"),
+        headerName: translate("clients.columns.segment"),
         width: 160,
         valueFormatter: (value: string | null) =>
-          value ? t(`enums.segment.${value}`) : "—",
+          value ? translate(`enums.segment.${value}`) : "—",
       },
       {
         field: "status",
-        headerName: t("clients.columns.status"),
+        headerName: translate("clients.columns.status"),
         width: 120,
-        valueFormatter: (value: string) => t(`enums.status.${value}`),
+        valueFormatter: (value: string) => translate(`enums.status.${value}`),
       },
-      { field: "version", headerName: t("clients.columns.version"), width: 90 },
+      {
+        field: "version",
+        headerName: translate("clients.columns.version"),
+        width: 90,
+      },
     ],
-    [t, localityLabel],
+    [translate, localityLabel],
   );
 
   const resetPaging = () => {
@@ -201,14 +209,14 @@ export default function ClientsPage() {
         alignItems={{ md: "center" }}
         justifyContent="space-between"
       >
-        <Typography variant="h5">{t("clients.title")}</Typography>
+        <Typography variant="h5">{translate("clients.title")}</Typography>
         {canWrite && (
           <Button
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => setDrawerOpen(true)}
           >
-            {t("actions.new_client")}
+            {translate("actions.new_client")}
           </Button>
         )}
       </Stack>
@@ -216,15 +224,15 @@ export default function ClientsPage() {
       <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
         <TextField
           size="small"
-          label={t("actions.search")}
+          label={translate("actions.search")}
           value={search}
           onChange={(event) => handleSearchChange(event.target.value)}
           sx={{ minWidth: 240 }}
         />
         <FormControl size="small" sx={{ minWidth: 200 }}>
-          <InputLabel>{t("clients.filters.territory")}</InputLabel>
+          <InputLabel>{translate("clients.filters.territory")}</InputLabel>
           <Select
-            label={t("clients.filters.territory")}
+            label={translate("clients.filters.territory")}
             value={cityFilter}
             onChange={(event) => {
               const value = event.target.value;
@@ -232,7 +240,7 @@ export default function ClientsPage() {
               resetPaging();
             }}
           >
-            <MenuItem value="">{t("clients.filters.all")}</MenuItem>
+            <MenuItem value="">{translate("clients.filters.all")}</MenuItem>
             {cityOptions.map((locality) => (
               <MenuItem key={locality.id} value={locality.id}>
                 {locality.name}
@@ -244,42 +252,50 @@ export default function ClientsPage() {
           </Select>
         </FormControl>
         <FormControl size="small" sx={{ minWidth: 180 }}>
-          <InputLabel>{t("clients.filters.coverage")}</InputLabel>
+          <InputLabel>{translate("clients.filters.coverage")}</InputLabel>
           <Select
-            label={t("clients.filters.coverage")}
+            label={translate("clients.filters.coverage")}
             value={coverageFilter}
             onChange={(event) => {
               setCoverageFilter(event.target.value as ClientCoverage | "");
               resetPaging();
             }}
           >
-            <MenuItem value="">{t("clients.filters.all")}</MenuItem>
-            <MenuItem value="PRIVATE">{t("enums.coverage.PRIVATE")}</MenuItem>
+            <MenuItem value="">{translate("clients.filters.all")}</MenuItem>
+            <MenuItem value="PRIVATE">
+              {translate("enums.coverage.PRIVATE")}
+            </MenuItem>
             <MenuItem value="MUNICIPAL_HOSPITAL">
-              {t("enums.coverage.MUNICIPAL_HOSPITAL")}
+              {translate("enums.coverage.MUNICIPAL_HOSPITAL")}
             </MenuItem>
           </Select>
         </FormControl>
         <FormControl size="small" sx={{ minWidth: 160 }}>
-          <InputLabel>{t("clients.filters.status")}</InputLabel>
+          <InputLabel>{translate("clients.filters.status")}</InputLabel>
           <Select
-            label={t("clients.filters.status")}
+            label={translate("clients.filters.status")}
             value={statusFilter}
             onChange={(event) => {
               setStatusFilter(event.target.value as ClientStatus | "");
               resetPaging();
             }}
           >
-            <MenuItem value="">{t("clients.filters.all")}</MenuItem>
-            <MenuItem value="ACTIVE">{t("enums.status.ACTIVE")}</MenuItem>
-            <MenuItem value="DORMANT">{t("enums.status.DORMANT")}</MenuItem>
-            <MenuItem value="INACTIVE">{t("enums.status.INACTIVE")}</MenuItem>
+            <MenuItem value="">{translate("clients.filters.all")}</MenuItem>
+            <MenuItem value="ACTIVE">
+              {translate("enums.status.ACTIVE")}
+            </MenuItem>
+            <MenuItem value="DORMANT">
+              {translate("enums.status.DORMANT")}
+            </MenuItem>
+            <MenuItem value="INACTIVE">
+              {translate("enums.status.INACTIVE")}
+            </MenuItem>
           </Select>
         </FormControl>
       </Stack>
 
       {clientsQuery.isError && (
-        <Alert severity="error">{t("errors.load_failed")}</Alert>
+        <Alert severity="error">{translate("errors.load_failed")}</Alert>
       )}
 
       <Box sx={{ flex: 1, minHeight: 400 }}>

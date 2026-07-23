@@ -54,5 +54,8 @@ describe("principal territory helpers", () => {
     expect(territoryIdsForPrincipal(base)).toEqual([1, 2]);
     expect(territoryIdsForPrincipal({ ...base, roles: ["ADMIN"] })).toBeNull();
     expect(territoryIdsForPrincipal({ ...base, roles: ["PLANT"] })).toBeNull();
+    expect(
+      territoryIdsForPrincipal({ ...base, roles: ["CLERK"], territories: [] }),
+    ).toBeNull();
   });
 });

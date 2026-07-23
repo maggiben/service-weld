@@ -11,13 +11,13 @@ import { LandingSection } from "./LandingSection";
  * Spec 013 E1: ship an explicit placeholder — never fabricate testimonials.
  */
 export function TestimonialsSection() {
-  const { t } = useTranslation("landing");
+  const { t: translate } = useTranslation("landing");
 
   return (
     <LandingSection
       id="testimonials"
-      eyebrow={t("testimonials.eyebrow")}
-      title={t("testimonials.title")}
+      eyebrow={translate("testimonials.eyebrow")}
+      title={translate("testimonials.title")}
     >
       <Box
         sx={{
@@ -34,7 +34,7 @@ export function TestimonialsSection() {
           color="text.secondary"
           sx={{ lineHeight: 1.7 }}
         >
-          {t("testimonials.placeholder")}
+          {translate("testimonials.placeholder")}
         </Typography>
       </Box>
     </LandingSection>

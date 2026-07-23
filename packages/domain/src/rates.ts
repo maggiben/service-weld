@@ -72,10 +72,10 @@ export function resolveEffectiveRate(
   // Legacy callers that only pass magnitude assume m³ (D-18).
   const unit = capacityM3 != null ? (capacityUnit ?? "M3") : null;
   const active = rates.filter(
-    (r) =>
-      r.effective_from <= onDate &&
-      (r.effective_to == null || r.effective_to >= onDate) &&
-      rateApplies(r, clientPartyId, gasCode, capacityM3, unit),
+    (rate) =>
+      rate.effective_from <= onDate &&
+      (rate.effective_to == null || rate.effective_to >= onDate) &&
+      rateApplies(rate, clientPartyId, gasCode, capacityM3, unit),
   );
 
   let best: RateCandidate | null = null;
@@ -193,10 +193,10 @@ export function rentalChargeAmount(days: number, unitPrice: Money): Money {
 
 /** Two rate rows overlap on the same (client, gas, capacity) key (409 RATE_OVERLAP). */
 export function ratesOverlap(
-  a: Pick<RateCandidate, "effective_from" | "effective_to">,
-  b: Pick<RateCandidate, "effective_from" | "effective_to">,
+  left: Pick<RateCandidate, "effective_from" | "effective_to">,
+  right: Pick<RateCandidate, "effective_from" | "effective_to">,
 ): boolean {
-  const aTo = a.effective_to ?? "9999-12-31";
-  const bTo = b.effective_to ?? "9999-12-31";
-  return a.effective_from <= bTo && b.effective_from <= aTo;
+  const aTo = left.effective_to ?? "9999-12-31";
+  const bTo = right.effective_to ?? "9999-12-31";
+  return left.effective_from <= bTo && right.effective_from <= aTo;
 }

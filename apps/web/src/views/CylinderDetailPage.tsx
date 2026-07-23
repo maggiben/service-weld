@@ -39,9 +39,11 @@ import { useUiStore } from "../store/uiStore";
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 
 export default function CylinderDetailPage() {
-  const { t } = useTranslation();
-  const locale = useUiStore((s) => s.locale);
-  const canWrite = useSessionStore((s) => s.hasCapability("cylinders:write"));
+  const { t: translate } = useTranslation();
+  const locale = useUiStore((state) => state.locale);
+  const canWrite = useSessionStore((state) =>
+    state.hasCapability("cylinders:write"),
+  );
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const cylinderId = Number(params.id);
@@ -102,13 +104,13 @@ export default function CylinderDetailPage() {
     () => [
       {
         field: "delivery_date",
-        headerName: t("cylinders.detail.columns.delivery"),
+        headerName: translate("cylinders.detail.columns.delivery"),
         width: 130,
         valueFormatter: (value: string) => formatDateDMY(value),
       },
       {
         field: "holder_name",
-        headerName: t("cylinders.detail.columns.holder"),
+        headerName: translate("cylinders.detail.columns.holder"),
         flex: 1,
         minWidth: 180,
         renderCell: (params) =>
@@ -128,51 +130,52 @@ export default function CylinderDetailPage() {
       },
       {
         field: "return_date",
-        headerName: t("cylinders.detail.columns.return"),
+        headerName: translate("cylinders.detail.columns.return"),
         width: 130,
         valueFormatter: (value: string | null) => formatDateDMY(value),
       },
       {
         field: "gas_code",
-        headerName: t("cylinders.detail.columns.gas"),
+        headerName: translate("cylinders.detail.columns.gas"),
         width: 100,
         valueFormatter: (value: string | null) => value ?? "—",
       },
       {
         field: "movement_kind",
-        headerName: t("cylinders.detail.columns.kind"),
+        headerName: translate("cylinders.detail.columns.kind"),
         width: 120,
-        valueFormatter: (value: string) => t(`enums.movement_kind.${value}`),
+        valueFormatter: (value: string) =>
+          translate(`enums.movement_kind.${value}`),
       },
       {
         field: "rental_days",
-        headerName: t("cylinders.detail.columns.rental_days"),
+        headerName: translate("cylinders.detail.columns.rental_days"),
         width: 120,
         type: "number",
         valueGetter: (_v, row) => displayRentalDays(row),
       },
       {
         field: "state",
-        headerName: t("cylinders.detail.columns.state"),
+        headerName: translate("cylinders.detail.columns.state"),
         width: 120,
         renderCell: (params) => (
           <Chip
             size="small"
-            label={t(`enums.movement_state.${params.value}`)}
+            label={translate(`enums.movement_state.${params.value}`)}
             color={params.value === "OPEN" ? "warning" : "default"}
           />
         ),
       },
       {
         field: "note",
-        headerName: t("cylinders.detail.columns.note"),
+        headerName: translate("cylinders.detail.columns.note"),
         flex: 1,
         minWidth: 140,
         valueFormatter: (value: string | null) =>
-          formatLedgerNote(value, (key) => t(key)),
+          formatLedgerNote(value, (key) => translate(key)),
       },
     ],
-    [t],
+    [translate],
   );
 
   const cylinder = cylinderQuery.data;
@@ -180,7 +183,7 @@ export default function CylinderDetailPage() {
   const pageMeta = historyQuery.data?.page;
 
   if (!Number.isFinite(cylinderId)) {
-    return <Alert severity="error">{t("errors.load_failed")}</Alert>;
+    return <Alert severity="error">{translate("errors.load_failed")}</Alert>;
   }
 
   return (
@@ -191,12 +194,12 @@ export default function CylinderDetailPage() {
           onClick={() => router.push("/cylinders")}
           size="small"
         >
-          {t("cylinders.detail.back")}
+          {translate("cylinders.detail.back")}
         </Button>
       </Stack>
 
       {(cylinderQuery.isError || historyQuery.isError) && (
-        <Alert severity="error">{t("errors.load_failed")}</Alert>
+        <Alert severity="error">{translate("errors.load_failed")}</Alert>
       )}
 
       {cylinder && (
@@ -215,7 +218,7 @@ export default function CylinderDetailPage() {
                 useFlexGap
               >
                 <Typography variant="h5">
-                  {t("cylinders.detail.title", {
+                  {translate("cylinders.detail.title", {
                     serial: cylinder.serial_number,
                   })}
                 </Typography>
@@ -225,7 +228,7 @@ export default function CylinderDetailPage() {
                     startIcon={<EditIcon />}
                     onClick={() => setEditOpen(true)}
                   >
-                    {t("actions.edit")}
+                    {translate("actions.edit")}
                   </Button>
                 )}
               </Stack>
@@ -242,7 +245,7 @@ export default function CylinderDetailPage() {
                 />
                 <Chip
                   size="small"
-                  label={t(`enums.basis.${cylinder.ownership_basis}`)}
+                  label={translate(`enums.basis.${cylinder.ownership_basis}`)}
                   variant="outlined"
                 />
                 {cylinder.gas_code && (
@@ -264,18 +267,18 @@ export default function CylinderDetailPage() {
                 )}
                 <Chip
                   size="small"
-                  label={t(`enums.cylinder_state.${cylinder.state}`)}
+                  label={translate(`enums.cylinder_state.${cylinder.state}`)}
                   color={cylinder.state === "AT_CLIENT" ? "warning" : "default"}
                 />
                 <Chip
                   size="small"
-                  label={t(`enums.condition.${cylinder.condition}`)}
+                  label={translate(`enums.condition.${cylinder.condition}`)}
                 />
               </Stack>
             </Box>
             <Paper variant="outlined" sx={{ px: 2, py: 1.5, minWidth: 200 }}>
               <Typography variant="caption" color="text.secondary">
-                {t("cylinders.detail.current_holder")}
+                {translate("cylinders.detail.current_holder")}
               </Typography>
               {cylinder.current_holder_party_id != null ? (
                 <Typography variant="h6">
@@ -290,7 +293,7 @@ export default function CylinderDetailPage() {
                 </Typography>
               ) : (
                 <Typography variant="h6" color="text.secondary">
-                  {t("cylinders.detail.in_stock")}
+                  {translate("cylinders.detail.in_stock")}
                 </Typography>
               )}
             </Paper>
@@ -299,7 +302,7 @@ export default function CylinderDetailPage() {
       )}
 
       <Typography variant="h6">
-        {t("cylinders.detail.history_title")}
+        {translate("cylinders.detail.history_title")}
       </Typography>
 
       <Box sx={{ flex: 1, minHeight: 360 }}>
@@ -332,7 +335,7 @@ export default function CylinderDetailPage() {
             noRowsOverlay: () => (
               <Stack height="100%" alignItems="center" justifyContent="center">
                 <Typography color="text.secondary">
-                  {t("cylinders.detail.empty")}
+                  {translate("cylinders.detail.empty")}
                 </Typography>
               </Stack>
             ),

@@ -14,7 +14,7 @@ import { useSessionStore } from "@/store/sessionStore";
 
 export default function LoginPage() {
   const router = useRouter();
-  const setUser = useSessionStore((s) => s.setUser);
+  const setUser = useSessionStore((state) => state.setUser);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -27,8 +27,8 @@ export default function LoginPage() {
     if (raw && raw.startsWith("/")) setFrom(raw);
   }, []);
 
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setBusy(true);
     setError(null);
     try {
@@ -58,7 +58,7 @@ export default function LoginPage() {
           <TextField
             label="Usuario"
             value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            onChange={(event) => setUsername(event.target.value)}
             autoComplete="username"
             required
             fullWidth
@@ -67,7 +67,7 @@ export default function LoginPage() {
             label="Contraseña"
             type="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(event) => setPassword(event.target.value)}
             autoComplete="current-password"
             required
             fullWidth

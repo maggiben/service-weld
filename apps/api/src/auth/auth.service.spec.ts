@@ -8,7 +8,7 @@ jest.mock("./password", () => {
     ...actual,
     verifyPassword: jest.fn(),
     generateRefreshToken: jest.fn(() => "refresh-token-value"),
-    hashRefreshToken: jest.fn((t: string) => `hash:${t}`),
+    hashRefreshToken: jest.fn((translate: string) => `hash:${translate}`),
   };
 });
 
@@ -22,7 +22,7 @@ function createDbMock(handlers: {
   const chain = (table: string, op = "select") => {
     const api: Record<string, unknown> = {};
     const self = () => api;
-    for (const m of [
+    for (const member of [
       "selectFrom",
       "select",
       "where",
@@ -32,9 +32,16 @@ function createDbMock(handlers: {
       "updateTable",
       "set",
     ]) {
-      api[m] = jest.fn((...args: unknown[]) => {
-        if (m === "selectFrom" || m === "insertInto" || m === "updateTable") {
-          return chain(String(args[0]), m === "selectFrom" ? "select" : m);
+      api[member] = jest.fn((...args: unknown[]) => {
+        if (
+          member === "selectFrom" ||
+          member === "insertInto" ||
+          member === "updateTable"
+        ) {
+          return chain(
+            String(args[0]),
+            member === "selectFrom" ? "select" : member,
+          );
         }
         return self();
       });
@@ -105,8 +112,8 @@ describe("AuthService", () => {
       jwtService as never,
       config as never,
     );
-    const p = await service.validateUser("admin", "ok");
-    expect(p).toMatchObject({
+    const part = await service.validateUser("admin", "ok");
+    expect(part).toMatchObject({
       id: 1,
       username: "admin",
       roles: ["ADMIN"],
@@ -186,25 +193,28 @@ describe("AuthService", () => {
       jwtService as never,
       config as never,
     );
-    const p = principal({
+    const part = principal({
       roles: ["ADMIN"],
       territories: [{ id: 1, name: "Junín" }],
       capabilities: ["admin:write"],
     });
 
-    const tokens = await service.login(p, { userAgent: "ua", ip: "1.1.1.1" });
+    const tokens = await service.login(part, {
+      userAgent: "ua",
+      ip: "1.1.1.1",
+    });
     expect(tokens.access_token).toBe("access.jwt");
     expect(tokens.refresh_token).toBe("refresh-token-value");
     expect(tokens.territories).toEqual(["Junín"]);
 
-    const refreshed = await service.refresh(p, "old-refresh");
+    const refreshed = await service.refresh(part, "old-refresh");
     expect(refreshed.access_token).toBe("access.jwt");
 
     await service.logout("old-refresh");
 
-    expect(service.me(p)).toMatchObject({
-      id: p.id,
-      username: p.username,
+    expect(service.me(part)).toMatchObject({
+      id: part.id,
+      username: part.username,
       capabilities: ["admin:write"],
       territories: ["Junín"],
     });

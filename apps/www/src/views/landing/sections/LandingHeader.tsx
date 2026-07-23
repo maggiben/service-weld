@@ -24,11 +24,11 @@ const NAV = [
 ] as const;
 
 export function LandingHeader() {
-  const { t } = useTranslation("landing");
-  const mode = useUiStore((s) => s.mode);
-  const locale = useUiStore((s) => s.locale);
-  const setMode = useUiStore((s) => s.setMode);
-  const setLocale = useUiStore((s) => s.setLocale);
+  const { t: translate } = useTranslation("landing");
+  const mode = useUiStore((state) => state.mode);
+  const locale = useUiStore((state) => state.locale);
+  const setMode = useUiStore((state) => state.setMode);
+  const setLocale = useUiStore((state) => state.setLocale);
   const logoSrc =
     mode === "dark" ? COMPANY.images.logoDarkBg : COMPANY.images.logoLightBg;
 
@@ -47,7 +47,7 @@ export function LandingHeader() {
           "&:focus": { left: 8, top: 8 },
         }}
       >
-        {t("nav.skip")}
+        {translate("nav.skip")}
       </Link>
       <AppBar
         position="sticky"
@@ -92,7 +92,7 @@ export function LandingHeader() {
                   size="small"
                   sx={{ fontWeight: 500, color: "text.secondary" }}
                 >
-                  {t(`nav.${item.key}`)}
+                  {translate(`nav.${item.key}`)}
                 </Button>
               ))}
             </Stack>
@@ -100,8 +100,8 @@ export function LandingHeader() {
             <IconButton
               size="small"
               onClick={() => setLocale(locale === "es" ? "en" : "es")}
-              aria-label={t("a11y.toggleLanguage")}
-              title={t("a11y.toggleLanguage")}
+              aria-label={translate("a11y.toggleLanguage")}
+              title={translate("a11y.toggleLanguage")}
             >
               <Typography variant="caption" fontWeight={700}>
                 {locale.toUpperCase()}
@@ -110,8 +110,8 @@ export function LandingHeader() {
             <IconButton
               size="small"
               onClick={() => setMode(mode === "light" ? "dark" : "light")}
-              aria-label={t("a11y.toggleTheme")}
-              title={t("a11y.toggleTheme")}
+              aria-label={translate("a11y.toggleTheme")}
+              title={translate("a11y.toggleTheme")}
             >
               {mode === "light" ? (
                 <DarkModeIcon fontSize="small" />
@@ -126,7 +126,7 @@ export function LandingHeader() {
               size="small"
               sx={{ ml: 0.5 }}
             >
-              {t("nav.login")}
+              {translate("nav.login")}
             </Button>
           </Toolbar>
         </Container>

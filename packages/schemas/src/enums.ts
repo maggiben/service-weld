@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z as zod } from "zod";
 
 /**
  * Controlled vocabularies (BR-15). These MUST stay in lockstep with the
@@ -7,7 +7,7 @@ import { z } from "zod";
  * i18n namespace (006 R7).
  */
 
-export const GasCode = z.enum([
+export const GasCode = zod.enum([
   "O2",
   "O2_MED",
   "O2_LASER",
@@ -23,15 +23,15 @@ export const GasCode = z.enum([
   "HELIUM",
   "THERMOLENE",
 ]);
-export type GasCode = z.infer<typeof GasCode>;
+export type GasCode = zod.infer<typeof GasCode>;
 
-export const OwnershipBasis = z.enum(["OURS", "SUPPLIER", "CUSTOMER"]);
-export type OwnershipBasis = z.infer<typeof OwnershipBasis>;
+export const OwnershipBasis = zod.enum(["OURS", "SUPPLIER", "CUSTOMER"]);
+export type OwnershipBasis = zod.infer<typeof OwnershipBasis>;
 
-export const MovementKind = z.enum(["RENTAL", "REFILL"]);
-export type MovementKind = z.infer<typeof MovementKind>;
+export const MovementKind = zod.enum(["RENTAL", "REFILL"]);
+export type MovementKind = zod.infer<typeof MovementKind>;
 
-export const MovementState = z.enum([
+export const MovementState = zod.enum([
   "OPEN",
   "CLOSED",
   "SWAPPED",
@@ -39,9 +39,9 @@ export const MovementState = z.enum([
   "SOLD",
   "VOID",
 ]);
-export type MovementState = z.infer<typeof MovementState>;
+export type MovementState = zod.infer<typeof MovementState>;
 
-export const CylinderState = z.enum([
+export const CylinderState = zod.enum([
   "IN_STOCK_EMPTY",
   "IN_STOCK_FULL",
   "AT_CLIENT",
@@ -52,29 +52,29 @@ export const CylinderState = z.enum([
   "RETURNED_TO_SUPPLIER",
   "RETIRED",
 ]);
-export type CylinderState = z.infer<typeof CylinderState>;
+export type CylinderState = zod.infer<typeof CylinderState>;
 
-export const CylinderCondition = z.enum(["EMPTY", "FULL"]);
-export type CylinderCondition = z.infer<typeof CylinderCondition>;
+export const CylinderCondition = zod.enum(["EMPTY", "FULL"]);
+export type CylinderCondition = zod.infer<typeof CylinderCondition>;
 
-export const PackagingKind = z.enum(["SINGLE", "BATTERY", "BATTERY_MEMBER"]);
-export type PackagingKind = z.infer<typeof PackagingKind>;
+export const PackagingKind = zod.enum(["SINGLE", "BATTERY", "BATTERY_MEMBER"]);
+export type PackagingKind = zod.infer<typeof PackagingKind>;
 
-export const PartyType = z.enum([
+export const PartyType = zod.enum([
   "SELF",
   "SUPPLIER",
   "SUBDISTRIBUTOR",
   "CUSTOMER",
 ]);
-export type PartyType = z.infer<typeof PartyType>;
+export type PartyType = zod.infer<typeof PartyType>;
 
-export const ClientCoverage = z.enum(["PRIVATE", "MUNICIPAL_HOSPITAL"]);
-export type ClientCoverage = z.infer<typeof ClientCoverage>;
+export const ClientCoverage = zod.enum(["PRIVATE", "MUNICIPAL_HOSPITAL"]);
+export type ClientCoverage = zod.infer<typeof ClientCoverage>;
 
-export const ClientStatus = z.enum(["ACTIVE", "DORMANT", "INACTIVE"]);
-export type ClientStatus = z.infer<typeof ClientStatus>;
+export const ClientStatus = zod.enum(["ACTIVE", "DORMANT", "INACTIVE"]);
+export type ClientStatus = zod.infer<typeof ClientStatus>;
 
-export const ClientSegment = z.enum([
+export const ClientSegment = zod.enum([
   "METALWORKING",
   "AGRO",
   "TRANSPORT",
@@ -86,10 +86,10 @@ export const ClientSegment = z.enum([
   "RESELLER",
   "OTHER",
 ]);
-export type ClientSegment = z.infer<typeof ClientSegment>;
+export type ClientSegment = zod.infer<typeof ClientSegment>;
 
 /** RBAC roles (005 R2). CLIENT exists but is not granted in v1 (D-1). */
-export const RoleCode = z.enum([
+export const RoleCode = zod.enum([
   "CLERK",
   "DRIVER",
   "PLANT",
@@ -101,36 +101,36 @@ export const RoleCode = z.enum([
   "MEDICAL",
   "CLIENT",
 ]);
-export type RoleCode = z.infer<typeof RoleCode>;
+export type RoleCode = zod.infer<typeof RoleCode>;
 
-export const RatePeriod = z.enum(["DAILY", "MONTHLY"]);
-export type RatePeriod = z.infer<typeof RatePeriod>;
+export const RatePeriod = zod.enum(["DAILY", "MONTHLY"]);
+export type RatePeriod = zod.infer<typeof RatePeriod>;
 
-export const InvoiceStatus = z.enum([
+export const InvoiceStatus = zod.enum([
   "DRAFT",
   "APPROVED",
   "EXPORTED",
   "CANCELLED",
 ]);
-export type InvoiceStatus = z.infer<typeof InvoiceStatus>;
+export type InvoiceStatus = zod.infer<typeof InvoiceStatus>;
 
 /** Supplier loan loop stages (BR-11 / W14). */
-export const LoanStage = z.enum([
+export const LoanStage = zod.enum([
   "RECEIVED",
   "OUT_TO_CLIENT",
   "BACK_FROM_CLIENT",
   "RETURNED_TO_SUPPLIER",
 ]);
-export type LoanStage = z.infer<typeof LoanStage>;
+export type LoanStage = zod.infer<typeof LoanStage>;
 
-export const AccessoryType = z.enum([
+export const AccessoryType = zod.enum([
   "REGULATOR",
   "ADAPTER",
   "PORTABLE_O2_BACKPACK",
 ]);
-export type AccessoryType = z.infer<typeof AccessoryType>;
+export type AccessoryType = zod.infer<typeof AccessoryType>;
 
-export const AccessoryState = z.enum([
+export const AccessoryState = zod.enum([
   "IN_STOCK",
   "ON_LOAN",
   "IN_REPAIR",
@@ -138,18 +138,18 @@ export const AccessoryState = z.enum([
   "BROKEN",
   "RETIRED",
 ]);
-export type AccessoryState = z.infer<typeof AccessoryState>;
+export type AccessoryState = zod.infer<typeof AccessoryState>;
 
-export const AccessoryRentalState = z.enum(["ON_LOAN", "RETURNED", "LOST"]);
-export type AccessoryRentalState = z.infer<typeof AccessoryRentalState>;
+export const AccessoryRentalState = zod.enum(["ON_LOAN", "RETURNED", "LOST"]);
+export type AccessoryRentalState = zod.infer<typeof AccessoryRentalState>;
 
-export const ChargeBasis = z.enum(["RENTAL", "FREE_LOAN"]);
-export type ChargeBasis = z.infer<typeof ChargeBasis>;
+export const ChargeBasis = zod.enum(["RENTAL", "FREE_LOAN"]);
+export type ChargeBasis = zod.infer<typeof ChargeBasis>;
 
 /** Immutable audit trail action (003 / schema.sql `audit_action`). */
-export const AuditAction = z.enum(["INSERT", "UPDATE", "DELETE", "VOID"]);
-export type AuditAction = z.infer<typeof AuditAction>;
+export const AuditAction = zod.enum(["INSERT", "UPDATE", "DELETE", "VOID"]);
+export type AuditAction = zod.infer<typeof AuditAction>;
 
 /** Cylinder capacity unit (D-18). Magnitude lives in capacity_m3 (legacy name). */
-export const CapacityUnit = z.enum(["M3", "KG"]);
-export type CapacityUnit = z.infer<typeof CapacityUnit>;
+export const CapacityUnit = zod.enum(["M3", "KG"]);
+export type CapacityUnit = zod.infer<typeof CapacityUnit>;

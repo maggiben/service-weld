@@ -25,14 +25,14 @@ interface Props {
   onClose: () => void;
 }
 
-function cylinderLabel(c: Cylinder): string {
-  const owner = c.owner_name ? ` · ${c.owner_name}` : "";
-  const gas = c.gas_code ? ` · ${c.gas_code}` : "";
-  return `${c.serial_number}${owner}${gas}`;
+function cylinderLabel(item: Cylinder): string {
+  const owner = item.owner_name ? ` · ${item.owner_name}` : "";
+  const gas = item.gas_code ? ` · ${item.gas_code}` : "";
+  return `${item.serial_number}${owner}${gas}`;
 }
 
 export function SwapDialog({ open, movement, onClose }: Props) {
-  const { t } = useTranslation();
+  const { t: translate } = useTranslation();
   const queryClient = useQueryClient();
   const [replacement, setReplacement] = useState<Cylinder | null>(null);
   const [cylinderQuery, setCylinderQuery] = useState("");
@@ -53,32 +53,32 @@ export function SwapDialog({ open, movement, onClose }: Props) {
   const stockQuery = useQuery({
     queryKey: ["cylinders", "swap-candidates", isRefill, cylinderQuery],
     queryFn: async () => {
-      const q = cylinderQuery || undefined;
+      const query = cylinderQuery || undefined;
       if (isRefill) {
         const res = await api.listCylinders({
-          q,
+          q: query,
           limit: 30,
           "filter[ownership_basis]": "CUSTOMER",
         });
         return res.data.filter(
-          (c) =>
-            (c.state === "IN_STOCK_EMPTY" ||
-              c.state === "IN_STOCK_FULL" ||
-              c.state === "AT_CLIENT") &&
-            c.packaging !== "BATTERY_MEMBER",
+          (item) =>
+            (item.state === "IN_STOCK_EMPTY" ||
+              item.state === "IN_STOCK_FULL" ||
+              item.state === "AT_CLIENT") &&
+            item.packaging !== "BATTERY_MEMBER",
         );
       }
       const res = await api.listCylinders({
-        q,
+        q: query,
         limit: 30,
         "filter[available_for_rental]": true,
       });
       return res.data.filter(
-        (c) =>
-          (c.state === "IN_STOCK_EMPTY" || c.state === "IN_STOCK_FULL") &&
-          c.ownership_basis !== "CUSTOMER" &&
-          c.packaging !== "BATTERY_MEMBER" &&
-          c.current_movement_id == null,
+        (item) =>
+          (item.state === "IN_STOCK_EMPTY" || item.state === "IN_STOCK_FULL") &&
+          item.ownership_basis !== "CUSTOMER" &&
+          item.packaging !== "BATTERY_MEMBER" &&
+          item.current_movement_id == null,
       );
     },
     enabled: open,
@@ -86,9 +86,9 @@ export function SwapDialog({ open, movement, onClose }: Props) {
 
   const candidates = useMemo(() => {
     const rows = (stockQuery.data ?? []).filter(
-      (c) => c.id !== movement?.cylinder_id,
+      (item) => item.id !== movement?.cylinder_id,
     );
-    if (replacement && !rows.some((c) => c.id === replacement.id)) {
+    if (replacement && !rows.some((row) => row.id === replacement.id)) {
       return [replacement, ...rows];
     }
     return rows;
@@ -116,29 +116,29 @@ export function SwapDialog({ open, movement, onClose }: Props) {
     onError: (err) => {
       if (err instanceof ApiClientError) {
         if (err.code === "RETURNED_CYLINDER_BUSY") {
-          setError(t("errors.returned_cylinder_busy"));
+          setError(translate("errors.returned_cylinder_busy"));
           return;
         }
         if (err.code === "NOT_OPEN") {
-          setError(t("errors.not_open"));
+          setError(translate("errors.not_open"));
           return;
         }
         if (err.code === "RETURN_BEFORE_DELIVERY") {
-          setError(t("errors.return_before_delivery"));
+          setError(translate("errors.return_before_delivery"));
           return;
         }
         if (err.code === "KIND_BASIS_MISMATCH") {
-          setError(t("errors.kind_basis_mismatch"));
+          setError(translate("errors.kind_basis_mismatch"));
           return;
         }
         if (err.code === "CYLINDER_ALREADY_OUT") {
-          setError(t("errors.cylinder_already_out"));
+          setError(translate("errors.cylinder_already_out"));
           return;
         }
         setError(err.message);
         return;
       }
-      setError(t("errors.generic"));
+      setError(translate("errors.generic"));
     },
   });
 
@@ -149,19 +149,19 @@ export function SwapDialog({ open, movement, onClose }: Props) {
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>{t("movements.swap.title")}</DialogTitle>
+      <DialogTitle>{translate("movements.swap.title")}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
           {movement && (
             <Typography variant="body2" color="text.secondary">
-              {t("movements.swap.summary", {
+              {translate("movements.swap.summary", {
                 serial: movement.cylinder_serial,
                 holder: movement.holder_name,
               })}
             </Typography>
           )}
           <Alert severity="info" sx={{ py: 0.5 }}>
-            {t("movements.swap.hint")}
+            {translate("movements.swap.hint")}
           </Alert>
           {error && <Alert severity="error">{error}</Alert>}
           <Autocomplete
@@ -169,7 +169,7 @@ export function SwapDialog({ open, movement, onClose }: Props) {
             getOptionLabel={(option) =>
               typeof option === "string" ? option : cylinderLabel(option)
             }
-            isOptionEqualToValue={(a, b) => a.id === b.id}
+            isOptionEqualToValue={(left, right) => left.id === right.id}
             loading={stockQuery.isFetching}
             filterOptions={(opts) => opts}
             value={replacement}
@@ -180,14 +180,14 @@ export function SwapDialog({ open, movement, onClose }: Props) {
             renderInput={(params) => (
               <TextField
                 {...params}
-                label={t("movements.swap.replacement_cylinder")}
+                label={translate("movements.swap.replacement_cylinder")}
                 required
-                helperText={t("movements.swap.replacement_hint")}
+                helperText={translate("movements.swap.replacement_hint")}
               />
             )}
           />
           <DatePicker
-            label={t("movements.swap.swap_date")}
+            label={translate("movements.swap.swap_date")}
             value={dayjs(swapDate)}
             minDate={movement ? dayjs(movement.delivery_date) : undefined}
             onChange={(value: Dayjs | null) => {
@@ -198,13 +198,13 @@ export function SwapDialog({ open, movement, onClose }: Props) {
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t("actions.cancel")}</Button>
+        <Button onClick={onClose}>{translate("actions.cancel")}</Button>
         <Button
           variant="contained"
           disabled={invalid || mutation.isPending}
           onClick={() => mutation.mutate()}
         >
-          {t("movements.swap.confirm")}
+          {translate("movements.swap.confirm")}
         </Button>
       </DialogActions>
     </Dialog>

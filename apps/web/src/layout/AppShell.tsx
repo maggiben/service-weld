@@ -162,21 +162,21 @@ export default function AppShell({ children }: PropsWithChildren) {
   // noSsr: keep server + first client paint in sync (defaultMatches=false), then
   // update after mount — avoids hydration mismatch on drawer/AppBar chrome.
   const isDesktop = useMediaQuery(theme.breakpoints.up("md"), { noSsr: true });
-  const { t } = useTranslation();
+  const { t: translate } = useTranslation();
   const pathname = usePathname();
   const router = useRouter();
-  const user = useSessionStore((s) => s.user);
-  const hasCapability = useSessionStore((s) => s.hasCapability);
-  const clearSession = useSessionStore((s) => s.clearSession);
-  const locale = useUiStore((s) => s.locale);
-  const setLocale = useUiStore((s) => s.setLocale);
-  const themeId = useUiStore((s) => s.themeId);
-  const setMode = useUiStore((s) => s.setMode);
-  const sidebarOpen = useUiStore((s) => s.sidebarOpen);
-  const toggleSidebar = useUiStore((s) => s.toggleSidebar);
+  const user = useSessionStore((state) => state.user);
+  const hasCapability = useSessionStore((state) => state.hasCapability);
+  const clearSession = useSessionStore((state) => state.clearSession);
+  const locale = useUiStore((state) => state.locale);
+  const setLocale = useUiStore((state) => state.setLocale);
+  const themeId = useUiStore((state) => state.themeId);
+  const setMode = useUiStore((state) => state.setMode);
+  const sidebarOpen = useUiStore((state) => state.sidebarOpen);
+  const toggleSidebar = useUiStore((state) => state.toggleSidebar);
   const themePreset = getThemePreset(resolveThemeId(themeId));
   const mode = themePreset.mode;
-  const unreadCount = useNotificationStore((s) => s.unreadCount);
+  const unreadCount = useNotificationStore((state) => state.unreadCount);
   useAlertsInbox();
 
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
@@ -214,7 +214,7 @@ export default function AppShell({ children }: PropsWithChildren) {
     <Box sx={{ pt: 1 }}>
       <Toolbar>
         <Typography variant="subtitle1" noWrap>
-          {t("app.title")}
+          {translate("app.title")}
         </Typography>
       </Toolbar>
       <List>
@@ -237,7 +237,7 @@ export default function AppShell({ children }: PropsWithChildren) {
                 item.icon
               )}
             </ListItemIcon>
-            <ListItemText primary={t(item.labelKey)} />
+            <ListItemText primary={translate(item.labelKey)} />
           </ListItemButton>
         ))}
       </List>
@@ -268,7 +268,7 @@ export default function AppShell({ children }: PropsWithChildren) {
           <Box
             component={Link}
             href="/"
-            aria-label={t("app.title")}
+            aria-label={translate("app.title")}
             sx={{
               display: "flex",
               alignItems: "center",
@@ -295,20 +295,20 @@ export default function AppShell({ children }: PropsWithChildren) {
             />
           </Box>
           <Typography variant="h6" sx={{ flexGrow: 1 }} noWrap>
-            {t("app.title")}
+            {translate("app.title")}
           </Typography>
           {hasCapability("alerts:read") && <AlertsBellMenu />}
           <IconButton
             color="inherit"
             onClick={() => setLocale(locale === "es" ? "en" : "es")}
-            title={t("actions.toggle_language")}
+            title={translate("actions.toggle_language")}
           >
             <Typography variant="caption">{locale.toUpperCase()}</Typography>
           </IconButton>
           <IconButton
             color="inherit"
             onClick={() => setMode(mode === "light" ? "dark" : "light")}
-            title={t("actions.toggle_theme")}
+            title={translate("actions.toggle_theme")}
           >
             {mode === "light" ? <DarkModeIcon /> : <LightModeIcon />}
           </IconButton>
@@ -318,7 +318,7 @@ export default function AppShell({ children }: PropsWithChildren) {
             aria-controls={menuOpen ? "user-menu" : undefined}
             aria-haspopup="true"
             aria-expanded={menuOpen ? "true" : undefined}
-            title={user?.username ?? t("shell.user_menu")}
+            title={user?.username ?? translate("shell.user_menu")}
             sx={{ ml: 0.5 }}
           >
             <Avatar
@@ -348,7 +348,9 @@ export default function AppShell({ children }: PropsWithChildren) {
                   {user.username}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" noWrap>
-                  {user.roles.map((role) => t(`enums.role.${role}`)).join(", ")}
+                  {user.roles
+                    .map((role) => translate(`enums.role.${role}`))
+                    .join(", ")}
                 </Typography>
               </Box>
             )}
@@ -357,14 +359,14 @@ export default function AppShell({ children }: PropsWithChildren) {
               <ListItemIcon>
                 <SettingsIcon fontSize="small" />
               </ListItemIcon>
-              {t("shell.menu.settings")}
+              {translate("shell.menu.settings")}
             </MenuItem>
             {hasCapability("admin:write") && (
               <MenuItem onClick={() => go("/admin/users")}>
                 <ListItemIcon>
                   <ManageAccountsIcon fontSize="small" />
                 </ListItemIcon>
-                {t("shell.menu.users")}
+                {translate("shell.menu.users")}
               </MenuItem>
             )}
             {hasCapability("admin:write") && (
@@ -372,7 +374,7 @@ export default function AppShell({ children }: PropsWithChildren) {
                 <ListItemIcon>
                   <ImportExportIcon fontSize="small" />
                 </ListItemIcon>
-                {t("shell.menu.data_migration")}
+                {translate("shell.menu.data_migration")}
               </MenuItem>
             )}
             {hasCapability("audit:read") && (
@@ -380,7 +382,7 @@ export default function AppShell({ children }: PropsWithChildren) {
                 <ListItemIcon>
                   <HistoryIcon fontSize="small" />
                 </ListItemIcon>
-                {t("shell.menu.audit")}
+                {translate("shell.menu.audit")}
               </MenuItem>
             )}
             <Divider />
@@ -388,7 +390,7 @@ export default function AppShell({ children }: PropsWithChildren) {
               <ListItemIcon>
                 <LogoutIcon fontSize="small" />
               </ListItemIcon>
-              {t("actions.logout")}
+              {translate("actions.logout")}
             </MenuItem>
           </Menu>
         </Toolbar>
@@ -423,8 +425,10 @@ export default function AppShell({ children }: PropsWithChildren) {
           separator={<ChevronRightIcon fontSize="small" />}
           sx={{ mb: 2 }}
         >
-          <Typography color="text.primary">{t("app.title")}</Typography>
-          <Typography color="text.primary">{t(breadcrumbKey)}</Typography>
+          <Typography color="text.primary">{translate("app.title")}</Typography>
+          <Typography color="text.primary">
+            {translate(breadcrumbKey)}
+          </Typography>
         </Breadcrumbs>
         {children}
       </Box>

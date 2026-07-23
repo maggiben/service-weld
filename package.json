@@ -11,11 +11,13 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "pnpm run format:check && pnpm run typecheck",
+    "lint:eslint": "eslint apps packages",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "test:coverage": "node scripts/check-coverage.mjs",
     "check:secrets": "node scripts/check-secrets.mjs",
     "check:deps": "node scripts/check-deps.mjs",
+    "check:id-length": "node scripts/check-id-length.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "husky",
@@ -32,12 +34,15 @@
     "*.{js,jsx,ts,tsx,mjs,cjs,json,md,yml,yaml,css,html}": "prettier --check"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.7.0",
     "husky": "^9.1.7",
     "lint-staged": "^15.4.3",
     "pg": "^8.13.0",
     "prettier": "^3.3.3",
     "turbo": "^2.1.3",
-    "typescript": "^5.6.2"
+    "typescript": "^5.6.2",
+    "typescript-eslint": "^8.65.0"
   },
   "pnpm": {
     "overrides": {

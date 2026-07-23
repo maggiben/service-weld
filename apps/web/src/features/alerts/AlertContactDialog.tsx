@@ -28,8 +28,8 @@ function toDateInputValue(iso: string | null | undefined): string {
 }
 
 export function AlertContactDialog({ alert, open, onClose }: Props) {
-  const { t } = useTranslation();
-  const pushToast = useNotificationStore((s) => s.pushToast);
+  const { t: translate } = useTranslation();
+  const pushToast = useNotificationStore((state) => state.pushToast);
   const queryClient = useQueryClient();
   const [note, setNote] = useState("");
   const [contactDate, setContactDate] = useState(() =>
@@ -53,54 +53,54 @@ export function AlertContactDialog({ alert, open, onClose }: Props) {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["alerts"] });
-      pushToast(t("alerts.contact_saved"));
+      pushToast(translate("alerts.contact_saved"));
       onClose();
     },
   });
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>{t("alerts.contact.title")}</DialogTitle>
+      <DialogTitle>{translate("alerts.contact.title")}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
           {alert && (
             <Typography variant="body2" color="text.secondary">
-              {t(`enums.alert_type.${alert.alert_type}`, {
+              {translate(`enums.alert_type.${alert.alert_type}`, {
                 defaultValue: alert.alert_type,
               })}
               {" · "}
-              {formatAlertDetail(alert, t)}
+              {formatAlertDetail(alert, translate)}
               {alert.client_phone ? ` · ${alert.client_phone}` : ""}
             </Typography>
           )}
           <TextField
-            label={t("alerts.contact.date")}
+            label={translate("alerts.contact.date")}
             type="date"
             value={contactDate}
-            onChange={(e) => setContactDate(e.target.value)}
+            onChange={(event) => setContactDate(event.target.value)}
             InputLabelProps={{ shrink: true }}
             fullWidth
           />
           <TextField
-            label={t("alerts.contact.note")}
+            label={translate("alerts.contact.note")}
             value={note}
-            onChange={(e) => setNote(e.target.value)}
+            onChange={(event) => setNote(event.target.value)}
             multiline
             minRows={4}
             fullWidth
-            placeholder={t("alerts.contact.note_placeholder")}
-            helperText={t("alerts.contact.note_help")}
+            placeholder={translate("alerts.contact.note_placeholder")}
+            helperText={translate("alerts.contact.note_help")}
           />
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t("actions.cancel")}</Button>
+        <Button onClick={onClose}>{translate("actions.cancel")}</Button>
         <Button
           variant="contained"
           disabled={mutation.isPending || !alert}
           onClick={() => mutation.mutate()}
         >
-          {t("actions.save")}
+          {translate("actions.save")}
         </Button>
       </DialogActions>
     </Dialog>

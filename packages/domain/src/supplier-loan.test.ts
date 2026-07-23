@@ -13,7 +13,8 @@ test("loan stages advance forward-only", () => {
   assert.equal(nextLoanStage("RETURNED_TO_SUPPLIER"), null);
   assert.throws(
     () => assertLoanStageAdvance("RECEIVED", "BACK_FROM_CLIENT"),
-    (e: unknown) => e instanceof DomainError && e.code === "STAGE_OUT_OF_ORDER",
+    (event: unknown) =>
+      event instanceof DomainError && event.code === "STAGE_OUT_OF_ORDER",
   );
   assert.doesNotThrow(() =>
     assertLoanStageAdvance("RECEIVED", "OUT_TO_CLIENT"),
@@ -25,7 +26,8 @@ test("loan dates are non-decreasing", () => {
   assert.doesNotThrow(() => assertLoanDateOrder("2022-07-13", "2022-09-08"));
   assert.throws(
     () => assertLoanDateOrder("2022-09-09", "2022-09-08"),
-    (e: unknown) => e instanceof DomainError && e.code === "DATE_ORDER",
+    (event: unknown) =>
+      event instanceof DomainError && event.code === "DATE_ORDER",
   );
 });
 

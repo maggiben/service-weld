@@ -47,8 +47,8 @@ function isoDate(value: string | Date | null): string | null {
 
 /** Calendar cutoff: asOf − overdueDays (inclusive threshold for received date). */
 function overdueCutoffIso(asOf: string, overdueDays: number): string {
-  const [y, m, d] = asOf.split("-").map(Number);
-  const date = new Date(Date.UTC(y!, m! - 1, d!));
+  const [year, member, data] = asOf.split("-").map(Number);
+  const date = new Date(Date.UTC(year!, member! - 1, data!));
   date.setUTCDate(date.getUTCDate() - overdueDays);
   return date.toISOString().slice(0, 10);
 }

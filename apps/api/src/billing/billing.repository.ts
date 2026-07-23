@@ -181,7 +181,7 @@ export class BillingRepository {
 
     const lockedRows = await lockedQb.execute();
     const lockedClientIds = new Set(
-      lockedRows.map((r) => Number(r.client_party_id)),
+      lockedRows.map((row) => Number(row.client_party_id)),
     );
 
     if (
@@ -241,7 +241,7 @@ export class BillingRepository {
     const priorDrafts = await priorDraftsQb.execute();
 
     if (priorDrafts.length > 0) {
-      const ids = priorDrafts.map((r) => Number(r.id));
+      const ids = priorDrafts.map((row) => Number(row.id));
       await db
         .deleteFrom("charge_line")
         .where("invoice_id", "in", ids)

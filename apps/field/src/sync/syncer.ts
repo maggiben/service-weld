@@ -44,7 +44,7 @@ export async function drainOutbox(): Promise<void> {
   try {
     const queued = useOutboxStore
       .getState()
-      .items.filter((i) => i.status === "queued")
+      .items.filter((item) => item.status === "queued")
       .slice()
       .reverse(); // oldest first (enqueue prepends)
 

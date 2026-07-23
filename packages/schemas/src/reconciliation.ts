@@ -1,82 +1,85 @@
-import { z } from "zod";
+import { z as zod } from "zod";
 import { IsoDate, paginated, PaginationQuery } from "./common";
 import { CylinderState, GasCode } from "./enums";
 
 /** Open movement float row (US-25 / GET /reports/outstanding). */
-export const OutstandingRow = z.object({
-  movement_id: z.number().int(),
-  cylinder_id: z.number().int(),
-  serial_number: z.string(),
-  client_party_id: z.number().int(),
-  client_name: z.string(),
+export const OutstandingRow = zod.object({
+  movement_id: zod.number().int(),
+  cylinder_id: zod.number().int(),
+  serial_number: zod.string(),
+  client_party_id: zod.number().int(),
+  client_name: zod.string(),
   gas_code: GasCode.nullable(),
   delivery_date: IsoDate,
-  accrued_days: z.number().int(),
-  to_verify: z.boolean(),
+  accrued_days: zod.number().int(),
+  to_verify: zod.boolean(),
   cylinder_state: CylinderState,
 });
-export type OutstandingRow = z.infer<typeof OutstandingRow>;
+export type OutstandingRow = zod.infer<typeof OutstandingRow>;
 
 export const OutstandingListQuery = PaginationQuery.extend({
-  sort: z
+  sort: zod
     .enum(["accrued_days", "-accrued_days", "delivery_date", "-delivery_date"])
     .default("-accrued_days"),
-  "filter[client_party_id]": z.coerce.number().int().optional(),
-  min_days: z.coerce.number().int().min(0).optional(),
+  "filter[client_party_id]": zod.coerce.number().int().optional(),
+  min_days: zod.coerce.number().int().min(0).optional(),
   as_of: IsoDate.optional(),
 });
-export type OutstandingListQuery = z.infer<typeof OutstandingListQuery>;
+export type OutstandingListQuery = zod.infer<typeof OutstandingListQuery>;
 
 export const OutstandingListResponse = paginated(OutstandingRow);
-export type OutstandingListResponse = z.infer<typeof OutstandingListResponse>;
+export type OutstandingListResponse = zod.infer<typeof OutstandingListResponse>;
 
-export const ReconciliationVarianceKind = z.enum([
+export const ReconciliationVarianceKind = zod.enum([
   "MATCHED",
   "PRESENT_ELSEWHERE",
   "ABSENT_HERE",
   "UNKNOWN_SERIAL",
 ]);
-export type ReconciliationVarianceKind = z.infer<
+export type ReconciliationVarianceKind = zod.infer<
   typeof ReconciliationVarianceKind
 >;
 
-export const ReconciliationVarianceRow = z.object({
+export const ReconciliationVarianceRow = zod.object({
   kind: ReconciliationVarianceKind,
-  cylinder_id: z.number().int().nullable(),
-  serial_number: z.string(),
-  system_state: z.string().nullable(),
+  cylinder_id: zod.number().int().nullable(),
+  serial_number: zod.string(),
+  system_state: zod.string().nullable(),
   /** Current custody party when the system shows AT_CLIENT / AT_SUPPLIER. */
-  holder_name: z.string().nullable().optional(),
-  suggested_action: z.enum(["NONE", "LOSS", "TRANSFER", "VERIFY"]).optional(),
+  holder_name: zod.string().nullable().optional(),
+  suggested_action: zod.enum(["NONE", "LOSS", "TRANSFER", "VERIFY"]).optional(),
 });
-export type ReconciliationVarianceRow = z.infer<
+export type ReconciliationVarianceRow = zod.infer<
   typeof ReconciliationVarianceRow
 >;
 
-export const PhysicalCountInput = z
+export const PhysicalCountInput = zod
   .object({
     counted_on: IsoDate,
-    serial_numbers: z.array(z.string().min(1)).default([]),
-    cylinder_ids: z.array(z.number().int()).default([]),
+    serial_numbers: zod.array(zod.string().min(1)).default([]),
+    cylinder_ids: zod.array(zod.number().int()).default([]),
     /**
      * When true, every in-stock cylinder not in the counted list is reported
      * as ABSENT_HERE (suggested LOSS). Default false so a partial list only
      * classifies the serials provided (matched / elsewhere / unknown).
      */
-    full_plant_count: z.boolean().default(false),
+    full_plant_count: zod.boolean().default(false),
   })
-  .refine((v) => v.serial_numbers.length > 0 || v.cylinder_ids.length > 0, {
-    message: "Provide at least one serial or cylinder id",
-  });
-export type PhysicalCountInput = z.infer<typeof PhysicalCountInput>;
+  .refine(
+    (value) => value.serial_numbers.length > 0 || value.cylinder_ids.length > 0,
+    {
+      message: "Provide at least one serial or cylinder id",
+    },
+  );
+export type PhysicalCountInput = zod.infer<typeof PhysicalCountInput>;
 
-export const PhysicalCountResult = z.object({
+export const PhysicalCountResult = zod.object({
   counted_on: IsoDate,
-  counted: z.number().int(),
-  matched: z.number().int(),
-  present_elsewhere: z.number().int(),
-  absent_here: z.number().int(),
-  unknown_serial: z.number().int(),
-  rows: z.array(ReconciliationVarianceRow),
+  counted: zod.number().int(),
+  matched: zod.number().int(),
+  present_elsewhere: zod.number().int(),
+  absent_here: zod.number().int(),
+  unknown_serial: zod.number().int(),
+  rows: zod.array(ReconciliationVarianceRow),
 });
-export type PhysicalCountResult = z.infer<typeof PhysicalCountResult>;
+export type PhysicalCountResult = zod.infer<typeof PhysicalCountResult>;

@@ -10,30 +10,30 @@ function joinParts(parts: Array<string | null | undefined>): string {
 }
 
 /** Secondary line for menus/tooltips (without repeating the alert type). */
-export function formatAlertDetail(alert: Alert, t: TFunction): string {
+export function formatAlertDetail(alert: Alert, translate: TFunction): string {
   const cylinder = present(alert.cylinder_serial)
-    ? t("alerts.tokens.cylinder", { serial: alert.cylinder_serial })
+    ? translate("alerts.tokens.cylinder", { serial: alert.cylinder_serial })
     : null;
   const client = present(alert.client_name)
-    ? t("alerts.tokens.client", { name: alert.client_name })
+    ? translate("alerts.tokens.client", { name: alert.client_name })
     : null;
   const supplier = present(alert.counterparty_name)
-    ? t("alerts.tokens.supplier", { name: alert.counterparty_name })
+    ? translate("alerts.tokens.supplier", { name: alert.counterparty_name })
     : null;
   const days =
     alert.days_open != null
-      ? t("alerts.tokens.days", { count: alert.days_open })
+      ? translate("alerts.tokens.days", { count: alert.days_open })
       : null;
   const gas = present(alert.gas_code)
-    ? t(`enums.gas.${alert.gas_code}`, { defaultValue: alert.gas_code })
+    ? translate(`enums.gas.${alert.gas_code}`, { defaultValue: alert.gas_code })
     : null;
   const stage = present(alert.loan_stage)
-    ? t(`enums.loan_stage.${alert.loan_stage}`, {
+    ? translate(`enums.loan_stage.${alert.loan_stage}`, {
         defaultValue: alert.loan_stage,
       })
     : null;
   const kind = present(alert.movement_kind)
-    ? t(`enums.movement_kind.${alert.movement_kind}`)
+    ? translate(`enums.movement_kind.${alert.movement_kind}`)
     : null;
 
   switch (alert.alert_type) {

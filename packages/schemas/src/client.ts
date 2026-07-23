@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z as zod } from "zod";
 import { IsoDate, PageMeta, paginated, PaginationQuery } from "./common";
 import { Cuit, isValidCuit } from "./cuit";
 import {
@@ -12,39 +12,39 @@ import { MovementEvent } from "./movement";
 
 const CUIT_FORMAT = /^\d{2}-\d{8}-\d$/;
 
-export const ClientContact = z.object({
-  id: z.number().int().optional(),
-  name: z.string().nullable().optional(),
-  phone: z.string().nullable().optional(),
-  role: z.string().nullable().optional(),
-  is_primary: z.boolean().default(false),
+export const ClientContact = zod.object({
+  id: zod.number().int().optional(),
+  name: zod.string().nullable().optional(),
+  phone: zod.string().nullable().optional(),
+  role: zod.string().nullable().optional(),
+  is_primary: zod.boolean().default(false),
 });
-export type ClientContact = z.infer<typeof ClientContact>;
+export type ClientContact = zod.infer<typeof ClientContact>;
 
-export const Client = z.object({
-  id: z.number().int(),
-  name: z.string(),
-  cuit: z.string().nullable(),
-  cuit_valid: z.boolean(),
-  address_street: z.string().nullable(),
-  locality_id: z.number().int().nullable(),
-  territory_id: z.number().int(),
+export const Client = zod.object({
+  id: zod.number().int(),
+  name: zod.string(),
+  cuit: zod.string().nullable(),
+  cuit_valid: zod.boolean(),
+  address_street: zod.string().nullable(),
+  locality_id: zod.number().int().nullable(),
+  territory_id: zod.number().int(),
   coverage: ClientCoverage,
   segment: ClientSegment.nullable(),
-  delivery_instructions: z.string().nullable(),
-  daily_rate_default: z.number().nullable(),
+  delivery_instructions: zod.string().nullable(),
+  daily_rate_default: zod.number().nullable(),
   status: ClientStatus,
-  version: z.number().int(),
-  created_at: z.string().datetime(),
-  contacts: z.array(ClientContact).optional(),
-  outstanding_count: z.number().int().optional(),
-  open_accessory_count: z.number().int().optional(),
+  version: zod.number().int(),
+  created_at: zod.string().datetime(),
+  contacts: zod.array(ClientContact).optional(),
+  outstanding_count: zod.number().int().optional(),
+  open_accessory_count: zod.number().int().optional(),
 });
-export type Client = z.infer<typeof Client>;
+export type Client = zod.infer<typeof Client>;
 
 export const CreateClientContactInput = ClientContact.omit({ id: true });
 
-const optionalCuit = z
+const optionalCuit = zod
   .string()
   .regex(CUIT_FORMAT, { message: "CUIT must match NN-NNNNNNNN-N" })
   .nullable()
@@ -53,47 +53,47 @@ const optionalCuit = z
     message: "Invalid CUIT check digit",
   });
 
-export const CreateClientInput = z
+export const CreateClientInput = zod
   .object({
-    name: z.string().min(1),
+    name: zod.string().min(1),
     cuit: optionalCuit,
-    address_street: z.string().nullable().optional(),
-    locality_id: z.number().int().nullable().optional(),
-    territory_id: z.number().int(),
+    address_street: zod.string().nullable().optional(),
+    locality_id: zod.number().int().nullable().optional(),
+    territory_id: zod.number().int(),
     coverage: ClientCoverage.default("PRIVATE"),
     segment: ClientSegment.nullable().optional(),
-    delivery_instructions: z.string().nullable().optional(),
-    daily_rate_default: z.coerce
+    delivery_instructions: zod.string().nullable().optional(),
+    daily_rate_default: zod.coerce
       .number()
       .multipleOf(0.01)
       .nullable()
       .optional(),
-    contacts: z.array(CreateClientContactInput).default([]),
+    contacts: zod.array(CreateClientContactInput).default([]),
   })
   .refine(
     (value) =>
       value.contacts.filter((contact) => contact.is_primary).length <= 1,
     { message: "At most one primary contact is allowed", path: ["contacts"] },
   );
-export type CreateClientInput = z.infer<typeof CreateClientInput>;
+export type CreateClientInput = zod.infer<typeof CreateClientInput>;
 
-export const UpdateClientInput = z
+export const UpdateClientInput = zod
   .object({
-    name: z.string().min(1).optional(),
+    name: zod.string().min(1).optional(),
     cuit: optionalCuit,
-    address_street: z.string().nullable().optional(),
-    locality_id: z.number().int().nullable().optional(),
-    territory_id: z.number().int().optional(),
+    address_street: zod.string().nullable().optional(),
+    locality_id: zod.number().int().nullable().optional(),
+    territory_id: zod.number().int().optional(),
     coverage: ClientCoverage.optional(),
     segment: ClientSegment.nullable().optional(),
-    delivery_instructions: z.string().nullable().optional(),
-    daily_rate_default: z.coerce
+    delivery_instructions: zod.string().nullable().optional(),
+    daily_rate_default: zod.coerce
       .number()
       .multipleOf(0.01)
       .nullable()
       .optional(),
     status: ClientStatus.optional(),
-    contacts: z.array(CreateClientContactInput).optional(),
+    contacts: zod.array(CreateClientContactInput).optional(),
   })
   .refine(
     (value) =>
@@ -101,11 +101,11 @@ export const UpdateClientInput = z
       value.contacts.filter((contact) => contact.is_primary).length <= 1,
     { message: "At most one primary contact is allowed", path: ["contacts"] },
   );
-export type UpdateClientInput = z.infer<typeof UpdateClientInput>;
+export type UpdateClientInput = zod.infer<typeof UpdateClientInput>;
 
 export const ClientListQuery = PaginationQuery.extend({
-  q: z.string().optional(),
-  sort: z
+  q: zod.string().optional(),
+  sort: zod
     .enum([
       "name",
       "-name",
@@ -115,53 +115,53 @@ export const ClientListQuery = PaginationQuery.extend({
       "-territory_id",
     ])
     .default("name"),
-  has_outstanding: z
+  has_outstanding: zod
     .enum(["true", "false"])
     .optional()
     .transform((value) => value === "true"),
-  "filter[territory_id]": z.coerce.number().int().optional(),
-  "filter[locality_id]": z.coerce.number().int().optional(),
+  "filter[territory_id]": zod.coerce.number().int().optional(),
+  "filter[locality_id]": zod.coerce.number().int().optional(),
   "filter[coverage]": ClientCoverage.optional(),
   "filter[segment]": ClientSegment.optional(),
   "filter[status]": ClientStatus.optional(),
 });
-export type ClientListQuery = z.infer<typeof ClientListQuery>;
+export type ClientListQuery = zod.infer<typeof ClientListQuery>;
 
 export const ClientListResponse = paginated(Client);
-export type ClientListResponse = z.infer<typeof ClientListResponse>;
+export type ClientListResponse = zod.infer<typeof ClientListResponse>;
 
 /** Open movement on a client account (GET /clients/{id}/account). */
-export const ClientAccountOutstandingRow = z.object({
-  movement_id: z.number().int(),
-  cylinder_id: z.number().int(),
-  serial: z.string(),
+export const ClientAccountOutstandingRow = zod.object({
+  movement_id: zod.number().int(),
+  cylinder_id: zod.number().int(),
+  serial: zod.string(),
   gas_code: GasCode.nullable(),
   movement_kind: MovementKind,
   delivery_date: IsoDate,
-  accrued_days: z.number().int(),
+  accrued_days: zod.number().int(),
 });
-export type ClientAccountOutstandingRow = z.infer<
+export type ClientAccountOutstandingRow = zod.infer<
   typeof ClientAccountOutstandingRow
 >;
 
-export const ClientAccountGasCount = z.object({
+export const ClientAccountGasCount = zod.object({
   gas_code: GasCode.nullable(),
-  count: z.number().int(),
+  count: zod.number().int(),
 });
-export type ClientAccountGasCount = z.infer<typeof ClientAccountGasCount>;
+export type ClientAccountGasCount = zod.infer<typeof ClientAccountGasCount>;
 
-export const ClientAccountSummary = z.object({
-  open_count: z.number().int(),
-  open_rental_count: z.number().int(),
-  open_refill_count: z.number().int(),
-  closed_days_last_period: z.number().int(),
-  by_gas: z.array(ClientAccountGasCount),
+export const ClientAccountSummary = zod.object({
+  open_count: zod.number().int(),
+  open_rental_count: zod.number().int(),
+  open_refill_count: zod.number().int(),
+  closed_days_last_period: zod.number().int(),
+  by_gas: zod.array(ClientAccountGasCount),
 });
-export type ClientAccountSummary = z.infer<typeof ClientAccountSummary>;
+export type ClientAccountSummary = zod.infer<typeof ClientAccountSummary>;
 
 export const ClientAccountQuery = PaginationQuery.extend({
-  sort: z.enum(["delivery_date", "-delivery_date"]).default("-delivery_date"),
-  open: z
+  sort: zod.enum(["delivery_date", "-delivery_date"]).default("-delivery_date"),
+  open: zod
     .enum(["true", "false"])
     .optional()
     .transform((value) => value === "true"),
@@ -169,13 +169,13 @@ export const ClientAccountQuery = PaginationQuery.extend({
   "filter[delivery_date][gte]": IsoDate.optional(),
   "filter[delivery_date][lte]": IsoDate.optional(),
 });
-export type ClientAccountQuery = z.infer<typeof ClientAccountQuery>;
+export type ClientAccountQuery = zod.infer<typeof ClientAccountQuery>;
 
-export const ClientAccountResponse = z.object({
-  client_id: z.number().int(),
-  outstanding: z.array(ClientAccountOutstandingRow),
+export const ClientAccountResponse = zod.object({
+  client_id: zod.number().int(),
+  outstanding: zod.array(ClientAccountOutstandingRow),
   rental_summary: ClientAccountSummary,
-  data: z.array(MovementEvent),
+  data: zod.array(MovementEvent),
   page: PageMeta,
 });
-export type ClientAccountResponse = z.infer<typeof ClientAccountResponse>;
+export type ClientAccountResponse = zod.infer<typeof ClientAccountResponse>;

@@ -40,7 +40,7 @@ interface Props {
 }
 
 export function BatteryFormDrawer({ open, mode, batteryId, onClose }: Props) {
-  const { t } = useTranslation();
+  const { t: translate } = useTranslation();
   const queryClient = useQueryClient();
   const [code, setCode] = useState("");
   const [ownerId, setOwnerId] = useState<number | "">("");
@@ -79,8 +79,8 @@ export function BatteryFormDrawer({ open, mode, batteryId, onClose }: Props) {
         limit: 40,
         "filter[owner_party_id]": Number(ownerId),
       });
-      return res.data.filter((c) =>
-        isPackableCandidate(c, ownerId, isEdit ? batteryId : null),
+      return res.data.filter((item) =>
+        isPackableCandidate(item, ownerId, isEdit ? batteryId : null),
       );
     },
     enabled: open && ownerId !== "",
@@ -107,7 +107,7 @@ export function BatteryFormDrawer({ open, mode, batteryId, onClose }: Props) {
     setGas(battery.gas_code ?? "");
     const nextMembers = fromBatteryMembers(battery);
     setMembers(nextMembers);
-    setInitialMemberIds(nextMembers.map((m) => m.id));
+    setInitialMemberIds(nextMembers.map((member) => member.id));
   }, [open, isEdit, batteryQuery.data]);
 
   const ownerOptions = useMemo(
@@ -125,16 +125,16 @@ export function BatteryFormDrawer({ open, mode, batteryId, onClose }: Props) {
   );
 
   const mapError = (err: unknown) => {
-    setError(batteryFormErrorMessage(err, t));
+    setError(batteryFormErrorMessage(err, translate));
   };
 
   const resolveTokens = (tokens: Array<string | MemberOption>) =>
     resolveMemberTokens(tokens, members, ownerId, isEdit ? batteryId : null, {
       fetchCylinder: (id) => api.getCylinder(id),
       onNotPackable: (id) =>
-        setError(t("batteries.form.member_not_packable", { id })),
+        setError(translate("batteries.form.member_not_packable", { id })),
       onNotFound: (id) =>
-        setError(t("batteries.form.member_not_found", { id })),
+        setError(translate("batteries.form.member_not_found", { id })),
     });
 
   const createMutation = useMutation({
@@ -144,7 +144,7 @@ export function BatteryFormDrawer({ open, mode, batteryId, onClose }: Props) {
         battery_code: code.trim(),
         owner_party_id: Number(ownerId),
         gas_code: gas || null,
-        member_cylinder_ids: members.map((m) => m.id),
+        member_cylinder_ids: members.map((member) => member.id),
       });
     },
     onSuccess: async () => {
@@ -165,7 +165,7 @@ export function BatteryFormDrawer({ open, mode, batteryId, onClose }: Props) {
       }
       const { toAdd, toRemove } = memberIdDiff(
         initialMemberIds,
-        members.map((m) => m.id),
+        members.map((member) => member.id),
       );
 
       for (const id of toAdd) {
@@ -207,11 +207,13 @@ export function BatteryFormDrawer({ open, mode, batteryId, onClose }: Props) {
     >
       <Stack spacing={2}>
         <Typography variant="h6">
-          {isEdit ? t("batteries.form.edit_title") : t("batteries.form.title")}
+          {isEdit
+            ? translate("batteries.form.edit_title")
+            : translate("batteries.form.title")}
         </Typography>
         {error && <Alert severity="error">{error}</Alert>}
         {batteryQuery.isError && (
-          <Alert severity="error">{t("errors.load_failed")}</Alert>
+          <Alert severity="error">{translate("errors.load_failed")}</Alert>
         )}
         {loadingBattery ? (
           <Stack alignItems="center" py={4}>
@@ -220,20 +222,20 @@ export function BatteryFormDrawer({ open, mode, batteryId, onClose }: Props) {
         ) : (
           <>
             <TextField
-              label={t("batteries.form.code")}
+              label={translate("batteries.form.code")}
               value={code}
-              onChange={(e) => setCode(e.target.value)}
+              onChange={(event) => setCode(event.target.value)}
               fullWidth
               required
               disabled={isEdit}
             />
             <TextField
               select
-              label={t("batteries.form.owner")}
+              label={translate("batteries.form.owner")}
               value={ownerId}
-              onChange={(e) => {
+              onChange={(event) => {
                 const next =
-                  e.target.value === "" ? "" : Number(e.target.value);
+                  event.target.value === "" ? "" : Number(event.target.value);
                 setOwnerId(next);
                 if (!isEdit) setMembers([]);
               }}
@@ -249,15 +251,15 @@ export function BatteryFormDrawer({ open, mode, batteryId, onClose }: Props) {
             </TextField>
             <TextField
               select
-              label={t("batteries.form.gas")}
+              label={translate("batteries.form.gas")}
               value={gas}
-              onChange={(e) => setGas(e.target.value as GasCode | "")}
+              onChange={(event) => setGas(event.target.value as GasCode | "")}
               fullWidth
               disabled={isEdit}
             >
-              {GASES.map((g) => (
-                <MenuItem key={g} value={g}>
-                  {g}
+              {GASES.map((gas) => (
+                <MenuItem key={gas} value={gas}>
+                  {gas}
                 </MenuItem>
               ))}
             </TextField>
@@ -269,10 +271,10 @@ export function BatteryFormDrawer({ open, mode, batteryId, onClose }: Props) {
               loading={cylindersSearch.isFetching}
               disabled={ownerId === ""}
               filterSelectedOptions
-              isOptionEqualToValue={(a, b) =>
-                typeof a === "string" || typeof b === "string"
+              isOptionEqualToValue={(left, right) =>
+                typeof left === "string" || typeof right === "string"
                   ? false
-                  : a.id === b.id
+                  : left.id === right.id
               }
               getOptionLabel={(option) =>
                 typeof option === "string" ? option : memberLabel(option)
@@ -301,18 +303,18 @@ export function BatteryFormDrawer({ open, mode, batteryId, onClose }: Props) {
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  label={t("batteries.form.members")}
+                  label={translate("batteries.form.members")}
                   helperText={
                     ownerId === ""
-                      ? t("batteries.form.members_owner_first")
-                      : t("batteries.form.members_hint")
+                      ? translate("batteries.form.members_owner_first")
+                      : translate("batteries.form.members_hint")
                   }
                   required
-                  onPaste={(e) => {
+                  onPaste={(event) => {
                     if (ownerId === "") return;
-                    const text = e.clipboardData.getData("text");
+                    const text = event.clipboardData.getData("text");
                     if (!/[,\s]/.test(text)) return;
-                    e.preventDefault();
+                    event.preventDefault();
                     void (async () => {
                       setError(null);
                       const resolved = await resolveTokens([...members, text]);
@@ -335,7 +337,7 @@ export function BatteryFormDrawer({ open, mode, batteryId, onClose }: Props) {
               )}
             />
             <Stack direction="row" spacing={1} justifyContent="flex-end">
-              <Button onClick={onClose}>{t("actions.cancel")}</Button>
+              <Button onClick={onClose}>{translate("actions.cancel")}</Button>
               <Button
                 variant="contained"
                 disabled={!canSave}
@@ -345,7 +347,7 @@ export function BatteryFormDrawer({ open, mode, batteryId, onClose }: Props) {
                   else createMutation.mutate();
                 }}
               >
-                {t("actions.save")}
+                {translate("actions.save")}
               </Button>
             </Stack>
           </>

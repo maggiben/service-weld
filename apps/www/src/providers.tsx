@@ -9,8 +9,8 @@ import { buildTheme } from "@/theme";
 import { useUiStore } from "@/store/uiStore";
 
 export function AppProviders({ children }: PropsWithChildren) {
-  const mode = useUiStore((s) => s.mode);
-  const locale = useUiStore((s) => s.locale);
+  const mode = useUiStore((state) => state.mode);
+  const locale = useUiStore((state) => state.locale);
   const { i18n } = useTranslation();
   const theme = useMemo(() => buildTheme(mode), [mode]);
 

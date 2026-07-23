@@ -49,9 +49,9 @@ import {
 import { useSessionStore } from "../store/sessionStore";
 
 export default function SupplierLoansPage() {
-  const { t } = useTranslation();
-  const canWrite = useSessionStore((s) =>
-    s.hasCapability("supplier_loans:write"),
+  const { t: translate } = useTranslation();
+  const canWrite = useSessionStore((state) =>
+    state.hasCapability("supplier_loans:write"),
   );
   const queryClient = useQueryClient();
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
@@ -139,7 +139,7 @@ export default function SupplierLoansPage() {
         setError(err.message);
         return;
       }
-      setError(t("errors.generic"));
+      setError(translate("errors.generic"));
     },
   });
 
@@ -170,17 +170,17 @@ export default function SupplierLoansPage() {
     onError: (err) => {
       if (err instanceof ApiClientError) {
         if (err.code === "STAGE_OUT_OF_ORDER") {
-          setError(t("errors.stage_out_of_order"));
+          setError(translate("errors.stage_out_of_order"));
           return;
         }
         if (err.code === "DATE_ORDER") {
-          setError(t("errors.date_order"));
+          setError(translate("errors.date_order"));
           return;
         }
         setError(err.message);
         return;
       }
-      setError(t("errors.generic"));
+      setError(translate("errors.generic"));
     },
   });
 
@@ -210,7 +210,7 @@ export default function SupplierLoansPage() {
         setError(err.message);
         return;
       }
-      setError(t("errors.generic"));
+      setError(translate("errors.generic"));
     },
   });
 
@@ -218,19 +218,19 @@ export default function SupplierLoansPage() {
     () => [
       {
         field: "cylinder_serial",
-        headerName: t("loans.columns.cylinder"),
+        headerName: translate("loans.columns.cylinder"),
         flex: 1,
         minWidth: 120,
       },
       {
         field: "supplier_name",
-        headerName: t("loans.columns.supplier"),
+        headerName: translate("loans.columns.supplier"),
         flex: 1,
         minWidth: 140,
       },
       {
         field: "stage",
-        headerName: t("loans.columns.stage"),
+        headerName: translate("loans.columns.stage"),
         width: 180,
         renderCell: (params) => {
           const stage = params.value as LoanStage;
@@ -245,7 +245,7 @@ export default function SupplierLoansPage() {
           return (
             <Chip
               size="small"
-              label={t(`enums.loan_stage.${stage}`)}
+              label={translate(`enums.loan_stage.${stage}`)}
               color={color}
             />
           );
@@ -253,18 +253,18 @@ export default function SupplierLoansPage() {
       },
       {
         field: "received_from_supplier",
-        headerName: t("loans.columns.received"),
+        headerName: translate("loans.columns.received"),
         width: 120,
       },
       {
         field: "client_name",
-        headerName: t("loans.columns.client"),
+        headerName: translate("loans.columns.client"),
         flex: 1,
         minWidth: 120,
       },
       {
         field: "disposition",
-        headerName: t("loans.columns.disposition"),
+        headerName: translate("loans.columns.disposition"),
         width: 260,
         sortable: false,
         valueGetter: (_v, row) => {
@@ -283,7 +283,7 @@ export default function SupplierLoansPage() {
               <Chip
                 size="small"
                 color="success"
-                label={t("loans.status.returned_on", {
+                label={translate("loans.status.returned_on", {
                   date: formatLoanDate(row.returned_by_client),
                 })}
               />
@@ -296,7 +296,7 @@ export default function SupplierLoansPage() {
             );
             return (
               <Tooltip
-                title={t("loans.status.overdue_hint", {
+                title={translate("loans.status.overdue_hint", {
                   days: daysOpen,
                   threshold: overdueDays,
                   received: formatLoanDate(row.received_from_supplier),
@@ -305,7 +305,7 @@ export default function SupplierLoansPage() {
                 <Chip
                   size="small"
                   color="warning"
-                  label={t("loans.status.overdue_on", {
+                  label={translate("loans.status.overdue_on", {
                     days: daysOpen,
                     threshold: overdueDays,
                   })}
@@ -338,13 +338,13 @@ export default function SupplierLoansPage() {
                 setError(null);
               }}
             >
-              {t("actions.advance")}
+              {translate("actions.advance")}
             </Button>
           );
         },
       },
     ],
-    [t, canWrite, overdueDays],
+    [translate, canWrite, overdueDays],
   );
 
   return (
@@ -353,11 +353,13 @@ export default function SupplierLoansPage() {
     >
       <Stack direction="row" justifyContent="space-between" alignItems="center">
         <Stack direction="row" spacing={1} alignItems="center">
-          <Typography variant="h5">{t("loans.title")}</Typography>
+          <Typography variant="h5">{translate("loans.title")}</Typography>
           <Chip
             size="small"
             variant="outlined"
-            label={t("loans.overdue_threshold_chip", { days: overdueDays })}
+            label={translate("loans.overdue_threshold_chip", {
+              days: overdueDays,
+            })}
           />
         </Stack>
         <Stack direction="row" spacing={1}>
@@ -371,7 +373,7 @@ export default function SupplierLoansPage() {
                 setError(null);
               }}
             >
-              {t("actions.configure_overdue")}
+              {translate("actions.configure_overdue")}
             </Button>
           )}
           {canWrite && (
@@ -383,7 +385,7 @@ export default function SupplierLoansPage() {
                 setError(null);
               }}
             >
-              {t("actions.new_loan")}
+              {translate("actions.new_loan")}
             </Button>
           )}
         </Stack>
@@ -394,32 +396,32 @@ export default function SupplierLoansPage() {
           control={
             <Switch
               checked={openOnly}
-              onChange={(_, v) => {
-                setOpenOnly(v);
+              onChange={(_, value) => {
+                setOpenOnly(value);
                 setCursors([undefined]);
-                setPaginationModel((p) => ({ ...p, page: 0 }));
+                setPaginationModel((part) => ({ ...part, page: 0 }));
               }}
             />
           }
-          label={t("loans.filters.open")}
+          label={translate("loans.filters.open")}
         />
         <FormControlLabel
           control={
             <Switch
               checked={overdueOnly}
-              onChange={(_, v) => {
-                setOverdueOnly(v);
+              onChange={(_, value) => {
+                setOverdueOnly(value);
                 setCursors([undefined]);
-                setPaginationModel((p) => ({ ...p, page: 0 }));
+                setPaginationModel((part) => ({ ...part, page: 0 }));
               }}
             />
           }
-          label={t("loans.filters.overdue", { days: overdueDays })}
+          label={translate("loans.filters.overdue", { days: overdueDays })}
         />
       </Stack>
 
       {loansQuery.isError && (
-        <Alert severity="error">{t("errors.load_failed")}</Alert>
+        <Alert severity="error">{translate("errors.load_failed")}</Alert>
       )}
 
       <Box sx={{ flex: 1, minHeight: 360 }}>
@@ -452,41 +454,41 @@ export default function SupplierLoansPage() {
         PaperProps={{ sx: { width: { xs: "100%", sm: 400 }, p: 3 } }}
       >
         <Stack spacing={2}>
-          <Typography variant="h6">{t("loans.form.title")}</Typography>
+          <Typography variant="h6">{translate("loans.form.title")}</Typography>
           {error && <Alert severity="error">{error}</Alert>}
           <TextField
-            label={t("loans.form.cylinder_id")}
+            label={translate("loans.form.cylinder_id")}
             value={cylinderId}
-            onChange={(e) => setCylinderId(e.target.value)}
+            onChange={(event) => setCylinderId(event.target.value)}
             type="number"
             required
           />
           <TextField
-            label={t("loans.form.supplier_id")}
+            label={translate("loans.form.supplier_id")}
             value={supplierId}
-            onChange={(e) => setSupplierId(e.target.value)}
+            onChange={(event) => setSupplierId(event.target.value)}
             type="number"
             required
-            helperText={t("loans.form.supplier_hint")}
+            helperText={translate("loans.form.supplier_hint")}
           />
           <TextField
-            label={t("loans.form.received_on")}
+            label={translate("loans.form.received_on")}
             type="date"
             value={receivedOn}
-            onChange={(e) => setReceivedOn(e.target.value)}
+            onChange={(event) => setReceivedOn(event.target.value)}
             InputLabelProps={{ shrink: true }}
             required
           />
           <Stack direction="row" spacing={1} justifyContent="flex-end">
             <Button onClick={() => setDrawerOpen(false)}>
-              {t("actions.cancel")}
+              {translate("actions.cancel")}
             </Button>
             <Button
               variant="contained"
               disabled={createMutation.isPending}
               onClick={() => createMutation.mutate()}
             >
-              {t("actions.save")}
+              {translate("actions.save")}
             </Button>
           </Stack>
         </Stack>
@@ -498,15 +500,15 @@ export default function SupplierLoansPage() {
         fullWidth
         maxWidth="xs"
       >
-        <DialogTitle>{t("loans.advance.title")}</DialogTitle>
+        <DialogTitle>{translate("loans.advance.title")}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             {error && <Alert severity="error">{error}</Alert>}
             {advanceLoan && (
               <Typography variant="body2">
-                {t("loans.advance.summary", {
+                {translate("loans.advance.summary", {
                   serial: advanceLoan.cylinder_serial,
-                  stage: t(
+                  stage: translate(
                     `enums.loan_stage.${LOAN_STAGE_NEXT[advanceLoan.stage]!}`,
                   ),
                 })}
@@ -515,23 +517,23 @@ export default function SupplierLoansPage() {
             {advanceLoan?.stage === "RECEIVED" && (
               <TextField
                 select
-                label={t("loans.form.client")}
+                label={translate("loans.form.client")}
                 value={clientId}
-                onChange={(e) => setClientId(e.target.value)}
+                onChange={(event) => setClientId(event.target.value)}
                 required
               >
-                {(clientsQuery.data?.data ?? []).map((c) => (
-                  <MenuItem key={c.id} value={c.id}>
-                    {c.name}
+                {(clientsQuery.data?.data ?? []).map((client) => (
+                  <MenuItem key={client.id} value={client.id}>
+                    {client.name}
                   </MenuItem>
                 ))}
               </TextField>
             )}
             <TextField
-              label={t("loans.advance.date")}
+              label={translate("loans.advance.date")}
               type="date"
               value={advanceDate}
-              onChange={(e) => setAdvanceDate(e.target.value)}
+              onChange={(event) => setAdvanceDate(event.target.value)}
               InputLabelProps={{ shrink: true }}
               required
             />
@@ -539,14 +541,14 @@ export default function SupplierLoansPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setAdvanceLoan(null)}>
-            {t("actions.cancel")}
+            {translate("actions.cancel")}
           </Button>
           <Button
             variant="contained"
             disabled={advanceMutation.isPending}
             onClick={() => advanceMutation.mutate()}
           >
-            {t("actions.advance")}
+            {translate("actions.advance")}
           </Button>
         </DialogActions>
       </Dialog>
@@ -557,18 +559,18 @@ export default function SupplierLoansPage() {
         fullWidth
         maxWidth="xs"
       >
-        <DialogTitle>{t("loans.threshold.title")}</DialogTitle>
+        <DialogTitle>{translate("loans.threshold.title")}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             {error && <Alert severity="error">{error}</Alert>}
             <Typography variant="body2" color="text.secondary">
-              {t("loans.threshold.help")}
+              {translate("loans.threshold.help")}
             </Typography>
             <TextField
-              label={t("loans.threshold.days")}
+              label={translate("loans.threshold.days")}
               type="number"
               value={thresholdDays}
-              onChange={(e) => setThresholdDays(e.target.value)}
+              onChange={(event) => setThresholdDays(event.target.value)}
               inputProps={{ min: 1, max: 3650 }}
               required
               autoFocus
@@ -577,14 +579,14 @@ export default function SupplierLoansPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setThresholdOpen(false)}>
-            {t("actions.cancel")}
+            {translate("actions.cancel")}
           </Button>
           <Button
             variant="contained"
             disabled={thresholdMutation.isPending}
             onClick={() => thresholdMutation.mutate()}
           >
-            {t("actions.save")}
+            {translate("actions.save")}
           </Button>
         </DialogActions>
       </Dialog>
@@ -593,7 +595,7 @@ export default function SupplierLoansPage() {
         open={savedToast}
         autoHideDuration={3000}
         onClose={() => setSavedToast(false)}
-        message={t("loans.threshold.saved")}
+        message={translate("loans.threshold.saved")}
       />
     </Box>
   );

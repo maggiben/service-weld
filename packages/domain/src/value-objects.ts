@@ -98,9 +98,9 @@ export function parseIsoDate(value: string): Date {
 
 /** Calendar days between two ISO dates (return − delivery). */
 export function calendarDaysBetween(from: string, to: string): number {
-  const a = parseIsoDate(from).getTime();
-  const b = parseIsoDate(to).getTime();
-  return Math.round((b - a) / 86_400_000);
+  const left = parseIsoDate(from).getTime();
+  const right = parseIsoDate(to).getTime();
+  return Math.round((right - left) / 86_400_000);
 }
 
 /**

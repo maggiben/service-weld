@@ -22,7 +22,7 @@ function todayIso() {
 }
 
 export default function CapturePage() {
-  const enqueue = useOutboxStore((s) => s.enqueue);
+  const enqueue = useOutboxStore((state) => state.enqueue);
   const [mode, setMode] = useState<"DELIVER" | "RETURN">("DELIVER");
   const [cylinderId, setCylinderId] = useState("");
   const [clientId, setClientId] = useState("");
@@ -84,7 +84,9 @@ export default function CapturePage() {
           select
           label="Tipo"
           value={mode}
-          onChange={(e) => setMode(e.target.value as "DELIVER" | "RETURN")}
+          onChange={(event) =>
+            setMode(event.target.value as "DELIVER" | "RETURN")
+          }
         >
           <MenuItem value="DELIVER">Entrega</MenuItem>
           <MenuItem value="RETURN">Devolución</MenuItem>
@@ -96,21 +98,21 @@ export default function CapturePage() {
               label="ID cilindro"
               type="number"
               value={cylinderId}
-              onChange={(e) => setCylinderId(e.target.value)}
+              onChange={(event) => setCylinderId(event.target.value)}
               required
             />
             <TextField
               label="ID cliente (party)"
               type="number"
               value={clientId}
-              onChange={(e) => setClientId(e.target.value)}
+              onChange={(event) => setClientId(event.target.value)}
               required
             />
             <TextField
               select
               label="Tipo movimiento"
               value={kind}
-              onChange={(e) => setKind(e.target.value as MovementKind)}
+              onChange={(event) => setKind(event.target.value as MovementKind)}
             >
               <MenuItem value="RENTAL">Alquiler</MenuItem>
               <MenuItem value="REFILL">Recarga</MenuItem>
@@ -119,18 +121,18 @@ export default function CapturePage() {
               select
               label="Gas"
               value={gas}
-              onChange={(e) => setGas(e.target.value as GasCode)}
+              onChange={(event) => setGas(event.target.value as GasCode)}
             >
-              {GASES.map((g) => (
-                <MenuItem key={g} value={g}>
-                  {g}
+              {GASES.map((gas) => (
+                <MenuItem key={gas} value={gas}>
+                  {gas}
                 </MenuItem>
               ))}
             </TextField>
             <TextField
               label="Nota"
               value={note}
-              onChange={(e) => setNote(e.target.value)}
+              onChange={(event) => setNote(event.target.value)}
               multiline
               minRows={2}
             />
@@ -140,7 +142,7 @@ export default function CapturePage() {
             label="ID movimiento abierto"
             type="number"
             value={movementId}
-            onChange={(e) => setMovementId(e.target.value)}
+            onChange={(event) => setMovementId(event.target.value)}
             required
           />
         )}
@@ -149,7 +151,7 @@ export default function CapturePage() {
           label="Fecha"
           type="date"
           value={date}
-          onChange={(e) => setDate(e.target.value)}
+          onChange={(event) => setDate(event.target.value)}
           InputLabelProps={{ shrink: true }}
         />
 

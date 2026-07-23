@@ -4,11 +4,11 @@ import { transferCustodyChipColor } from "../../lib/chipColors";
 export { transferCustodyChipColor };
 
 export function partyTypeLabel(
-  t: (key: string) => string,
+  translate: (key: string) => string,
   partyType: string,
 ): string {
   const key = `transfers.party_types.${partyType}`;
-  const label = t(key);
+  const label = translate(key);
   return label === key ? partyType : label;
 }
 

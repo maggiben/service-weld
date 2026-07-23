@@ -1,51 +1,51 @@
-import { z } from "zod";
+import { z as zod } from "zod";
 import { paginated, PaginationQuery } from "./common";
 import { RoleCode } from "./enums";
 
-export const AdminUser = z.object({
-  id: z.number().int(),
-  username: z.string(),
-  email: z.string().email().nullable(),
-  roles: z.array(RoleCode),
-  territories: z.array(z.string()),
-  territory_ids: z.array(z.number().int()),
-  is_active: z.boolean(),
-  mfa_enabled: z.boolean(),
-  last_login_at: z.string().datetime().nullable(),
-  created_at: z.string().datetime(),
-  version: z.number().int(),
+export const AdminUser = zod.object({
+  id: zod.number().int(),
+  username: zod.string(),
+  email: zod.string().email().nullable(),
+  roles: zod.array(RoleCode),
+  territories: zod.array(zod.string()),
+  territory_ids: zod.array(zod.number().int()),
+  is_active: zod.boolean(),
+  mfa_enabled: zod.boolean(),
+  last_login_at: zod.string().datetime().nullable(),
+  created_at: zod.string().datetime(),
+  version: zod.number().int(),
 });
-export type AdminUser = z.infer<typeof AdminUser>;
+export type AdminUser = zod.infer<typeof AdminUser>;
 
 export const AdminUserListQuery = PaginationQuery.extend({
-  sort: z.enum(["username", "-username"]).default("username"),
+  sort: zod.enum(["username", "-username"]).default("username"),
   "filter[role]": RoleCode.optional(),
-  "filter[is_active]": z.enum(["true", "false"]).optional(),
-  q: z.string().optional(),
+  "filter[is_active]": zod.enum(["true", "false"]).optional(),
+  q: zod.string().optional(),
 });
-export type AdminUserListQuery = z.infer<typeof AdminUserListQuery>;
+export type AdminUserListQuery = zod.infer<typeof AdminUserListQuery>;
 
 export const AdminUserListResponse = paginated(AdminUser);
-export type AdminUserListResponse = z.infer<typeof AdminUserListResponse>;
+export type AdminUserListResponse = zod.infer<typeof AdminUserListResponse>;
 
-export const CreateAdminUserInput = z.object({
-  username: z.string().trim().min(2).max(64),
-  email: z.string().email().nullable().optional(),
-  password: z.string().min(8).max(128),
-  roles: z.array(RoleCode).min(1),
-  territory_ids: z.array(z.number().int()).default([]),
-  mfa_enabled: z.boolean().default(false),
+export const CreateAdminUserInput = zod.object({
+  username: zod.string().trim().min(2).max(64),
+  email: zod.string().email().nullable().optional(),
+  password: zod.string().min(8).max(128),
+  roles: zod.array(RoleCode).min(1),
+  territory_ids: zod.array(zod.number().int()).default([]),
+  mfa_enabled: zod.boolean().default(false),
 });
-export type CreateAdminUserInput = z.infer<typeof CreateAdminUserInput>;
+export type CreateAdminUserInput = zod.infer<typeof CreateAdminUserInput>;
 
-export const UpdateAdminUserInput = z
+export const UpdateAdminUserInput = zod
   .object({
-    email: z.string().email().nullable().optional(),
-    password: z.string().min(8).max(128).optional(),
-    roles: z.array(RoleCode).min(1).optional(),
-    territory_ids: z.array(z.number().int()).optional(),
-    is_active: z.boolean().optional(),
-    mfa_enabled: z.boolean().optional(),
+    email: zod.string().email().nullable().optional(),
+    password: zod.string().min(8).max(128).optional(),
+    roles: zod.array(RoleCode).min(1).optional(),
+    territory_ids: zod.array(zod.number().int()).optional(),
+    is_active: zod.boolean().optional(),
+    mfa_enabled: zod.boolean().optional(),
   })
   .refine(
     (value) =>
@@ -57,4 +57,4 @@ export const UpdateAdminUserInput = z
       value.mfa_enabled !== undefined,
     { message: "At least one field is required" },
   );
-export type UpdateAdminUserInput = z.infer<typeof UpdateAdminUserInput>;
+export type UpdateAdminUserInput = zod.infer<typeof UpdateAdminUserInput>;

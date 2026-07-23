@@ -13,31 +13,32 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
-import { z } from "zod";
+import { z as zod } from "zod";
 import { api, ApiError } from "@/api/client";
+import { homePathForCapabilities } from "@/auth/homePath";
 import { RedirectIfAuthed } from "@/auth/RequireAuth";
 import { useSessionStore } from "@/store/sessionStore";
 import { useUiStore } from "@/store/uiStore";
 
-const loginSchema = z.object({
-  username: z.string().min(1),
-  password: z.string().min(1),
+const loginSchema = zod.object({
+  username: zod.string().min(1),
+  password: zod.string().min(1),
 });
 
-type LoginForm = z.infer<typeof loginSchema>;
+type LoginForm = zod.infer<typeof loginSchema>;
 
 export default function LoginPage() {
-  const { t } = useTranslation();
+  const { t: translate } = useTranslation();
   const router = useRouter();
-  const setUser = useSessionStore((s) => s.setUser);
+  const setUser = useSessionStore((state) => state.setUser);
   const { locale, setLocale } = useUiStore();
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [from, setFrom] = useState("/clients");
+  const [from, setFrom] = useState<string | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const raw = params.get("from");
-    if (raw && raw.startsWith("/")) setFrom(raw);
+    if (raw && raw.startsWith("/") && raw !== "/forbidden") setFrom(raw);
   }, []);
 
   const {
@@ -52,20 +53,23 @@ export default function LoginPage() {
   const onSubmit = handleSubmit(async (values) => {
     setSubmitError(null);
     try {
+      // Drop any stale profile before tokens land so RedirectIfAuthed cannot
+      // treat a half-finished login as authenticated.
+      setUser(null);
       await api.login(values.username, values.password);
       const me = await api.me();
       setUser(me);
-      router.replace(from);
+      router.replace(from ?? homePathForCapabilities(me.capabilities));
     } catch (error) {
       if (
         error instanceof ApiError &&
         error.httpStatus === 401 &&
         error.code === "INVALID_CREDENTIALS"
       ) {
-        setSubmitError(t("errors.invalid_credentials"));
+        setSubmitError(translate("errors.invalid_credentials"));
         return;
       }
-      setSubmitError(t("errors.generic"));
+      setSubmitError(translate("errors.generic"));
     }
   });
 
@@ -100,10 +104,10 @@ export default function LoginPage() {
                   }}
                 />
                 <Typography variant="h5" sx={{ mt: 2 }}>
-                  {t("login.title")}
+                  {translate("login.title")}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  {t("login.subtitle")}
+                  {translate("login.subtitle")}
                 </Typography>
               </Box>
 
@@ -116,13 +120,15 @@ export default function LoginPage() {
                   render={({ field }) => (
                     <TextField
                       {...field}
-                      label={t("login.username")}
+                      label={translate("login.username")}
                       autoComplete="username"
                       autoFocus
                       fullWidth
                       error={Boolean(errors.username)}
                       helperText={
-                        errors.username ? t("validation.required") : undefined
+                        errors.username
+                          ? translate("validation.required")
+                          : undefined
                       }
                     />
                   )}
@@ -134,12 +140,14 @@ export default function LoginPage() {
                     <TextField
                       {...field}
                       type="password"
-                      label={t("login.password")}
+                      label={translate("login.password")}
                       autoComplete="current-password"
                       fullWidth
                       error={Boolean(errors.password)}
                       helperText={
-                        errors.password ? t("validation.required") : undefined
+                        errors.password
+                          ? translate("validation.required")
+                          : undefined
                       }
                     />
                   )}
@@ -150,7 +158,7 @@ export default function LoginPage() {
                   size="large"
                   disabled={isSubmitting}
                 >
-                  {t("login.submit")}
+                  {translate("login.submit")}
                 </Button>
               </Stack>
 
@@ -158,7 +166,7 @@ export default function LoginPage() {
                 variant="text"
                 onClick={() => setLocale(locale === "es" ? "en" : "es")}
               >
-                {t("actions.toggle_language")} ({locale})
+                {translate("actions.toggle_language")} ({locale})
               </Button>
             </Stack>
           </CardContent>

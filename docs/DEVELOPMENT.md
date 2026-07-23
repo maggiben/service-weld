@@ -111,11 +111,13 @@ ESLint packages are deferred — see `docs/ESLINT.md`.
 
 Local hooks and CI enforce the same intent. **Never commit without the pre-commit checks having passed. Never push without the coverage gate having passed. Never skip hooks with `--no-verify` unless you explicitly choose to bypass.**
 
-| Gate          | When                      | What runs                                                                                          |
-| ------------- | ------------------------- | -------------------------------------------------------------------------------------------------- |
-| pre-commit    | every `git commit`        | `pnpm run check:secrets` → `pnpm run check:deps` → lint-staged (Prettier) → `pnpm run typecheck`   |
-| pre-push      | every `git push`          | `pnpm run test:coverage` — **≥80%** lines / branches / functions / statements on **every** package |
-| CI (`ci.yml`) | every PR / push to `main` | format check, typecheck, unit tests, coverage ≥80%, build + DB schema/invariants                   |
+| Gate          | When                      | What runs                                                                                                                          |
+| ------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| pre-commit    | every `git commit`        | `pnpm run check:secrets` → `pnpm run check:deps` → `pnpm run check:id-length` (≥2) → lint-staged (Prettier) → `pnpm run typecheck` |
+| pre-push      | every `git push`          | `pnpm run test:coverage` — **≥80%** lines / branches / functions / statements on **every** package                                 |
+| CI (`ci.yml`) | every PR / push to `main` | format check, typecheck, unit tests, coverage ≥80%, build + DB schema/invariants                                                   |
+
+**Identifier length:** value bindings in `apps/` and `packages/` must be ≥2 characters (`pnpm run check:id-length` / `scripts/check-id-length.mjs`). Single-letter names are forbidden — choose a name that matches the value (`event`, `row`, `state`). Two-letter idioms (`id`, `db`, `qb`, `eb`) are fine; do not invent numbered clones (`database2`). Only `_` is allowed short (unused placeholder). Type-only names are exempt. **IDE:** ESLint `id-length` in `eslint.config.mjs` (install the ESLint extension — see `docs/ESLINT.md`).
 
 Coverage is global per workspace package (`apps/api`, `apps/web`, `apps/field`, `apps/www`, `packages/domain`, `packages/schemas`, `packages/api-client`), enforced by `scripts/check-coverage.mjs` (default threshold `80`, overridable only via `COVERAGE_THRESHOLD`). Specs: `010` R9–R10 / AC7–AC8, `012` R8 / AC6–AC7, `000` commit policy.
 

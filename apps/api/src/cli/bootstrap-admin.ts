@@ -11,7 +11,6 @@ async function main(): Promise<void> {
   const password = process.env.BOOTSTRAP_ADMIN_PASSWORD;
 
   if (!username || !password) {
-    // eslint-disable-next-line no-console
     console.log(
       "BOOTSTRAP_ADMIN_USER/PASSWORD not set — skipping admin bootstrap.",
     );
@@ -33,7 +32,6 @@ async function main(): Promise<void> {
       .executeTakeFirst();
 
     if (existing) {
-      // eslint-disable-next-line no-console
       console.log(`Bootstrap admin '${username}' already exists — no-op.`);
       return;
     }
@@ -67,7 +65,6 @@ async function main(): Promise<void> {
       .values({ user_id: user.id, role_id: adminRole.id })
       .execute();
 
-    // eslint-disable-next-line no-console
     console.log(`Created bootstrap admin '${username}' (id=${user.id}).`);
   } finally {
     await db.destroy();
@@ -75,7 +72,6 @@ async function main(): Promise<void> {
 }
 
 void main().catch((error: unknown) => {
-  // eslint-disable-next-line no-console
   console.error(error);
   process.exit(1);
 });

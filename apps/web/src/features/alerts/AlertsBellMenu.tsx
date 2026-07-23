@@ -23,9 +23,9 @@ import { alertEntityHref, formatAlertDetail } from "./alertDisplay";
 const PREVIEW_LIMIT = 8;
 
 export function AlertsBellMenu() {
-  const { t } = useTranslation();
+  const { t: translate } = useTranslation();
   const router = useRouter();
-  const unreadCount = useNotificationStore((s) => s.unreadCount);
+  const unreadCount = useNotificationStore((state) => state.unreadCount);
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const open = Boolean(anchorEl);
 
@@ -59,8 +59,8 @@ export function AlertsBellMenu() {
       <IconButton
         color="inherit"
         onClick={handleOpen}
-        title={t("nav.alerts")}
-        aria-label={t("nav.alerts")}
+        title={translate("nav.alerts")}
+        aria-label={translate("nav.alerts")}
         aria-controls={open ? "alerts-menu" : undefined}
         aria-haspopup="true"
         aria-expanded={open ? "true" : undefined}
@@ -83,9 +83,11 @@ export function AlertsBellMenu() {
         }}
       >
         <Box sx={{ px: 2, py: 1.5 }}>
-          <Typography variant="subtitle2">{t("alerts.menu.title")}</Typography>
+          <Typography variant="subtitle2">
+            {translate("alerts.menu.title")}
+          </Typography>
           <Typography variant="caption" color="text.secondary">
-            {t("alerts.menu.open_count", { count: unreadCount })}
+            {translate("alerts.menu.open_count", { count: unreadCount })}
           </Typography>
         </Box>
         <Divider />
@@ -97,13 +99,13 @@ export function AlertsBellMenu() {
         {!previewQuery.isLoading && alerts.length === 0 && (
           <Box sx={{ px: 2, py: 2 }}>
             <Typography variant="body2" color="text.secondary">
-              {t("alerts.menu.empty")}
+              {translate("alerts.menu.empty")}
             </Typography>
           </Box>
         )}
         {alerts.map((alert) => {
           const href = alertEntityHref(alert) ?? "/alerts";
-          const typeLabel = t(`enums.alert_type.${alert.alert_type}`, {
+          const typeLabel = translate(`enums.alert_type.${alert.alert_type}`, {
             defaultValue: alert.alert_type,
           });
           return (
@@ -120,7 +122,7 @@ export function AlertsBellMenu() {
             >
               <ListItemText
                 primary={typeLabel}
-                secondary={formatAlertDetail(alert, t)}
+                secondary={formatAlertDetail(alert, translate)}
                 primaryTypographyProps={{ variant: "body2", fontWeight: 600 }}
                 secondaryTypographyProps={{
                   variant: "caption",
@@ -133,7 +135,7 @@ export function AlertsBellMenu() {
         <Divider />
         <Box sx={{ px: 1, py: 1 }}>
           <Button fullWidth size="small" onClick={goToAlerts}>
-            {t("alerts.menu.view_all")}
+            {translate("alerts.menu.view_all")}
           </Button>
         </Box>
       </Menu>

@@ -1,47 +1,47 @@
-import { z } from "zod";
+import { z as zod } from "zod";
 import { RoleCode } from "@weld/schemas";
 import { createZodDto } from "nestjs-zod";
 
-export const LoginRequestSchema = z.object({
-  username: z.string().min(1),
-  password: z.string().min(1),
-  otp: z.string().optional(),
+export const LoginRequestSchema = zod.object({
+  username: zod.string().min(1),
+  password: zod.string().min(1),
+  otp: zod.string().optional(),
 });
 export class LoginRequestDto extends createZodDto(LoginRequestSchema) {}
 
-export const LoginResponseSchema = z.object({
-  access_token: z.string(),
-  refresh_token: z.string(),
-  expires_in: z.number().int(),
-  roles: z.array(RoleCode),
-  territories: z.array(z.string()),
+export const LoginResponseSchema = zod.object({
+  access_token: zod.string(),
+  refresh_token: zod.string(),
+  expires_in: zod.number().int(),
+  roles: zod.array(RoleCode),
+  territories: zod.array(zod.string()),
 });
 export class LoginResponseDto extends createZodDto(LoginResponseSchema) {}
 
-export const RefreshRequestSchema = z.object({
-  refresh_token: z.string().min(1),
+export const RefreshRequestSchema = zod.object({
+  refresh_token: zod.string().min(1),
 });
 export class RefreshRequestDto extends createZodDto(RefreshRequestSchema) {}
 
-export const LogoutRequestSchema = z.object({
-  refresh_token: z.string().min(1),
+export const LogoutRequestSchema = zod.object({
+  refresh_token: zod.string().min(1),
 });
 export class LogoutRequestDto extends createZodDto(LogoutRequestSchema) {}
 
 /** Territory scopes with ids — needed by UI forms (create client). */
-export const TerritoryScopeSchema = z.object({
-  id: z.number().int(),
-  name: z.string(),
+export const TerritoryScopeSchema = zod.object({
+  id: zod.number().int(),
+  name: zod.string(),
 });
 
-export const MeResponseSchema = z.object({
-  id: z.number().int(),
-  username: z.string(),
-  roles: z.array(RoleCode),
+export const MeResponseSchema = zod.object({
+  id: zod.number().int(),
+  username: zod.string(),
+  roles: zod.array(RoleCode),
   /** Territory names (openapi checklist parity). */
-  territories: z.array(z.string()),
+  territories: zod.array(zod.string()),
   /** Scoped territories with ids for forms / filtering. */
-  territory_scopes: z.array(TerritoryScopeSchema),
-  capabilities: z.array(z.string()),
+  territory_scopes: zod.array(TerritoryScopeSchema),
+  capabilities: zod.array(zod.string()),
 });
 export class MeResponseDto extends createZodDto(MeResponseSchema) {}

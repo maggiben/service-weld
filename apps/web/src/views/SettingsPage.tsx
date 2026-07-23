@@ -33,11 +33,11 @@ const TIMEZONE_OPTIONS = [
 ] as const;
 
 function OperationalSettings() {
-  const { t } = useTranslation();
+  const { t: translate } = useTranslation();
   const queryClient = useQueryClient();
-  const setLocale = useUiStore((s) => s.setLocale);
-  const canRefreshAlerts = useSessionStore((s) =>
-    s.hasCapability("alerts:write"),
+  const setLocale = useUiStore((state) => state.setLocale);
+  const canRefreshAlerts = useSessionStore((state) =>
+    state.hasCapability("alerts:write"),
   );
   const [overdueDays, setOverdueDays] = useState("120");
   const [longOutstandingDays, setLongOutstandingDays] = useState("90");
@@ -112,7 +112,7 @@ function OperationalSettings() {
         setError(err.message);
         return;
       }
-      setError(t("errors.generic"));
+      setError(translate("errors.generic"));
     },
   });
 
@@ -125,10 +125,10 @@ function OperationalSettings() {
   return (
     <Box>
       <Typography variant="h6" gutterBottom>
-        {t("settings.operational_title")}
+        {translate("settings.operational_title")}
       </Typography>
       <Typography color="text.secondary" sx={{ mb: 2 }}>
-        {t("settings.operational_subtitle")}
+        {translate("settings.operational_subtitle")}
       </Typography>
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
@@ -141,20 +141,20 @@ function OperationalSettings() {
           sx={{ mb: 2 }}
           onClose={() => setSaved(false)}
         >
-          {t("settings.saved")}
+          {translate("settings.saved")}
         </Alert>
       )}
       <Stack spacing={2} sx={{ maxWidth: 420 }}>
         <FormControl fullWidth disabled={settingsQuery.isLoading}>
           <InputLabel id="business-timezone-label">
-            {t("settings.business_timezone")}
+            {translate("settings.business_timezone")}
           </InputLabel>
           <Select
             labelId="business-timezone-label"
-            label={t("settings.business_timezone")}
+            label={translate("settings.business_timezone")}
             value={timezone}
-            onChange={(e) => {
-              setTimezone(e.target.value);
+            onChange={(event) => {
+              setTimezone(event.target.value);
               setSaved(false);
             }}
           >
@@ -165,64 +165,66 @@ function OperationalSettings() {
             ))}
           </Select>
           <FormHelperText>
-            {t("settings.business_timezone_help")}
+            {translate("settings.business_timezone_help")}
           </FormHelperText>
         </FormControl>
 
         <TextField
-          label={t("settings.rental_min_days")}
+          label={translate("settings.rental_min_days")}
           type="number"
           value={minDays}
-          onChange={(e) => {
-            setMinDays(e.target.value);
+          onChange={(event) => {
+            setMinDays(event.target.value);
             setSaved(false);
           }}
-          helperText={t("settings.rental_min_days_help")}
+          helperText={translate("settings.rental_min_days_help")}
           slotProps={{ htmlInput: { min: 0, max: 365 } }}
           disabled={settingsQuery.isLoading}
         />
 
         <FormControl fullWidth disabled={settingsQuery.isLoading}>
           <InputLabel id="primary-language-label">
-            {t("settings.primary_language")}
+            {translate("settings.primary_language")}
           </InputLabel>
           <Select
             labelId="primary-language-label"
-            label={t("settings.primary_language")}
+            label={translate("settings.primary_language")}
             value={primaryLanguage}
-            onChange={(e) => {
-              setPrimaryLanguage(e.target.value as PrimaryLanguage);
+            onChange={(event) => {
+              setPrimaryLanguage(event.target.value as PrimaryLanguage);
               setSaved(false);
             }}
           >
-            <MenuItem value="es">{t("settings.languages.es")}</MenuItem>
-            <MenuItem value="en">{t("settings.languages.en")}</MenuItem>
+            <MenuItem value="es">{translate("settings.languages.es")}</MenuItem>
+            <MenuItem value="en">{translate("settings.languages.en")}</MenuItem>
           </Select>
-          <FormHelperText>{t("settings.primary_language_help")}</FormHelperText>
+          <FormHelperText>
+            {translate("settings.primary_language_help")}
+          </FormHelperText>
         </FormControl>
 
         <TextField
-          label={t("settings.supplier_loan_overdue_days")}
+          label={translate("settings.supplier_loan_overdue_days")}
           type="number"
           value={overdueDays}
-          onChange={(e) => {
-            setOverdueDays(e.target.value);
+          onChange={(event) => {
+            setOverdueDays(event.target.value);
             setSaved(false);
           }}
-          helperText={t("settings.supplier_loan_overdue_days_help")}
+          helperText={translate("settings.supplier_loan_overdue_days_help")}
           slotProps={{ htmlInput: { min: 1, max: 3650 } }}
           disabled={settingsQuery.isLoading}
         />
 
         <TextField
-          label={t("settings.long_outstanding_days")}
+          label={translate("settings.long_outstanding_days")}
           type="number"
           value={longOutstandingDays}
-          onChange={(e) => {
-            setLongOutstandingDays(e.target.value);
+          onChange={(event) => {
+            setLongOutstandingDays(event.target.value);
             setSaved(false);
           }}
-          helperText={t("settings.long_outstanding_days_help")}
+          helperText={translate("settings.long_outstanding_days_help")}
           slotProps={{ htmlInput: { min: 1, max: 36500 } }}
           disabled={settingsQuery.isLoading}
         />
@@ -232,7 +234,7 @@ function OperationalSettings() {
           disabled={saveMutation.isPending || settingsQuery.isLoading}
           sx={{ alignSelf: "flex-start" }}
         >
-          {t("actions.save")}
+          {translate("actions.save")}
         </Button>
       </Stack>
     </Box>
@@ -240,26 +242,26 @@ function OperationalSettings() {
 }
 
 function LanguagePreference() {
-  const { t } = useTranslation();
-  const locale = useUiStore((s) => s.locale);
-  const setLocale = useUiStore((s) => s.setLocale);
+  const { t: translate } = useTranslation();
+  const locale = useUiStore((state) => state.locale);
+  const setLocale = useUiStore((state) => state.setLocale);
 
   return (
     <Box sx={{ mb: 4 }}>
       <Typography variant="h6" gutterBottom>
-        {t("settings.language_title")}
+        {translate("settings.language_title")}
       </Typography>
       <Typography color="text.secondary" sx={{ mb: 2 }}>
-        {t("settings.language_subtitle")}
+        {translate("settings.language_subtitle")}
       </Typography>
       <FormControl sx={{ minWidth: 220 }}>
         <Select
-          aria-label={t("settings.language_title")}
+          aria-label={translate("settings.language_title")}
           value={locale}
-          onChange={(e) => setLocale(e.target.value as Locale)}
+          onChange={(event) => setLocale(event.target.value as Locale)}
         >
-          <MenuItem value="es">{t("settings.languages.es")}</MenuItem>
-          <MenuItem value="en">{t("settings.languages.en")}</MenuItem>
+          <MenuItem value="es">{translate("settings.languages.es")}</MenuItem>
+          <MenuItem value="en">{translate("settings.languages.en")}</MenuItem>
         </Select>
       </FormControl>
     </Box>
@@ -267,16 +269,18 @@ function LanguagePreference() {
 }
 
 export default function SettingsPage() {
-  const { t } = useTranslation();
-  const canAdmin = useSessionStore((s) => s.hasCapability("admin:write"));
+  const { t: translate } = useTranslation();
+  const canAdmin = useSessionStore((state) =>
+    state.hasCapability("admin:write"),
+  );
 
   return (
     <Box>
       <Typography variant="h5" gutterBottom>
-        {t("settings.title")}
+        {translate("settings.title")}
       </Typography>
       <Typography color="text.secondary" sx={{ mb: 3 }}>
-        {t("settings.subtitle")}
+        {translate("settings.subtitle")}
       </Typography>
 
       {canAdmin ? (

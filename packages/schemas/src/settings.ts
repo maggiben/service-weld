@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z as zod } from "zod";
 
 /**
  * System settings (`GET/PATCH /settings`, table `system_setting`).
@@ -6,17 +6,17 @@ import { z } from "zod";
  */
 
 /** Days after which an open supplier loan loop is overdue (US-21). */
-export const SupplierLoanOverdueDays = z.number().int().min(1).max(3650);
+export const SupplierLoanOverdueDays = zod.number().int().min(1).max(3650);
 
 /**
  * Days after which an OPEN movement raises a LONG_OUTSTANDING alert.
  * Default 90 (product default); editable via Configuración.
  * Upper bound is intentionally high for legacy / migrated open movements.
  */
-export const LongOutstandingDays = z.number().int().min(1).max(36500);
+export const LongOutstandingDays = zod.number().int().min(1).max(36500);
 
 /** IANA timezone used for business "today" / aging (D-13). */
-export const BusinessTimezone = z
+export const BusinessTimezone = zod
   .string()
   .min(1)
   .max(64)
@@ -36,25 +36,25 @@ export const BusinessTimezone = z
  * Minimum billable days for a rental / loan period (009 C2).
  * `0` preserves D-14 (exact calendar days, same-day → 0).
  */
-export const RentalMinDays = z.number().int().min(0).max(365);
+export const RentalMinDays = zod.number().int().min(0).max(365);
 
 /** Org default UI / document language (D-17; 000 C1 / 006 R7). */
-export const PrimaryLanguage = z.enum(["es", "en"]);
-export type PrimaryLanguage = z.infer<typeof PrimaryLanguage>;
+export const PrimaryLanguage = zod.enum(["es", "en"]);
+export type PrimaryLanguage = zod.infer<typeof PrimaryLanguage>;
 
-export const SystemSettings = z.object({
+export const SystemSettings = zod.object({
   supplier_loan_overdue_days: SupplierLoanOverdueDays,
   long_outstanding_days: LongOutstandingDays,
   business_timezone: BusinessTimezone,
   rental_min_days: RentalMinDays,
   primary_language: PrimaryLanguage,
   /** Aggregate optimistic-concurrency token: max(row.version) across known keys. */
-  version: z.number().int(),
+  version: zod.number().int(),
 });
-export type SystemSettings = z.infer<typeof SystemSettings>;
+export type SystemSettings = zod.infer<typeof SystemSettings>;
 
 /** Partial update — at least one field required. */
-export const UpdateSystemSettingsInput = z
+export const UpdateSystemSettingsInput = zod
   .object({
     supplier_loan_overdue_days: SupplierLoanOverdueDays.optional(),
     long_outstanding_days: LongOutstandingDays.optional(),
@@ -71,6 +71,6 @@ export const UpdateSystemSettingsInput = z
       value.primary_language != null,
     { message: "At least one setting is required" },
   );
-export type UpdateSystemSettingsInput = z.infer<
+export type UpdateSystemSettingsInput = zod.infer<
   typeof UpdateSystemSettingsInput
 >;

@@ -7,6 +7,9 @@ pnpm run check:secrets
 echo "▸ Dependency advisories & deprecated packages…"
 pnpm run check:deps
 
+echo "▸ Identifier length (≥2)…"
+pnpm run check:id-length
+
 echo "▸ Lint staged files (prettier)…"
 pnpm exec lint-staged
 

@@ -10,7 +10,7 @@ export const TERMINAL_CYLINDER_STATES = new Set([
 
 /** Cylinder available to start a rental delivery. */
 export function isRentalPickable(
-  c: Pick<
+  item: Pick<
     Cylinder,
     | "state"
     | "ownership_basis"
@@ -20,22 +20,22 @@ export function isRentalPickable(
   >,
 ): boolean {
   return (
-    (c.state === "IN_STOCK_EMPTY" || c.state === "IN_STOCK_FULL") &&
-    c.ownership_basis !== "CUSTOMER" &&
-    c.packaging !== "BATTERY_MEMBER" &&
-    c.current_movement_id == null &&
-    c.current_holder_party_id == null
+    (item.state === "IN_STOCK_EMPTY" || item.state === "IN_STOCK_FULL") &&
+    item.ownership_basis !== "CUSTOMER" &&
+    item.packaging !== "BATTERY_MEMBER" &&
+    item.current_movement_id == null &&
+    item.current_holder_party_id == null
   );
 }
 
 /** Customer-owned cylinder available for refill. */
 export function isRefillPickable(
-  c: Pick<Cylinder, "ownership_basis" | "state" | "packaging">,
+  item: Pick<Cylinder, "ownership_basis" | "state" | "packaging">,
 ): boolean {
   return (
-    c.ownership_basis === "CUSTOMER" &&
-    !TERMINAL_CYLINDER_STATES.has(c.state) &&
-    c.packaging !== "BATTERY_MEMBER"
+    item.ownership_basis === "CUSTOMER" &&
+    !TERMINAL_CYLINDER_STATES.has(item.state) &&
+    item.packaging !== "BATTERY_MEMBER"
   );
 }
 

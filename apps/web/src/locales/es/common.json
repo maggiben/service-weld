@@ -488,7 +488,7 @@
     "period_locked": "El período ya tiene facturas aprobadas o exportadas",
     "not_approved": "La corrida debe estar aprobada antes de exportar",
     "forbidden_title": "Acceso denegado",
-    "forbidden_back": "Volver a clientes",
+    "forbidden_back": "Volver al inicio",
     "duplicate_username": "Ya existe un usuario con ese nombre",
     "has_open_movements": "El cliente tiene cilindros en poder. Devolvé o cerrá esos movimientos antes de eliminarlo.",
     "has_open_accessories": "El cliente tiene accesorios en préstamo. Recuperálos antes de eliminarlo."
@@ -963,7 +963,7 @@
       "password_optional_help": "Dejar vacío para mantener la contraseña actual",
       "roles": "Roles",
       "territories": "Territorios",
-      "territories_hint": "Elegí uno o más, «Seleccionar todos», o «Agregar territorio…»",
+      "territories_hint": "Vacío = todos. O elegí uno o más, «Seleccionar todos», o «Agregar territorio…»",
       "select_all_territories": "Seleccionar todos",
       "clear_all_territories": "Quitar todos",
       "create_territory": "Agregar «{{name}}»",

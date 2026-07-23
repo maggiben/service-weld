@@ -43,9 +43,13 @@ import { useLocations } from "../hooks/useLocations";
 import { useSessionStore } from "../store/sessionStore";
 
 export default function BillingPage() {
-  const { t } = useTranslation();
-  const canWrite = useSessionStore((s) => s.hasCapability("billing:write"));
-  const canApprove = useSessionStore((s) => s.hasCapability("billing:approve"));
+  const { t: translate } = useTranslation();
+  const canWrite = useSessionStore((state) =>
+    state.hasCapability("billing:write"),
+  );
+  const canApprove = useSessionStore((state) =>
+    state.hasCapability("billing:approve"),
+  );
   const { territories, localities, encodeFilter, decodeFilter } =
     useLocations();
   const [periodStart, setPeriodStart] = useState(
@@ -118,13 +122,13 @@ export default function BillingPage() {
     onError: (err) => {
       if (err instanceof ApiClientError) {
         if (err.code === "PERIOD_LOCKED") {
-          setError(t("errors.period_locked"));
+          setError(translate("errors.period_locked"));
           return;
         }
         setError(err.message);
         return;
       }
-      setError(t("errors.generic"));
+      setError(translate("errors.generic"));
     },
   });
 
@@ -145,7 +149,7 @@ export default function BillingPage() {
         setError(err.message);
         return;
       }
-      setError(t("errors.generic"));
+      setError(translate("errors.generic"));
     },
   });
 
@@ -167,13 +171,13 @@ export default function BillingPage() {
     onError: (err) => {
       if (err instanceof ApiClientError) {
         if (err.code === "NOT_APPROVED") {
-          setError(t("errors.not_approved"));
+          setError(translate("errors.not_approved"));
           return;
         }
         setError(err.message);
         return;
       }
-      setError(t("errors.generic"));
+      setError(translate("errors.generic"));
     },
   });
 
@@ -181,7 +185,7 @@ export default function BillingPage() {
     () => [
       {
         field: "client_name",
-        headerName: t("billing.columns.client"),
+        headerName: translate("billing.columns.client"),
         flex: 1,
         minWidth: 160,
         renderCell: (params) => (
@@ -189,8 +193,8 @@ export default function BillingPage() {
             component="button"
             type="button"
             underline="hover"
-            onClick={(e) => {
-              e.stopPropagation();
+            onClick={(event) => {
+              event.stopPropagation();
               setLedgerClient({
                 id: params.row.client_party_id,
                 name: params.row.client_name,
@@ -204,35 +208,35 @@ export default function BillingPage() {
       },
       {
         field: "client_locality_name",
-        headerName: t("billing.columns.locality"),
+        headerName: translate("billing.columns.locality"),
         width: 140,
         valueGetter: (_v, row) => row.client_locality_name ?? "—",
       },
       {
         field: "lines",
-        headerName: t("billing.columns.lines"),
+        headerName: translate("billing.columns.lines"),
         width: 100,
         type: "number",
         valueGetter: (_v, row) => row.charge_lines?.length ?? 0,
       },
       {
         field: "days_breakdown",
-        headerName: t("billing.columns.days_breakdown"),
+        headerName: translate("billing.columns.days_breakdown"),
         flex: 1,
         minWidth: 200,
         sortable: false,
-        valueGetter: (_v, row) => formatInvoiceDaysBreakdown(row, t),
+        valueGetter: (_v, row) => formatInvoiceDaysBreakdown(row, translate),
       },
       {
         field: "total_days",
-        headerName: t("billing.columns.total_days"),
+        headerName: translate("billing.columns.total_days"),
         width: 130,
         type: "number",
         valueGetter: (_v, row) => invoiceTotalDays(row),
       },
       {
         field: "total",
-        headerName: t("billing.columns.total"),
+        headerName: translate("billing.columns.total"),
         width: 140,
         type: "number",
         valueFormatter: (value: number) =>
@@ -243,31 +247,32 @@ export default function BillingPage() {
       },
       {
         field: "status",
-        headerName: t("billing.columns.status"),
+        headerName: translate("billing.columns.status"),
         width: 120,
-        valueFormatter: (value: string) => t(`enums.invoice_status.${value}`),
+        valueFormatter: (value: string) =>
+          translate(`enums.invoice_status.${value}`),
       },
     ],
-    [t],
+    [translate],
   );
 
   const lineColumns: GridColDef<ChargeLine>[] = useMemo(
     () => [
       {
         field: "description",
-        headerName: t("billing.lines.description"),
+        headerName: translate("billing.lines.description"),
         flex: 1,
         minWidth: 220,
       },
       {
         field: "quantity",
-        headerName: t("billing.lines.days"),
+        headerName: translate("billing.lines.days"),
         width: 90,
         type: "number",
       },
       {
         field: "unit_price",
-        headerName: t("billing.lines.unit_price"),
+        headerName: translate("billing.lines.unit_price"),
         width: 130,
         type: "number",
         valueFormatter: (value: number) =>
@@ -278,11 +283,11 @@ export default function BillingPage() {
       },
       {
         field: "calc",
-        headerName: t("billing.lines.calc"),
+        headerName: translate("billing.lines.calc"),
         width: 160,
         sortable: false,
         valueGetter: (_v, row) =>
-          t("billing.lines.calc_value", {
+          translate("billing.lines.calc_value", {
             days: row.quantity,
             price: Number(row.unit_price).toLocaleString(undefined, {
               minimumFractionDigits: 2,
@@ -292,7 +297,7 @@ export default function BillingPage() {
       },
       {
         field: "amount",
-        headerName: t("billing.lines.amount"),
+        headerName: translate("billing.lines.amount"),
         width: 130,
         type: "number",
         valueFormatter: (value: number) =>
@@ -302,7 +307,7 @@ export default function BillingPage() {
           })} ARS`,
       },
     ],
-    [t],
+    [translate],
   );
 
   const busy =
@@ -314,9 +319,9 @@ export default function BillingPage() {
 
   return (
     <Stack spacing={2} sx={{ height: "calc(100vh - 180px)" }}>
-      <Typography variant="h5">{t("billing.title")}</Typography>
+      <Typography variant="h5">{translate("billing.title")}</Typography>
       <Typography variant="body2" color="text.secondary">
-        {t("billing.subtitle")}
+        {translate("billing.subtitle")}
       </Typography>
 
       <Stack spacing={0.5}>
@@ -328,18 +333,18 @@ export default function BillingPage() {
           useFlexGap
         >
           <DatePicker
-            label={t("billing.period_start")}
+            label={translate("billing.period_start")}
             value={dayjs(periodStart)}
-            onChange={(v: Dayjs | null) => {
-              if (v) setPeriodStart(v.format("YYYY-MM-DD"));
+            onChange={(value: Dayjs | null) => {
+              if (value) setPeriodStart(value.format("YYYY-MM-DD"));
             }}
             slotProps={{ textField: { size: "small", sx: { width: 180 } } }}
           />
           <DatePicker
-            label={t("billing.period_end")}
+            label={translate("billing.period_end")}
             value={dayjs(periodEnd)}
-            onChange={(v: Dayjs | null) => {
-              if (v) setPeriodEnd(v.format("YYYY-MM-DD"));
+            onChange={(value: Dayjs | null) => {
+              if (value) setPeriodEnd(value.format("YYYY-MM-DD"));
             }}
             slotProps={{ textField: { size: "small", sx: { width: 180 } } }}
           />
@@ -351,27 +356,29 @@ export default function BillingPage() {
               onClick={() => draftMutation.mutate("period")}
               sx={{ height: 40 }}
             >
-              {t("actions.run_billing")}
+              {translate("actions.run_billing")}
             </Button>
           )}
           <FormControl size="small" sx={{ minWidth: 220 }}>
             <InputLabel id="billing-location-label">
-              {t("billing.filters.location")}
+              {translate("billing.filters.location")}
             </InputLabel>
             <Select
               labelId="billing-location-label"
-              label={t("billing.filters.location")}
+              label={translate("billing.filters.location")}
               value={locationFilter}
               disabled={client != null}
-              onChange={(e) => {
-                setLocationFilter(e.target.value);
+              onChange={(event) => {
+                setLocationFilter(event.target.value);
                 setClient(null);
               }}
             >
               <MenuItem value="">
-                <em>{t("billing.filters.all_locations")}</em>
+                <em>{translate("billing.filters.all_locations")}</em>
               </MenuItem>
-              <ListSubheader>{t("billing.filters.territories")}</ListSubheader>
+              <ListSubheader>
+                {translate("billing.filters.territories")}
+              </ListSubheader>
               {territories.map((tr) => (
                 <MenuItem
                   key={`territory-${tr.id}`}
@@ -380,7 +387,9 @@ export default function BillingPage() {
                   {tr.name}
                 </MenuItem>
               ))}
-              <ListSubheader>{t("billing.filters.cities")}</ListSubheader>
+              <ListSubheader>
+                {translate("billing.filters.cities")}
+              </ListSubheader>
               {localities.map((loc) => (
                 <MenuItem
                   key={`locality-${loc.id}`}
@@ -400,13 +409,13 @@ export default function BillingPage() {
                 ? [
                     client,
                     ...(clientsSearch.data?.data ?? []).filter(
-                      (c) => c.id !== client.id,
+                      (client) => client.id !== client.id,
                     ),
                   ]
                 : (clientsSearch.data?.data ?? [])
             }
             getOptionLabel={(option: Client) => option.name}
-            isOptionEqualToValue={(a, b) => a.id === b.id}
+            isOptionEqualToValue={(left, right) => left.id === right.id}
             loading={clientsSearch.isFetching}
             value={client}
             onChange={(_, value) => setClient(value)}
@@ -414,7 +423,10 @@ export default function BillingPage() {
               if (reason !== "reset") setClientQuery(value);
             }}
             renderInput={(params) => (
-              <TextField {...params} label={t("billing.filters.client")} />
+              <TextField
+                {...params}
+                label={translate("billing.filters.client")}
+              />
             )}
           />
           {canWrite && (
@@ -425,7 +437,7 @@ export default function BillingPage() {
               onClick={() => draftMutation.mutate("history")}
               sx={{ height: 40 }}
             >
-              {t("actions.run_billing_history")}
+              {translate("actions.run_billing_history")}
             </Button>
           )}
           {canApprove && run?.status === "DRAFT" && (
@@ -436,7 +448,7 @@ export default function BillingPage() {
               onClick={() => approveMutation.mutate()}
               sx={{ height: 40 }}
             >
-              {t("actions.approve_billing")}
+              {translate("actions.approve_billing")}
             </Button>
           )}
           {canWrite &&
@@ -448,17 +460,17 @@ export default function BillingPage() {
                 onClick={() => exportMutation.mutate()}
                 sx={{ height: 40 }}
               >
-                {t("actions.export_billing")}
+                {translate("actions.export_billing")}
               </Button>
             )}
         </Stack>
         <Stack spacing={0.25}>
           <Typography variant="caption" color="text.secondary">
-            {t("billing.period_hint")}
+            {translate("billing.period_hint")}
           </Typography>
           {canWrite && (
             <Typography variant="caption" color="text.secondary">
-              {t("billing.history_hint")}
+              {translate("billing.history_hint")}
             </Typography>
           )}
         </Stack>
@@ -469,7 +481,7 @@ export default function BillingPage() {
       {run && (
         <Alert severity={run.invoice_count ? "success" : "warning"}>
           <Typography variant="body2" component="div">
-            {t(
+            {translate(
               runMode === "history"
                 ? "billing.run_summary_history"
                 : "billing.run_summary",
@@ -485,7 +497,7 @@ export default function BillingPage() {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 }),
-                status: t(`enums.invoice_status.${run.status}`),
+                status: translate(`enums.invoice_status.${run.status}`),
                 from: run.period_start,
                 to: run.period_end,
               },
@@ -493,9 +505,11 @@ export default function BillingPage() {
           </Typography>
           {(run.skipped_no_rate ?? 0) > 0 && (
             <Typography variant="body2" component="div" sx={{ mt: 0.75 }}>
-              {t("billing.skipped_no_rate", { count: run.skipped_no_rate })}{" "}
+              {translate("billing.skipped_no_rate", {
+                count: run.skipped_no_rate,
+              })}{" "}
               <Link component={NextLink} href="/rates" underline="hover">
-                {t("billing.configure_rates")}
+                {translate("billing.configure_rates")}
               </Link>
             </Typography>
           )}
@@ -505,14 +519,14 @@ export default function BillingPage() {
             display="block"
             sx={{ mt: 0.5 }}
           >
-            {t("billing.days_hint")}
+            {translate("billing.days_hint")}
           </Typography>
         </Alert>
       )}
 
       {exportPayload && (
         <Alert severity="info">
-          {t("billing.export_ready", {
+          {translate("billing.export_ready", {
             count: exportPayload.invoices.length,
             at: exportPayload.exported_at,
           })}
@@ -537,7 +551,7 @@ export default function BillingPage() {
             noRowsOverlay: () => (
               <Stack height="100%" alignItems="center" justifyContent="center">
                 <Typography color="text.secondary">
-                  {t("billing.empty")}
+                  {translate("billing.empty")}
                 </Typography>
               </Stack>
             ),
@@ -548,7 +562,7 @@ export default function BillingPage() {
       {selectedInvoice && (
         <Box sx={{ minHeight: 180, maxHeight: 280 }}>
           <Typography variant="subtitle2" sx={{ mb: 1 }}>
-            {t("billing.lines.title", {
+            {translate("billing.lines.title", {
               client:
                 selectedInvoice.client_name ?? selectedInvoice.client_party_id,
               count: selectedLines.length,
@@ -580,7 +594,7 @@ export default function BillingPage() {
                   justifyContent="center"
                 >
                   <Typography color="text.secondary">
-                    {t("billing.lines.empty")}
+                    {translate("billing.lines.empty")}
                   </Typography>
                 </Stack>
               ),

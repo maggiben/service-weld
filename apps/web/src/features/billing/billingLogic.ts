@@ -25,7 +25,7 @@ export function invoiceDaysBreakdownParams(invoice: InvoiceLike): {
   if (cylinders === 0) return { kind: "empty", cylinders: 0, total };
 
   const quantities = lines.map((line) => line.quantity);
-  const allSame = quantities.every((q) => q === quantities[0]);
+  const allSame = quantities.every((item) => item === quantities[0]);
   if (allSame) {
     return {
       kind: "uniform",
@@ -39,18 +39,18 @@ export function invoiceDaysBreakdownParams(invoice: InvoiceLike): {
 
 export function formatInvoiceDaysBreakdown(
   invoice: InvoiceLike,
-  t: (key: string, opts?: Record<string, unknown>) => string,
+  translate: (key: string, opts?: Record<string, unknown>) => string,
 ): string {
   const params = invoiceDaysBreakdownParams(invoice);
   if (params.kind === "empty") return "—";
   if (params.kind === "uniform") {
-    return t("billing.columns.days_breakdown_uniform", {
+    return translate("billing.columns.days_breakdown_uniform", {
       cylinders: params.cylinders,
       days: params.days,
       total: params.total,
     });
   }
-  return t("billing.columns.days_breakdown_mixed", {
+  return translate("billing.columns.days_breakdown_mixed", {
     cylinders: params.cylinders,
     total: params.total,
   });

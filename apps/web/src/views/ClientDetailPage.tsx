@@ -44,10 +44,12 @@ const PAGE_SIZE_OPTIONS = [25, 50, 100];
 type LedgerTab = "outstanding" | "history" | "rentals" | "refills";
 
 export default function ClientDetailPage() {
-  const { t } = useTranslation();
-  const locale = useUiStore((s) => s.locale);
+  const { t: translate } = useTranslation();
+  const locale = useUiStore((state) => state.locale);
   const { localityLabel } = useLocations();
-  const canWrite = useSessionStore((s) => s.hasCapability("clients:write"));
+  const canWrite = useSessionStore((state) =>
+    state.hasCapability("clients:write"),
+  );
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const clientId = Number(params.id);
@@ -121,11 +123,15 @@ export default function ClientDetailPage() {
   const summary = accountQuery.data?.rental_summary;
   const outstanding = accountQuery.data?.outstanding ?? [];
 
-  const outstandingColumns = useMemo(() => buildOutstandingColumns(t), [t]);
+  const outstandingColumns = useMemo(
+    () => buildOutstandingColumns(translate),
+    [translate],
+  );
 
   const historyColumns = useMemo(
-    () => buildHistoryColumns(t, tab === "refills" ? "refills" : "history"),
-    [t, tab],
+    () =>
+      buildHistoryColumns(translate, tab === "refills" ? "refills" : "history"),
+    [translate, tab],
   );
 
   const client = clientQuery.data;
@@ -133,7 +139,7 @@ export default function ClientDetailPage() {
   const pageMeta = accountQuery.data?.page;
 
   if (!Number.isFinite(clientId)) {
-    return <Alert severity="error">{t("errors.load_failed")}</Alert>;
+    return <Alert severity="error">{translate("errors.load_failed")}</Alert>;
   }
 
   return (
@@ -149,7 +155,7 @@ export default function ClientDetailPage() {
           onClick={() => router.push("/clients")}
           size="small"
         >
-          {t("clients.detail.back")}
+          {translate("clients.detail.back")}
         </Button>
         {canWrite && client && (
           <Button
@@ -157,13 +163,13 @@ export default function ClientDetailPage() {
             size="small"
             onClick={() => setEditOpen(true)}
           >
-            {t("actions.edit")}
+            {translate("actions.edit")}
           </Button>
         )}
       </Stack>
 
       {clientQuery.isError && (
-        <Alert severity="error">{t("errors.load_failed")}</Alert>
+        <Alert severity="error">{translate("errors.load_failed")}</Alert>
       )}
 
       {client && (
@@ -185,17 +191,20 @@ export default function ClientDetailPage() {
                 {client.cuit && <Chip size="small" label={client.cuit} />}
                 <Chip
                   size="small"
-                  label={t(`enums.coverage.${client.coverage}`)}
+                  label={translate(`enums.coverage.${client.coverage}`)}
                   color="primary"
                   variant="outlined"
                 />
                 {client.segment && (
                   <Chip
                     size="small"
-                    label={t(`enums.segment.${client.segment}`)}
+                    label={translate(`enums.segment.${client.segment}`)}
                   />
                 )}
-                <Chip size="small" label={t(`enums.status.${client.status}`)} />
+                <Chip
+                  size="small"
+                  label={translate(`enums.status.${client.status}`)}
+                />
               </Stack>
               {(client.address_street || client.locality_id != null) && (
                 <Typography
@@ -206,7 +215,7 @@ export default function ClientDetailPage() {
                   {[
                     client.address_street,
                     client.locality_id != null
-                      ? `${t("clients.detail.locality")}: ${localityLabel(client.locality_id)}`
+                      ? `${translate("clients.detail.locality")}: ${localityLabel(client.locality_id)}`
                       : null,
                   ]
                     .filter(Boolean)
@@ -214,8 +223,11 @@ export default function ClientDetailPage() {
                 </Typography>
               )}
               {client.contacts
-                ?.filter((c) => c.phone || c.name)
-                .sort((a, b) => Number(b.is_primary) - Number(a.is_primary))
+                ?.filter((client) => client.phone || client.name)
+                .sort(
+                  (left, right) =>
+                    Number(right.is_primary) - Number(left.is_primary),
+                )
                 .map((contact) => {
                   const prefix = [contact.name, contact.role]
                     .filter(Boolean)
@@ -235,7 +247,7 @@ export default function ClientDetailPage() {
                         </Link>
                       ) : null}
                       {contact.is_primary
-                        ? ` · ${t("clients.form.contact_primary")}`
+                        ? ` · ${translate("clients.form.contact_primary")}`
                         : null}
                     </Typography>
                   );
@@ -252,23 +264,23 @@ export default function ClientDetailPage() {
             </Box>
             <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
               <Kpi
-                label={t("clients.detail.kpi.outstanding")}
+                label={translate("clients.detail.kpi.outstanding")}
                 value={summary?.open_count ?? client.outstanding_count ?? 0}
               />
               <Kpi
-                label={t("clients.detail.kpi.rentals")}
+                label={translate("clients.detail.kpi.rentals")}
                 value={summary?.open_rental_count ?? 0}
               />
               <Kpi
-                label={t("clients.detail.kpi.refills")}
+                label={translate("clients.detail.kpi.refills")}
                 value={summary?.open_refill_count ?? 0}
               />
               <Kpi
-                label={t("clients.detail.kpi.closed_days")}
+                label={translate("clients.detail.kpi.closed_days")}
                 value={summary?.closed_days_last_period ?? 0}
               />
               <Kpi
-                label={t("clients.detail.kpi.accessories")}
+                label={translate("clients.detail.kpi.accessories")}
                 value={client.open_accessory_count ?? 0}
               />
             </Stack>
@@ -299,10 +311,13 @@ export default function ClientDetailPage() {
         variant="scrollable"
         allowScrollButtonsMobile
       >
-        <Tab value="outstanding" label={t("clients.detail.tabs.outstanding")} />
-        <Tab value="history" label={t("clients.detail.tabs.history")} />
-        <Tab value="rentals" label={t("clients.detail.tabs.rentals")} />
-        <Tab value="refills" label={t("clients.detail.tabs.refills")} />
+        <Tab
+          value="outstanding"
+          label={translate("clients.detail.tabs.outstanding")}
+        />
+        <Tab value="history" label={translate("clients.detail.tabs.history")} />
+        <Tab value="rentals" label={translate("clients.detail.tabs.rentals")} />
+        <Tab value="refills" label={translate("clients.detail.tabs.refills")} />
       </Tabs>
 
       {!isOutstandingTab && (
@@ -310,15 +325,15 @@ export default function ClientDetailPage() {
           control={
             <Switch
               checked={openOnly}
-              onChange={(e) => setOpenOnly(e.target.checked)}
+              onChange={(event) => setOpenOnly(event.target.checked)}
             />
           }
-          label={t("clients.detail.filters.open_only")}
+          label={translate("clients.detail.filters.open_only")}
         />
       )}
 
       {accountQuery.isError && (
-        <Alert severity="error">{t("errors.load_failed")}</Alert>
+        <Alert severity="error">{translate("errors.load_failed")}</Alert>
       )}
 
       <Box sx={{ flex: 1, minHeight: 360 }}>
@@ -344,7 +359,7 @@ export default function ClientDetailPage() {
                   justifyContent="center"
                 >
                   <Typography color="text.secondary">
-                    {t("clients.detail.empty")}
+                    {translate("clients.detail.empty")}
                   </Typography>
                 </Stack>
               ),
@@ -383,7 +398,7 @@ export default function ClientDetailPage() {
                   justifyContent="center"
                 >
                   <Typography color="text.secondary">
-                    {t("clients.detail.empty")}
+                    {translate("clients.detail.empty")}
                   </Typography>
                 </Stack>
               ),

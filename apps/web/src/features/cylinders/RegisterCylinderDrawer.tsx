@@ -41,7 +41,7 @@ interface Props {
 type CreateLocationKind = "territory" | "locality";
 
 export function RegisterCylinderDrawer({ open, onClose }: Props) {
-  const { t } = useTranslation();
+  const { t: translate } = useTranslation();
   const queryClient = useQueryClient();
   const { territories, refetch: refetchLocations } = useLocations();
   const [conflictError, setConflictError] = useState<string | null>(null);
@@ -77,7 +77,7 @@ export function RegisterCylinderDrawer({ open, onClose }: Props) {
 
   const ownerId = watch("owner_party_id");
   const owner = useMemo(
-    () => SEED_OWNERS.find((o) => o.id === ownerId),
+    () => SEED_OWNERS.find((item) => item.id === ownerId),
     [ownerId],
   );
 
@@ -117,12 +117,14 @@ export function RegisterCylinderDrawer({ open, onClose }: Props) {
         error instanceof ApiClientError &&
         error.code === "DUPLICATE_SERIAL_FOR_OWNER"
       ) {
-        setConflictError(t("errors.duplicate_serial"));
+        setConflictError(translate("errors.duplicate_serial"));
         return;
       }
       if (!applyServerErrors(error, setError, "serial_number")) {
         setConflictError(
-          error instanceof ApiClientError ? error.message : t("errors.generic"),
+          error instanceof ApiClientError
+            ? error.message
+            : translate("errors.generic"),
         );
       }
     },
@@ -165,7 +167,7 @@ export function RegisterCylinderDrawer({ open, onClose }: Props) {
     },
     onError: (error) => {
       if (error instanceof Error && error.message === "empty") {
-        setCreateError(t("cylinders.form.location_name_required"));
+        setCreateError(translate("cylinders.form.location_name_required"));
         return;
       }
       if (error instanceof ApiClientError) {
@@ -173,18 +175,19 @@ export function RegisterCylinderDrawer({ open, onClose }: Props) {
           error.code === "DUPLICATE_TERRITORY" ||
           error.code === "DUPLICATE_LOCALITY"
         ) {
-          setCreateError(t("errors.duplicate_location"));
+          setCreateError(translate("errors.duplicate_location"));
           return;
         }
         setCreateError(error.message);
         return;
       }
-      setCreateError(t("errors.generic"));
+      setCreateError(translate("errors.generic"));
     },
   });
 
   const handleClose = () => {
-    if (isDirty && !window.confirm(t("cylinders.form.unsaved_confirm"))) return;
+    if (isDirty && !window.confirm(translate("cylinders.form.unsaved_confirm")))
+      return;
     onClose();
   };
 
@@ -208,7 +211,7 @@ export function RegisterCylinderDrawer({ open, onClose }: Props) {
       >
         <Box
           component="form"
-          onSubmit={handleSubmit((v) => create.mutate(v))}
+          onSubmit={handleSubmit((value) => create.mutate(value))}
           sx={{
             p: 3,
             height: "100%",
@@ -217,7 +220,7 @@ export function RegisterCylinderDrawer({ open, onClose }: Props) {
           }}
         >
           <Typography variant="h6" sx={{ mb: 2 }}>
-            {t("cylinders.form.title_create")}
+            {translate("cylinders.form.title_create")}
           </Typography>
 
           {conflictError && (
@@ -234,7 +237,7 @@ export function RegisterCylinderDrawer({ open, onClose }: Props) {
                 <TextField
                   {...field}
                   required
-                  label={t("cylinders.form.serial")}
+                  label={translate("cylinders.form.serial")}
                   fullWidth
                   error={Boolean(errors.serial_number)}
                   helperText={errors.serial_number?.message}
@@ -251,15 +254,17 @@ export function RegisterCylinderDrawer({ open, onClose }: Props) {
                   required
                   error={Boolean(errors.owner_party_id)}
                 >
-                  <InputLabel>{t("cylinders.form.owner")}</InputLabel>
+                  <InputLabel>{translate("cylinders.form.owner")}</InputLabel>
                   <Select
-                    label={t("cylinders.form.owner")}
+                    label={translate("cylinders.form.owner")}
                     value={field.value}
-                    onChange={(e) => field.onChange(Number(e.target.value))}
+                    onChange={(event) =>
+                      field.onChange(Number(event.target.value))
+                    }
                   >
-                    {SEED_OWNERS.map((o) => (
-                      <MenuItem key={o.id} value={o.id}>
-                        {o.name}
+                    {SEED_OWNERS.map((item) => (
+                      <MenuItem key={item.id} value={item.id}>
+                        {item.name}
                       </MenuItem>
                     ))}
                   </Select>
@@ -277,16 +282,20 @@ export function RegisterCylinderDrawer({ open, onClose }: Props) {
               control={control}
               render={({ field }) => (
                 <FormControl fullWidth required>
-                  <InputLabel>{t("cylinders.form.basis")}</InputLabel>
-                  <Select {...field} label={t("cylinders.form.basis")} disabled>
+                  <InputLabel>{translate("cylinders.form.basis")}</InputLabel>
+                  <Select
+                    {...field}
+                    label={translate("cylinders.form.basis")}
+                    disabled
+                  >
                     {OwnershipBasis.options.map((value) => (
                       <MenuItem key={value} value={value}>
-                        {t(`enums.basis.${value}`)}
+                        {translate(`enums.basis.${value}`)}
                       </MenuItem>
                     ))}
                   </Select>
                   <FormHelperText>
-                    {t("cylinders.form.basis_hint")}
+                    {translate("cylinders.form.basis_hint")}
                   </FormHelperText>
                 </FormControl>
               )}
@@ -297,15 +306,17 @@ export function RegisterCylinderDrawer({ open, onClose }: Props) {
               control={control}
               render={({ field }) => (
                 <FormControl fullWidth>
-                  <InputLabel>{t("cylinders.form.gas")}</InputLabel>
+                  <InputLabel>{translate("cylinders.form.gas")}</InputLabel>
                   <Select
-                    label={t("cylinders.form.gas")}
+                    label={translate("cylinders.form.gas")}
                     value={field.value ?? ""}
-                    onChange={(e) => field.onChange(e.target.value || null)}
+                    onChange={(event) =>
+                      field.onChange(event.target.value || null)
+                    }
                   >
                     {GAS_CODES.map((code) => (
                       <MenuItem key={code} value={code}>
-                        {t(`enums.gas.${code}`, { defaultValue: code })}
+                        {translate(`enums.gas.${code}`, { defaultValue: code })}
                       </MenuItem>
                     ))}
                   </Select>
@@ -318,24 +329,26 @@ export function RegisterCylinderDrawer({ open, onClose }: Props) {
               control={control}
               render={({ field }) => (
                 <FormControl fullWidth>
-                  <InputLabel>{t("cylinders.form.capacity_unit")}</InputLabel>
+                  <InputLabel>
+                    {translate("cylinders.form.capacity_unit")}
+                  </InputLabel>
                   <Select
-                    label={t("cylinders.form.capacity_unit")}
+                    label={translate("cylinders.form.capacity_unit")}
                     value={field.value ?? "M3"}
-                    onChange={(e) =>
+                    onChange={(event) =>
                       field.onChange(
-                        e.target.value as FormValues["capacity_unit"],
+                        event.target.value as FormValues["capacity_unit"],
                       )
                     }
                   >
                     {CapacityUnit.options.map((unit) => (
                       <MenuItem key={unit} value={unit}>
-                        {t(`enums.capacity_unit.${unit}`)}
+                        {translate(`enums.capacity_unit.${unit}`)}
                       </MenuItem>
                     ))}
                   </Select>
                   <FormHelperText>
-                    {t("cylinders.form.capacity_hint")}
+                    {translate("cylinders.form.capacity_hint")}
                   </FormHelperText>
                 </FormControl>
               )}
@@ -348,13 +361,15 @@ export function RegisterCylinderDrawer({ open, onClose }: Props) {
                 <TextField
                   {...field}
                   value={field.value ?? ""}
-                  onChange={(e) =>
+                  onChange={(event) =>
                     field.onChange(
-                      e.target.value === "" ? null : Number(e.target.value),
+                      event.target.value === ""
+                        ? null
+                        : Number(event.target.value),
                     )
                   }
                   type="number"
-                  label={t("cylinders.form.capacity")}
+                  label={translate("cylinders.form.capacity")}
                   fullWidth
                   error={Boolean(errors.capacity_m3)}
                   helperText={errors.capacity_m3?.message}
@@ -367,12 +382,14 @@ export function RegisterCylinderDrawer({ open, onClose }: Props) {
               control={control}
               render={({ field }) => (
                 <FormControl fullWidth>
-                  <InputLabel>{t("cylinders.form.territory")}</InputLabel>
+                  <InputLabel>
+                    {translate("cylinders.form.territory")}
+                  </InputLabel>
                   <Select
-                    label={t("cylinders.form.territory")}
+                    label={translate("cylinders.form.territory")}
                     value={field.value ?? ""}
-                    onChange={(e) => {
-                      const value = e.target.value;
+                    onChange={(event) => {
+                      const value = event.target.value;
                       if (value === "__create_territory__") {
                         openCreateDialog("territory");
                         return;
@@ -390,14 +407,14 @@ export function RegisterCylinderDrawer({ open, onClose }: Props) {
                       </MenuItem>
                     ))}
                     <MenuItem value="__create_territory__">
-                      {t("cylinders.form.create_territory")}
+                      {translate("cylinders.form.create_territory")}
                     </MenuItem>
                     <MenuItem value="__create_locality__">
-                      {t("cylinders.form.create_locality")}
+                      {translate("cylinders.form.create_locality")}
                     </MenuItem>
                   </Select>
                   <FormHelperText>
-                    {t("cylinders.form.territory_hint")}
+                    {translate("cylinders.form.territory_hint")}
                   </FormHelperText>
                 </FormControl>
               )}
@@ -408,13 +425,18 @@ export function RegisterCylinderDrawer({ open, onClose }: Props) {
               control={control}
               render={({ field }) => (
                 <FormControl fullWidth>
-                  <InputLabel>{t("cylinders.form.condition")}</InputLabel>
-                  <Select {...field} label={t("cylinders.form.condition")}>
+                  <InputLabel>
+                    {translate("cylinders.form.condition")}
+                  </InputLabel>
+                  <Select
+                    {...field}
+                    label={translate("cylinders.form.condition")}
+                  >
                     <MenuItem value="EMPTY">
-                      {t("enums.condition.EMPTY")}
+                      {translate("enums.condition.EMPTY")}
                     </MenuItem>
                     <MenuItem value="FULL">
-                      {t("enums.condition.FULL")}
+                      {translate("enums.condition.FULL")}
                     </MenuItem>
                   </Select>
                 </FormControl>
@@ -428,13 +450,13 @@ export function RegisterCylinderDrawer({ open, onClose }: Props) {
             justifyContent="flex-end"
             sx={{ pt: 2 }}
           >
-            <Button onClick={handleClose}>{t("actions.cancel")}</Button>
+            <Button onClick={handleClose}>{translate("actions.cancel")}</Button>
             <Button
               type="submit"
               variant="contained"
               disabled={isSubmitting || create.isPending}
             >
-              {t("actions.save")}
+              {translate("actions.save")}
             </Button>
           </Stack>
         </Box>
@@ -448,31 +470,33 @@ export function RegisterCylinderDrawer({ open, onClose }: Props) {
       >
         <DialogTitle>
           {createKind === "territory"
-            ? t("cylinders.form.create_territory_title")
-            : t("cylinders.form.create_locality_title")}
+            ? translate("cylinders.form.create_territory_title")
+            : translate("cylinders.form.create_locality_title")}
         </DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
             {createError && <Alert severity="error">{createError}</Alert>}
             <TextField
               autoFocus
-              label={t("cylinders.form.location_name")}
+              label={translate("cylinders.form.location_name")}
               value={createName}
-              onChange={(e) => setCreateName(e.target.value)}
+              onChange={(event) => setCreateName(event.target.value)}
               fullWidth
             />
             {createKind === "locality" && (
               <FormControl fullWidth>
-                <InputLabel>{t("cylinders.form.territory")}</InputLabel>
+                <InputLabel>{translate("cylinders.form.territory")}</InputLabel>
                 <Select
-                  label={t("cylinders.form.territory")}
+                  label={translate("cylinders.form.territory")}
                   value={createTerritoryId}
-                  onChange={(e) => {
-                    const value = e.target.value;
+                  onChange={(event) => {
+                    const value = event.target.value;
                     setCreateTerritoryId(value === "" ? "" : Number(value));
                   }}
                 >
-                  <MenuItem value="">{t("clients.filters.all")}</MenuItem>
+                  <MenuItem value="">
+                    {translate("clients.filters.all")}
+                  </MenuItem>
                   {territories.map((territory) => (
                     <MenuItem key={territory.id} value={territory.id}>
                       {territory.name}
@@ -480,7 +504,7 @@ export function RegisterCylinderDrawer({ open, onClose }: Props) {
                   ))}
                 </Select>
                 <FormHelperText>
-                  {t("cylinders.form.locality_territory_hint")}
+                  {translate("cylinders.form.locality_territory_hint")}
                 </FormHelperText>
               </FormControl>
             )}
@@ -488,14 +512,14 @@ export function RegisterCylinderDrawer({ open, onClose }: Props) {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setCreateOpen(false)}>
-            {t("actions.cancel")}
+            {translate("actions.cancel")}
           </Button>
           <Button
             variant="contained"
             disabled={createLocation.isPending}
             onClick={() => createLocation.mutate()}
           >
-            {t("actions.save")}
+            {translate("actions.save")}
           </Button>
         </DialogActions>
       </Dialog>

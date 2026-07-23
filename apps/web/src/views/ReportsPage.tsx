@@ -68,8 +68,8 @@ function ClientLedgerLink({
       component="button"
       type="button"
       underline="hover"
-      onClick={(e) => {
-        e.stopPropagation();
+      onClick={(event) => {
+        event.stopPropagation();
         onOpen({ id: clientPartyId, name: label });
       }}
       sx={{ textAlign: "left" }}
@@ -80,8 +80,10 @@ function ClientLedgerLink({
 }
 
 export default function ReportsPage() {
-  const { t } = useTranslation();
-  const canMedical = useSessionStore((s) => s.hasCapability("medical:read"));
+  const { t: translate } = useTranslation();
+  const canMedical = useSessionStore((state) =>
+    state.hasCapability("medical:read"),
+  );
   const { territories } = useTerritories();
   const [tab, setTab] = useState<ReportTab>("fleet");
   const [groupBy, setGroupBy] = useState<
@@ -261,29 +263,32 @@ export default function ReportsPage() {
         field: "group_key",
         headerName:
           groupBy === "state"
-            ? t("reports.group.state")
+            ? translate("reports.group.state")
             : groupBy === "gas_code"
-              ? t("reports.group.gas")
+              ? translate("reports.group.gas")
               : groupBy === "owner"
-                ? t("reports.group.owner")
+                ? translate("reports.group.owner")
                 : groupBy === "locality"
-                  ? t("reports.group.locality")
-                  : t("reports.group.client"),
+                  ? translate("reports.group.locality")
+                  : translate("reports.group.client"),
         flex: 1,
         minWidth: 160,
         valueGetter: (_value, row) => {
           if (groupBy === "state") {
             const state = row.state ?? row.group_key;
-            return t(`enums.cylinder_state.${state}`, {
+            return translate(`enums.cylinder_state.${state}`, {
               defaultValue: state,
             });
           }
           if (groupBy === "gas_code") {
             const code = row.gas_code ?? row.group_key;
-            return t(`enums.gas.${code}`, { defaultValue: code });
+            return translate(`enums.gas.${code}`, { defaultValue: code });
           }
           if (groupBy === "locality") {
-            return row.locality_name ?? t("reports.group.unassigned_locality");
+            return (
+              row.locality_name ??
+              translate("reports.group.unassigned_locality")
+            );
           }
           if (groupBy === "client") {
             return row.client_name ?? row.group_key;
@@ -309,18 +314,18 @@ export default function ReportsPage() {
       },
       {
         field: "count",
-        headerName: t("reports.columns.count"),
+        headerName: translate("reports.columns.count"),
         width: 110,
       },
     ],
-    [t, groupBy],
+    [translate, groupBy],
   );
 
   const floatColumns = useMemo<GridColDef<FloatAgingRow>[]>(
     () => [
       {
         field: "client_name",
-        headerName: t("reports.columns.client"),
+        headerName: translate("reports.columns.client"),
         flex: 1,
         minWidth: 140,
         renderCell: (params) => (
@@ -333,14 +338,14 @@ export default function ReportsPage() {
       },
       {
         field: "serial_number",
-        headerName: t("reports.columns.serial"),
+        headerName: translate("reports.columns.serial"),
         width: 120,
         renderCell: (params) => (
           <Link
             component={NextLink}
             href={`/cylinders/${params.row.cylinder_id}`}
             underline="hover"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
           >
             {params.value}
           </Link>
@@ -348,28 +353,28 @@ export default function ReportsPage() {
       },
       {
         field: "delivery_date",
-        headerName: t("reports.columns.delivery"),
+        headerName: translate("reports.columns.delivery"),
         width: 120,
       },
       {
         field: "days_out",
-        headerName: t("reports.columns.days_out"),
+        headerName: translate("reports.columns.days_out"),
         width: 110,
       },
       {
         field: "bucket",
-        headerName: t("reports.columns.bucket"),
+        headerName: translate("reports.columns.bucket"),
         width: 110,
       },
     ],
-    [t],
+    [translate],
   );
 
   const rentalColumns = useMemo<GridColDef<RentalReportRow>[]>(
     () => [
       {
         field: "client_name",
-        headerName: t("reports.columns.client"),
+        headerName: translate("reports.columns.client"),
         flex: 1,
         minWidth: 140,
         renderCell: (params) => (
@@ -382,19 +387,21 @@ export default function ReportsPage() {
       },
       {
         field: "gas_code",
-        headerName: t("reports.columns.gas"),
+        headerName: translate("reports.columns.gas"),
         width: 110,
         valueFormatter: (value: string | null) =>
-          value ? t(`enums.gas.${value}`, { defaultValue: value }) : "—",
+          value
+            ? translate(`enums.gas.${value}`, { defaultValue: value })
+            : "—",
       },
       {
         field: "rental_days",
-        headerName: t("reports.columns.rental_days"),
+        headerName: translate("reports.columns.rental_days"),
         width: 110,
       },
       {
         field: "revenue",
-        headerName: t("reports.columns.revenue"),
+        headerName: translate("reports.columns.revenue"),
         width: 120,
         valueFormatter: (value: number) =>
           new Intl.NumberFormat(undefined, {
@@ -404,60 +411,60 @@ export default function ReportsPage() {
       },
       {
         field: "movement_count",
-        headerName: t("reports.columns.movements"),
+        headerName: translate("reports.columns.movements"),
         width: 110,
       },
     ],
-    [t],
+    [translate],
   );
 
   const lossColumns = useMemo<GridColDef<LossReportRow>[]>(
     () => [
       {
         field: "owner_name",
-        headerName: t("reports.columns.owner"),
+        headerName: translate("reports.columns.owner"),
         flex: 1,
         minWidth: 140,
       },
       {
         field: "ownership_basis",
-        headerName: t("reports.columns.basis"),
+        headerName: translate("reports.columns.basis"),
         width: 120,
         valueFormatter: (value: string) =>
-          t(`enums.basis.${value}`, { defaultValue: value }),
+          translate(`enums.basis.${value}`, { defaultValue: value }),
       },
       {
         field: "state",
-        headerName: t("reports.columns.state"),
+        headerName: translate("reports.columns.state"),
         width: 160,
         valueFormatter: (value: string) =>
-          t(`enums.cylinder_state.${value}`, { defaultValue: value }),
+          translate(`enums.cylinder_state.${value}`, { defaultValue: value }),
       },
       {
         field: "count",
-        headerName: t("reports.columns.count"),
+        headerName: translate("reports.columns.count"),
         width: 90,
       },
       {
         field: "liability",
-        headerName: t("reports.columns.liability"),
+        headerName: translate("reports.columns.liability"),
         width: 110,
       },
     ],
-    [t],
+    [translate],
   );
 
   const supplierColumns = useMemo<GridColDef<SupplierReturnsRow>[]>(
     () => [
       {
         field: "supplier_name",
-        headerName: t("reports.columns.supplier"),
+        headerName: translate("reports.columns.supplier"),
         flex: 1,
         minWidth: 140,
       },
       {
         field: "serial_number",
-        headerName: t("reports.columns.serial"),
+        headerName: translate("reports.columns.serial"),
         width: 120,
         renderCell: (params) =>
           params.row.cylinder_id != null && params.value ? (
@@ -465,7 +472,7 @@ export default function ReportsPage() {
               component={NextLink}
               href={`/cylinders/${params.row.cylinder_id}`}
               underline="hover"
-              onClick={(e) => e.stopPropagation()}
+              onClick={(event) => event.stopPropagation()}
             >
               {params.value}
             </Link>
@@ -475,14 +482,14 @@ export default function ReportsPage() {
       },
       {
         field: "stage",
-        headerName: t("reports.columns.stage"),
+        headerName: translate("reports.columns.stage"),
         width: 180,
         renderCell: (params) => {
           const stage = params.value as string;
           return (
             <Chip
               size="small"
-              label={t(`enums.loan_stage.${stage}`, {
+              label={translate(`enums.loan_stage.${stage}`, {
                 defaultValue: stage,
               })}
               color={loanStageChipColor(stage)}
@@ -492,45 +499,45 @@ export default function ReportsPage() {
       },
       {
         field: "days_open",
-        headerName: t("reports.columns.days_open"),
+        headerName: translate("reports.columns.days_open"),
         width: 110,
       },
     ],
-    [t],
+    [translate],
   );
 
   const qualityColumns = useMemo<GridColDef<DataQualityRow>[]>(
     () => [
       {
         field: "source",
-        headerName: t("reports.columns.source"),
+        headerName: translate("reports.columns.source"),
         width: 140,
       },
       {
         field: "reason",
-        headerName: t("reports.columns.reason"),
+        headerName: translate("reports.columns.reason"),
         flex: 1,
         minWidth: 180,
       },
       {
         field: "status",
-        headerName: t("reports.columns.status"),
+        headerName: translate("reports.columns.status"),
         width: 110,
       },
       {
         field: "created_at",
-        headerName: t("reports.columns.created"),
+        headerName: translate("reports.columns.created"),
         width: 180,
       },
     ],
-    [t],
+    [translate],
   );
 
   const medicalColumns = useMemo<GridColDef<MedicalStatementRow>[]>(
     () => [
       {
         field: "client_name",
-        headerName: t("reports.columns.client"),
+        headerName: translate("reports.columns.client"),
         flex: 1,
         minWidth: 140,
         renderCell: (params) => (
@@ -543,21 +550,21 @@ export default function ReportsPage() {
       },
       {
         field: "deliveries",
-        headerName: t("reports.columns.deliveries"),
+        headerName: translate("reports.columns.deliveries"),
         width: 110,
       },
       {
         field: "rental_days",
-        headerName: t("reports.columns.rental_days"),
+        headerName: translate("reports.columns.rental_days"),
         width: 110,
       },
       {
         field: "accessory_rentals",
-        headerName: t("reports.columns.accessories"),
+        headerName: translate("reports.columns.accessories"),
         width: 120,
       },
     ],
-    [t],
+    [translate],
   );
 
   const activeQuery =
@@ -577,29 +584,35 @@ export default function ReportsPage() {
 
   const rows =
     tab === "fleet"
-      ? (fleetQuery.data?.data ?? []).map((r, i) => ({ ...r, id: i }))
+      ? (fleetQuery.data?.data ?? []).map((row, item) => ({ ...row, id: item }))
       : tab === "float"
-        ? (floatQuery.data?.data ?? []).map((r) => ({
-            ...r,
-            id: r.movement_id,
+        ? (floatQuery.data?.data ?? []).map((row) => ({
+            ...row,
+            id: row.movement_id,
           }))
         : tab === "rental"
-          ? (rentalQuery.data?.data ?? []).map((r, i) => ({ ...r, id: i }))
+          ? (rentalQuery.data?.data ?? []).map((row, item) => ({
+              ...row,
+              id: item,
+            }))
           : tab === "loss"
-            ? (lossQuery.data?.data ?? []).map((r, i) => ({ ...r, id: i }))
+            ? (lossQuery.data?.data ?? []).map((row, item) => ({
+                ...row,
+                id: item,
+              }))
             : tab === "supplier"
-              ? (supplierQuery.data?.data ?? []).map((r) => ({
-                  ...r,
-                  id: r.loan_id,
+              ? (supplierQuery.data?.data ?? []).map((row) => ({
+                  ...row,
+                  id: row.loan_id,
                 }))
               : tab === "quality"
-                ? (qualityQuery.data?.data ?? []).map((r) => ({
-                    ...r,
-                    id: r.id,
+                ? (qualityQuery.data?.data ?? []).map((row) => ({
+                    ...row,
+                    id: row.id,
                   }))
-                : (medicalQuery.data?.data ?? []).map((r, i) => ({
-                    ...r,
-                    id: i,
+                : (medicalQuery.data?.data ?? []).map((row, item) => ({
+                    ...row,
+                    id: item,
                   }));
 
   const columns =
@@ -631,71 +644,79 @@ export default function ReportsPage() {
   return (
     <Stack spacing={2}>
       <Box>
-        <Typography variant="h5">{t("reports.title")}</Typography>
+        <Typography variant="h5">{translate("reports.title")}</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-          {t("reports.subtitle")}
+          {translate("reports.subtitle")}
         </Typography>
         {showClientLedgerHint ? (
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            {t("reports.hint_client_ledger")}
+            {translate("reports.hint_client_ledger")}
           </Typography>
         ) : null}
       </Box>
 
       <Tabs
         value={tab}
-        onChange={(_, v: ReportTab) => setTab(v)}
+        onChange={(_, value: ReportTab) => setTab(value)}
         variant="scrollable"
         allowScrollButtonsMobile
       >
-        <Tab value="fleet" label={t("reports.tabs.fleet")} />
-        <Tab value="float" label={t("reports.tabs.float")} />
-        <Tab value="rental" label={t("reports.tabs.rental")} />
-        <Tab value="loss" label={t("reports.tabs.loss")} />
-        <Tab value="supplier" label={t("reports.tabs.supplier")} />
-        <Tab value="quality" label={t("reports.tabs.quality")} />
+        <Tab value="fleet" label={translate("reports.tabs.fleet")} />
+        <Tab value="float" label={translate("reports.tabs.float")} />
+        <Tab value="rental" label={translate("reports.tabs.rental")} />
+        <Tab value="loss" label={translate("reports.tabs.loss")} />
+        <Tab value="supplier" label={translate("reports.tabs.supplier")} />
+        <Tab value="quality" label={translate("reports.tabs.quality")} />
         {canMedical ? (
-          <Tab value="medical" label={t("reports.tabs.medical")} />
+          <Tab value="medical" label={translate("reports.tabs.medical")} />
         ) : null}
       </Tabs>
 
       <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
         {tab === "fleet" ? (
           <FormControl size="small" sx={{ minWidth: 180 }}>
-            <InputLabel>{t("reports.filters.group_by")}</InputLabel>
+            <InputLabel>{translate("reports.filters.group_by")}</InputLabel>
             <Select
-              label={t("reports.filters.group_by")}
+              label={translate("reports.filters.group_by")}
               value={groupBy}
-              onChange={(e) =>
+              onChange={(event) =>
                 setGroupBy(
-                  e.target.value as
+                  event.target.value as
                     "state" | "gas_code" | "owner" | "locality" | "client",
                 )
               }
             >
-              <MenuItem value="state">{t("reports.group.state")}</MenuItem>
-              <MenuItem value="gas_code">{t("reports.group.gas")}</MenuItem>
-              <MenuItem value="owner">{t("reports.group.owner")}</MenuItem>
-              <MenuItem value="locality">
-                {t("reports.group.locality")}
+              <MenuItem value="state">
+                {translate("reports.group.state")}
               </MenuItem>
-              <MenuItem value="client">{t("reports.group.client")}</MenuItem>
+              <MenuItem value="gas_code">
+                {translate("reports.group.gas")}
+              </MenuItem>
+              <MenuItem value="owner">
+                {translate("reports.group.owner")}
+              </MenuItem>
+              <MenuItem value="locality">
+                {translate("reports.group.locality")}
+              </MenuItem>
+              <MenuItem value="client">
+                {translate("reports.group.client")}
+              </MenuItem>
             </Select>
           </FormControl>
         ) : null}
         {tab === "float" ? (
           <>
             <FormControl size="small" sx={{ minWidth: 160 }}>
-              <InputLabel>{t("reports.filters.territory")}</InputLabel>
+              <InputLabel>{translate("reports.filters.territory")}</InputLabel>
               <Select
-                label={t("reports.filters.territory")}
+                label={translate("reports.filters.territory")}
                 value={territoryFilter}
-                onChange={(e) => {
-                  const value = e.target.value;
+                onChange={(event) => {
+                  const value = event.target.value;
                   setTerritoryFilter(value === "" ? "" : Number(value));
                 }}
               >
-                <MenuItem value="">{t("clients.filters.all")}</MenuItem>
+                <MenuItem value="">{translate("clients.filters.all")}</MenuItem>
                 {territories.map((territory) => (
                   <MenuItem key={territory.id} value={territory.id}>
                     {territory.name}
@@ -704,17 +725,17 @@ export default function ReportsPage() {
               </Select>
             </FormControl>
             <FormControl size="small" sx={{ minWidth: 160 }}>
-              <InputLabel>{t("reports.filters.bucket")}</InputLabel>
+              <InputLabel>{translate("reports.filters.bucket")}</InputLabel>
               <Select
-                label={t("reports.filters.bucket")}
+                label={translate("reports.filters.bucket")}
                 value={bucket}
-                onChange={(e) =>
+                onChange={(event) =>
                   setBucket(
-                    e.target.value as "" | ">30" | ">90" | ">180" | ">365",
+                    event.target.value as "" | ">30" | ">90" | ">180" | ">365",
                   )
                 }
               >
-                <MenuItem value="">{t("reports.bucket.all")}</MenuItem>
+                <MenuItem value="">{translate("reports.bucket.all")}</MenuItem>
                 <MenuItem value=">30">&gt;30</MenuItem>
                 <MenuItem value=">90">&gt;90</MenuItem>
                 <MenuItem value=">180">&gt;180</MenuItem>
@@ -728,17 +749,17 @@ export default function ReportsPage() {
             <TextField
               size="small"
               type="date"
-              label={t("reports.filters.period_start")}
+              label={translate("reports.filters.period_start")}
               value={periodStart}
-              onChange={(e) => setPeriodStart(e.target.value)}
+              onChange={(event) => setPeriodStart(event.target.value)}
               InputLabelProps={{ shrink: true }}
             />
             <TextField
               size="small"
               type="date"
-              label={t("reports.filters.period_end")}
+              label={translate("reports.filters.period_end")}
               value={periodEnd}
-              onChange={(e) => setPeriodEnd(e.target.value)}
+              onChange={(event) => setPeriodEnd(event.target.value)}
               InputLabelProps={{ shrink: true }}
             />
             {tab === "rental" ? (
@@ -751,13 +772,13 @@ export default function ReportsPage() {
                       ? [
                           rentalClient,
                           ...(clientsSearch.data?.data ?? []).filter(
-                            (c) => c.id !== rentalClient.id,
+                            (client) => client.id !== rentalClient.id,
                           ),
                         ]
                       : (clientsSearch.data?.data ?? [])
                   }
                   getOptionLabel={(option: Client) => option.name}
-                  isOptionEqualToValue={(a, b) => a.id === b.id}
+                  isOptionEqualToValue={(left, right) => left.id === right.id}
                   loading={clientsSearch.isFetching}
                   value={rentalClient}
                   onChange={(_, value) => setRentalClient(value)}
@@ -767,7 +788,7 @@ export default function ReportsPage() {
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      label={t("reports.filters.client")}
+                      label={translate("reports.filters.client")}
                     />
                   )}
                 />
@@ -779,7 +800,7 @@ export default function ReportsPage() {
                       ? [
                           rentalCylinder,
                           ...(cylindersSearch.data?.data ?? []).filter(
-                            (c) => c.id !== rentalCylinder.id,
+                            (cylinder) => cylinder.id !== rentalCylinder.id,
                           ),
                         ]
                       : (cylindersSearch.data?.data ?? [])
@@ -789,7 +810,7 @@ export default function ReportsPage() {
                       option.owner_name ? ` · ${option.owner_name}` : ""
                     }`
                   }
-                  isOptionEqualToValue={(a, b) => a.id === b.id}
+                  isOptionEqualToValue={(left, right) => left.id === right.id}
                   loading={cylindersSearch.isFetching}
                   value={rentalCylinder}
                   onChange={(_, value) => setRentalCylinder(value)}
@@ -799,7 +820,7 @@ export default function ReportsPage() {
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      label={t("reports.filters.cylinder")}
+                      label={translate("reports.filters.cylinder")}
                     />
                   )}
                 />
@@ -811,14 +832,14 @@ export default function ReportsPage() {
                 void activeQuery.refetch();
               }}
             >
-              {t("reports.refresh")}
+              {translate("reports.refresh")}
             </Button>
           </>
         ) : null}
       </Stack>
 
       {activeQuery.isError ? (
-        <Alert severity="error">{t("reports.error")}</Alert>
+        <Alert severity="error">{translate("reports.error")}</Alert>
       ) : null}
 
       <Box sx={{ height: 520, width: "100%" }}>
@@ -843,7 +864,7 @@ export default function ReportsPage() {
           pageSizeOptions={[25, 50, 100]}
           sx={{ [`& .${gridClasses.cell}`]: { outline: "none" } }}
           localeText={{
-            noRowsLabel: t("reports.empty"),
+            noRowsLabel: translate("reports.empty"),
           }}
         />
       </Box>

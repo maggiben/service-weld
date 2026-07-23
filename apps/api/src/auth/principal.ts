@@ -15,7 +15,7 @@ export interface AuthPrincipal {
   mfa: boolean;
 }
 
-/** Roles that must have ≥1 territory scope row (D-2). */
+/** Roles filtered by `user_territory_scope` when assigned (D-2). */
 export const SCOPED_ROLES = new Set<RoleCode>([
   "DRIVER",
   "SUBDIST",
@@ -39,6 +39,10 @@ export function hasGlobalTerritoryAccess(roles: RoleCode[]): boolean {
   return roles.some((role) => GLOBAL_TERRITORY_ROLES.has(role));
 }
 
+/**
+ * Territory filter for queries.
+ * `null` = all territories. Empty assignment on a scoped role also means all.
+ */
 export function territoryIdsForPrincipal(
   principal: AuthPrincipal,
 ): number[] | null {
@@ -46,6 +50,9 @@ export function territoryIdsForPrincipal(
     return null;
   }
   if (!isTerritoryScoped(principal.roles)) {
+    return null;
+  }
+  if (principal.territories.length === 0) {
     return null;
   }
   return principal.territories.map((territory) => territory.id);

@@ -432,16 +432,19 @@ export class AlertsRepository {
     );
 
     const movementIds = rows
-      .filter((r) => r.entity_table === "movement_event" && r.entity_id != null)
-      .map((r) => Number(r.entity_id));
+      .filter(
+        (row) => row.entity_table === "movement_event" && row.entity_id != null,
+      )
+      .map((row) => Number(row.entity_id));
     const loanIds = rows
       .filter(
-        (r) => r.entity_table === "supplier_loan_cycle" && r.entity_id != null,
+        (row) =>
+          row.entity_table === "supplier_loan_cycle" && row.entity_id != null,
       )
-      .map((r) => Number(r.entity_id));
+      .map((row) => Number(row.entity_id));
     const cylinderIds = rows
-      .filter((r) => r.entity_table === "cylinder" && r.entity_id != null)
-      .map((r) => Number(r.entity_id));
+      .filter((row) => row.entity_table === "cylinder" && row.entity_id != null)
+      .map((row) => Number(row.entity_id));
 
     const movementCtx = new Map<number, AlertContext>();
     if (movementIds.length > 0) {
@@ -560,12 +563,12 @@ export class AlertsRepository {
         number,
         { holder_party_id: number; display_name: string }
       >();
-      for (const h of holders) {
-        const cylId = Number(h.cylinder_id);
+      for (const head of holders) {
+        const cylId = Number(head.cylinder_id);
         if (!holderByCylinder.has(cylId)) {
           holderByCylinder.set(cylId, {
-            holder_party_id: Number(h.holder_party_id),
-            display_name: h.display_name,
+            holder_party_id: Number(head.holder_party_id),
+            display_name: head.display_name,
           });
         }
       }
@@ -608,10 +611,10 @@ export class AlertsRepository {
         .orderBy("id", "asc")
         .execute();
 
-      for (const c of contacts) {
-        const partyId = Number(c.client_party_id);
-        if (!phoneByParty.has(partyId) && c.phone) {
-          phoneByParty.set(partyId, c.phone);
+      for (const item of contacts) {
+        const partyId = Number(item.client_party_id);
+        if (!phoneByParty.has(partyId) && item.phone) {
+          phoneByParty.set(partyId, item.phone);
         }
       }
     }

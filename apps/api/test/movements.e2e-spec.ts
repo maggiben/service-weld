@@ -50,7 +50,7 @@ describe("Movements delivery (e2e)", () => {
     expect(res.status).toBe(200);
     const found = (
       res.body.data as Array<{ id: number; packaging: string }>
-    ).find((c) => c.packaging === "SINGLE");
+    ).find((item) => item.packaging === "SINGLE");
     expect(found).toBeDefined();
     return found!.id;
   }

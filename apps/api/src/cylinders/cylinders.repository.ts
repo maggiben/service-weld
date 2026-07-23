@@ -563,12 +563,12 @@ export class CylindersRepository {
     ];
 
     const direction = sort.direction;
-    merged.sort((a, b) => {
-      const dateCmp = a.delivery_date.localeCompare(b.delivery_date);
+    merged.sort((left, right) => {
+      const dateCmp = left.delivery_date.localeCompare(right.delivery_date);
       if (dateCmp !== 0) return direction === "asc" ? dateCmp : -dateCmp;
-      const aId = a.movement_id ?? a.loan_id ?? 0;
-      const bId = b.movement_id ?? b.loan_id ?? 0;
-      const sourceCmp = a.event_source.localeCompare(b.event_source);
+      const aId = left.movement_id ?? left.loan_id ?? 0;
+      const bId = right.movement_id ?? right.loan_id ?? 0;
+      const sourceCmp = left.event_source.localeCompare(right.event_source);
       if (sourceCmp !== 0) return direction === "asc" ? sourceCmp : -sourceCmp;
       return direction === "asc" ? aId - bId : bId - aId;
     });

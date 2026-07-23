@@ -488,7 +488,7 @@
     "period_locked": "Period already has approved or exported invoices",
     "not_approved": "Billing run must be approved before export",
     "forbidden_title": "Access denied",
-    "forbidden_back": "Back to clients",
+    "forbidden_back": "Back to home",
     "duplicate_username": "A user with this username already exists",
     "has_open_movements": "This client still holds cylinders. Return or close those movements before deleting.",
     "has_open_accessories": "This client still holds accessories on loan. Recover them before deleting."
@@ -963,7 +963,7 @@
       "password_optional_help": "Leave blank to keep the current password",
       "roles": "Roles",
       "territories": "Territories",
-      "territories_hint": "Pick one or more, “Select all”, or “Add territory…”",
+      "territories_hint": "Empty = all territories. Or pick one or more, “Select all”, or “Add territory…”",
       "select_all_territories": "Select all",
       "clear_all_territories": "Clear all",
       "create_territory": "Add “{{name}}”",

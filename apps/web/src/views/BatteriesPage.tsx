@@ -26,8 +26,10 @@ import {
 import { useSessionStore } from "../store/sessionStore";
 
 export default function BatteriesPage() {
-  const { t } = useTranslation();
-  const canWrite = useSessionStore((s) => s.hasCapability("batteries:write"));
+  const { t: translate } = useTranslation();
+  const canWrite = useSessionStore((state) =>
+    state.hasCapability("batteries:write"),
+  );
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
     page: 0,
     pageSize: 50,
@@ -87,27 +89,32 @@ export default function BatteriesPage() {
     () => [
       {
         field: "battery_code",
-        headerName: t("batteries.columns.code"),
+        headerName: translate("batteries.columns.code"),
         flex: 1,
         minWidth: 120,
       },
       {
         field: "owner_name",
-        headerName: t("batteries.columns.owner"),
+        headerName: translate("batteries.columns.owner"),
         width: 160,
       },
-      { field: "gas_code", headerName: t("batteries.columns.gas"), width: 100 },
+      {
+        field: "gas_code",
+        headerName: translate("batteries.columns.gas"),
+        width: 100,
+      },
       {
         field: "member_count",
-        headerName: t("batteries.columns.members"),
+        headerName: translate("batteries.columns.members"),
         width: 110,
         type: "number",
       },
       {
         field: "state",
-        headerName: t("batteries.columns.state"),
+        headerName: translate("batteries.columns.state"),
         width: 150,
-        valueFormatter: (value: string) => t(`enums.cylinder_state.${value}`),
+        valueFormatter: (value: string) =>
+          translate(`enums.cylinder_state.${value}`),
       },
       ...(canWrite
         ? [
@@ -119,14 +126,14 @@ export default function BatteriesPage() {
               filterable: false,
               renderCell: (params) => (
                 <Button size="small" onClick={() => openEdit(params.row)}>
-                  {t("actions.edit")}
+                  {translate("actions.edit")}
                 </Button>
               ),
             } satisfies GridColDef<Battery>,
           ]
         : []),
     ],
-    [t, canWrite],
+    [translate, canWrite],
   );
 
   return (
@@ -136,20 +143,20 @@ export default function BatteriesPage() {
         justifyContent="space-between"
         alignItems={{ md: "center" }}
       >
-        <Typography variant="h5">{t("batteries.title")}</Typography>
+        <Typography variant="h5">{translate("batteries.title")}</Typography>
         {canWrite && (
           <Button
             variant="contained"
             startIcon={<AddIcon />}
             onClick={openCreate}
           >
-            {t("actions.new_battery")}
+            {translate("actions.new_battery")}
           </Button>
         )}
       </Stack>
 
       {batteriesQuery.isError && (
-        <Alert severity="error">{t("errors.load_failed")}</Alert>
+        <Alert severity="error">{translate("errors.load_failed")}</Alert>
       )}
 
       <Box sx={{ flex: 1, minHeight: 400 }}>

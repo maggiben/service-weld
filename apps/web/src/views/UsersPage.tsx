@@ -81,9 +81,9 @@ const SELECT_ALL_ID = -3;
 const filterTerritoryOptions = createFilterOptions<TerritoryOption>();
 
 function UsersPageInner() {
-  const { t } = useTranslation();
+  const { t: translate } = useTranslation();
   const queryClient = useQueryClient();
-  const currentUserId = useSessionStore((s) => s.user?.id);
+  const currentUserId = useSessionStore((state) => state.user?.id);
   const { territories, refetch: refetchLocations } = useLocations();
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
     page: 0,
@@ -154,8 +154,8 @@ function UsersPageInner() {
     for (const tr of knownTerritories) {
       if (!byId.has(tr.id)) byId.set(tr.id, { id: tr.id, name: tr.name });
     }
-    return [...byId.values()].sort((a, b) =>
-      a.name.localeCompare(b.name, "es"),
+    return [...byId.values()].sort((left, right) =>
+      left.name.localeCompare(right.name, "es"),
     );
   }, [territories, knownTerritories]);
 
@@ -238,10 +238,10 @@ function UsersPageInner() {
     },
     onSuccess: async (row) => {
       rememberTerritory(row);
-      setDraft((d) =>
-        d.territory_ids.includes(row.id)
-          ? d
-          : { ...d, territory_ids: [...d.territory_ids, row.id] },
+      setDraft((data) =>
+        data.territory_ids.includes(row.id)
+          ? data
+          : { ...data, territory_ids: [...data.territory_ids, row.id] },
       );
       setCreateTerritoryOpen(false);
       setCreateTerritoryName("");
@@ -251,13 +251,15 @@ function UsersPageInner() {
     },
     onError: (err) => {
       if (err instanceof Error && err.message === "empty") {
-        setCreateTerritoryError(t("users.form.create_territory_name_required"));
+        setCreateTerritoryError(
+          translate("users.form.create_territory_name_required"),
+        );
         return;
       }
       if (err instanceof ApiClientError) {
         const message =
           err.code === "DUPLICATE_TERRITORY"
-            ? t("errors.duplicate_location")
+            ? translate("errors.duplicate_location")
             : err.message;
         if (createTerritoryOpen) {
           setCreateTerritoryError(message);
@@ -267,10 +269,10 @@ function UsersPageInner() {
         return;
       }
       if (createTerritoryOpen) {
-        setCreateTerritoryError(t("errors.generic"));
+        setCreateTerritoryError(translate("errors.generic"));
         return;
       }
-      setError(t("errors.generic"));
+      setError(translate("errors.generic"));
     },
   });
 
@@ -303,13 +305,13 @@ function UsersPageInner() {
     onError: (err) => {
       if (err instanceof ApiClientError) {
         if (err.code === "DUPLICATE_USERNAME") {
-          setError(t("errors.duplicate_username"));
+          setError(translate("errors.duplicate_username"));
           return;
         }
         setError(err.message);
         return;
       }
-      setError(t("errors.generic"));
+      setError(translate("errors.generic"));
     },
   });
 
@@ -324,7 +326,7 @@ function UsersPageInner() {
         setError(err.message);
         return;
       }
-      setError(t("errors.generic"));
+      setError(translate("errors.generic"));
     },
   });
 
@@ -332,33 +334,37 @@ function UsersPageInner() {
     () => [
       {
         field: "username",
-        headerName: t("users.columns.username"),
+        headerName: translate("users.columns.username"),
         flex: 1,
         minWidth: 140,
       },
       {
         field: "email",
-        headerName: t("users.columns.email"),
+        headerName: translate("users.columns.email"),
         flex: 1,
         minWidth: 160,
         valueFormatter: (value: string | null) => value ?? "—",
       },
       {
         field: "roles",
-        headerName: t("users.columns.roles"),
+        headerName: translate("users.columns.roles"),
         flex: 1.2,
         minWidth: 180,
         renderCell: (params) => (
           <Stack direction="row" spacing={0.5} sx={{ flexWrap: "wrap", py: 1 }}>
             {params.row.roles.map((role) => (
-              <Chip key={role} size="small" label={t(`enums.role.${role}`)} />
+              <Chip
+                key={role}
+                size="small"
+                label={translate(`enums.role.${role}`)}
+              />
             ))}
           </Stack>
         ),
       },
       {
         field: "territories",
-        headerName: t("users.columns.territories"),
+        headerName: translate("users.columns.territories"),
         flex: 1,
         minWidth: 140,
         valueFormatter: (value: string[]) =>
@@ -366,13 +372,17 @@ function UsersPageInner() {
       },
       {
         field: "is_active",
-        headerName: t("users.columns.active"),
+        headerName: translate("users.columns.active"),
         width: 100,
         renderCell: (params) =>
           params.value ? (
-            <Chip size="small" color="success" label={t("users.active_yes")} />
+            <Chip
+              size="small"
+              color="success"
+              label={translate("users.active_yes")}
+            />
           ) : (
-            <Chip size="small" label={t("users.active_no")} />
+            <Chip size="small" label={translate("users.active_no")} />
           ),
       },
       {
@@ -383,7 +393,7 @@ function UsersPageInner() {
         renderCell: (params) => (
           <Stack direction="row" spacing={1}>
             <Button size="small" onClick={() => openEdit(params.row)}>
-              {t("actions.edit")}
+              {translate("actions.edit")}
             </Button>
             <Button
               size="small"
@@ -392,13 +402,13 @@ function UsersPageInner() {
               onClick={() => setRemoveTarget(params.row)}
               startIcon={<DeleteOutlineIcon />}
             >
-              {t("actions.remove")}
+              {translate("actions.remove")}
             </Button>
           </Stack>
         ),
       },
     ],
-    [t, currentUserId],
+    [translate, currentUserId],
   );
 
   return (
@@ -411,15 +421,17 @@ function UsersPageInner() {
         sx={{ mb: 2 }}
       >
         <Box>
-          <Typography variant="h5">{t("users.title")}</Typography>
-          <Typography color="text.secondary">{t("users.subtitle")}</Typography>
+          <Typography variant="h5">{translate("users.title")}</Typography>
+          <Typography color="text.secondary">
+            {translate("users.subtitle")}
+          </Typography>
         </Box>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
           onClick={openCreate}
         >
-          {t("actions.new_user")}
+          {translate("actions.new_user")}
         </Button>
       </Stack>
 
@@ -431,38 +443,38 @@ function UsersPageInner() {
 
       <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ mb: 2 }}>
         <FormControl size="small" sx={{ minWidth: 160 }}>
-          <InputLabel>{t("users.filters.role")}</InputLabel>
+          <InputLabel>{translate("users.filters.role")}</InputLabel>
           <Select
-            label={t("users.filters.role")}
+            label={translate("users.filters.role")}
             value={roleFilter}
-            onChange={(e) => {
-              setRoleFilter(e.target.value as RoleCode | "");
+            onChange={(event) => {
+              setRoleFilter(event.target.value as RoleCode | "");
               setCursors([undefined]);
-              setPaginationModel((p) => ({ ...p, page: 0 }));
+              setPaginationModel((part) => ({ ...part, page: 0 }));
             }}
           >
-            <MenuItem value="">{t("users.filters.all")}</MenuItem>
+            <MenuItem value="">{translate("users.filters.all")}</MenuItem>
             {ASSIGNABLE_ROLES.map((role) => (
               <MenuItem key={role} value={role}>
-                {t(`enums.role.${role}`)}
+                {translate(`enums.role.${role}`)}
               </MenuItem>
             ))}
           </Select>
         </FormControl>
         <FormControl size="small" sx={{ minWidth: 160 }}>
-          <InputLabel>{t("users.filters.active")}</InputLabel>
+          <InputLabel>{translate("users.filters.active")}</InputLabel>
           <Select
-            label={t("users.filters.active")}
+            label={translate("users.filters.active")}
             value={activeFilter}
-            onChange={(e) => {
-              setActiveFilter(e.target.value as "all" | "true" | "false");
+            onChange={(event) => {
+              setActiveFilter(event.target.value as "all" | "true" | "false");
               setCursors([undefined]);
-              setPaginationModel((p) => ({ ...p, page: 0 }));
+              setPaginationModel((part) => ({ ...part, page: 0 }));
             }}
           >
-            <MenuItem value="all">{t("users.filters.all")}</MenuItem>
-            <MenuItem value="true">{t("users.active_yes")}</MenuItem>
-            <MenuItem value="false">{t("users.active_no")}</MenuItem>
+            <MenuItem value="all">{translate("users.filters.all")}</MenuItem>
+            <MenuItem value="true">{translate("users.active_yes")}</MenuItem>
+            <MenuItem value="false">{translate("users.active_no")}</MenuItem>
           </Select>
         </FormControl>
       </Stack>
@@ -501,67 +513,75 @@ function UsersPageInner() {
         slotProps={{ paper: { sx: { width: { xs: "100%", sm: 420 }, p: 3 } } }}
       >
         <Typography variant="h6" gutterBottom>
-          {editing ? t("users.form.title_edit") : t("users.form.title_create")}
+          {editing
+            ? translate("users.form.title_edit")
+            : translate("users.form.title_create")}
         </Typography>
         <Stack spacing={2.5} sx={{ pt: 0.5 }}>
           <TextField
-            label={t("users.form.username")}
+            label={translate("users.form.username")}
             value={draft.username}
             disabled={Boolean(editing)}
-            onChange={(e) =>
-              setDraft((d) => ({ ...d, username: e.target.value }))
+            onChange={(event) =>
+              setDraft((data) => ({ ...data, username: event.target.value }))
             }
             required
             fullWidth
           />
           <TextField
-            label={t("users.form.email")}
+            label={translate("users.form.email")}
             type="email"
             value={draft.email}
-            onChange={(e) => setDraft((d) => ({ ...d, email: e.target.value }))}
+            onChange={(event) =>
+              setDraft((data) => ({ ...data, email: event.target.value }))
+            }
             fullWidth
           />
           <TextField
             label={
               editing
-                ? t("users.form.password_optional")
-                : t("users.form.password")
+                ? translate("users.form.password_optional")
+                : translate("users.form.password")
             }
             type="password"
             value={draft.password}
-            onChange={(e) =>
-              setDraft((d) => ({ ...d, password: e.target.value }))
+            onChange={(event) =>
+              setDraft((data) => ({ ...data, password: event.target.value }))
             }
             required={!editing}
             helperText={
-              editing ? t("users.form.password_optional_help") : undefined
+              editing
+                ? translate("users.form.password_optional_help")
+                : undefined
             }
             fullWidth
           />
           <FormControl fullWidth>
             <InputLabel id="users-form-roles-label">
-              {t("users.form.roles")}
+              {translate("users.form.roles")}
             </InputLabel>
             <Select
               labelId="users-form-roles-label"
               multiple
-              label={t("users.form.roles")}
+              label={translate("users.form.roles")}
               value={draft.roles}
-              onChange={(e) =>
-                setDraft((d) => ({
-                  ...d,
-                  roles: e.target.value as RoleCode[],
+              onChange={(event) =>
+                setDraft((data) => ({
+                  ...data,
+                  roles: event.target.value as RoleCode[],
                 }))
               }
-              input={<OutlinedInput label={t("users.form.roles")} />}
+              input={<OutlinedInput label={translate("users.form.roles")} />}
               renderValue={(selected) =>
-                selected.map((role) => t(`enums.role.${role}`)).join(", ")
+                selected
+                  .map((role) => translate(`enums.role.${role}`))
+                  .join(", ")
               }
             >
               {ASSIGNABLE_ROLES.map((role) => (
                 <MenuItem key={role} value={role}>
                   <Checkbox checked={draft.roles.includes(role)} />
-                  {t(`enums.role.${role}`)}
+                  {translate(`enums.role.${role}`)}
                 </MenuItem>
               ))}
             </Select>
@@ -573,18 +593,18 @@ function UsersPageInner() {
             value={selectedTerritories}
             loading={createTerritoryMutation.isPending}
             disabled={createTerritoryMutation.isPending}
-            isOptionEqualToValue={(a, b) => a.id === b.id}
+            isOptionEqualToValue={(left, right) => left.id === right.id}
             getOptionLabel={(option) => {
               if (option.action === "prompt") {
-                return t("users.form.create_territory_option");
+                return translate("users.form.create_territory_option");
               }
               if (option.action === "select_all") {
                 return allTerritoriesSelected(
                   draft.territory_ids,
                   territoryOptions.map((tr) => tr.id),
                 )
-                  ? t("users.form.clear_all_territories")
-                  : t("users.form.select_all_territories");
+                  ? translate("users.form.clear_all_territories")
+                  : translate("users.form.select_all_territories");
               }
               return option.name;
             }}
@@ -608,13 +628,13 @@ function UsersPageInner() {
               if (territoryOptions.length > 0 && !normalized) {
                 filtered.unshift({
                   id: SELECT_ALL_ID,
-                  name: t("users.form.select_all_territories"),
+                  name: translate("users.form.select_all_territories"),
                   action: "select_all",
                 });
               }
               filtered.push({
                 id: CREATE_PROMPT_ID,
-                name: t("users.form.create_territory_option"),
+                name: translate("users.form.create_territory_option"),
                 action: "prompt",
               });
               return filtered;
@@ -622,10 +642,10 @@ function UsersPageInner() {
             onChange={(_event, next) => {
               const selectAll = next.find((opt) => opt.action === "select_all");
               if (selectAll) {
-                setDraft((d) => ({
-                  ...d,
+                setDraft((data) => ({
+                  ...data,
                   territory_ids: nextTerritorySelection(
-                    d.territory_ids,
+                    data.territory_ids,
                     territoryOptions.map((tr) => tr.id),
                   ),
                 }));
@@ -636,8 +656,8 @@ function UsersPageInner() {
               const kept = next.filter(
                 (opt) => !opt.inputValue && !opt.action && opt.id > 0,
               );
-              setDraft((d) => ({
-                ...d,
+              setDraft((data) => ({
+                ...data,
                 territory_ids: kept.map((opt) => opt.id),
               }));
               if (prompt) {
@@ -651,12 +671,12 @@ function UsersPageInner() {
                 );
                 if (existing) {
                   rememberTerritory(existing);
-                  setDraft((d) =>
-                    d.territory_ids.includes(existing.id)
-                      ? d
+                  setDraft((data) =>
+                    data.territory_ids.includes(existing.id)
+                      ? data
                       : {
-                          ...d,
-                          territory_ids: [...d.territory_ids, existing.id],
+                          ...data,
+                          territory_ids: [...data.territory_ids, existing.id],
                         },
                   );
                   return;
@@ -670,7 +690,7 @@ function UsersPageInner() {
                 return (
                   <li key={key} {...rest}>
                     <AddIcon fontSize="small" sx={{ mr: 1, opacity: 0.8 }} />
-                    {t("users.form.create_territory_option")}
+                    {translate("users.form.create_territory_option")}
                   </li>
                 );
               }
@@ -690,8 +710,8 @@ function UsersPageInner() {
                       sx={{ mr: 1, p: 0.5 }}
                     />
                     {allSelected
-                      ? t("users.form.clear_all_territories")
-                      : t("users.form.select_all_territories")}
+                      ? translate("users.form.clear_all_territories")
+                      : translate("users.form.select_all_territories")}
                   </li>
                 );
               }
@@ -700,7 +720,9 @@ function UsersPageInner() {
                   {option.inputValue ? (
                     <>
                       <AddIcon fontSize="small" sx={{ mr: 1, opacity: 0.8 }} />
-                      {t("users.form.create_territory", { name: option.name })}
+                      {translate("users.form.create_territory", {
+                        name: option.name,
+                      })}
                     </>
                   ) : (
                     <>
@@ -718,8 +740,8 @@ function UsersPageInner() {
             renderInput={(params) => (
               <TextField
                 {...params}
-                label={t("users.form.territories")}
-                helperText={t("users.form.territories_hint")}
+                label={translate("users.form.territories")}
+                helperText={translate("users.form.territories_hint")}
                 InputProps={{
                   ...params.InputProps,
                   endAdornment: (
@@ -738,12 +760,15 @@ function UsersPageInner() {
             control={
               <Switch
                 checked={draft.mfa_enabled}
-                onChange={(e) =>
-                  setDraft((d) => ({ ...d, mfa_enabled: e.target.checked }))
+                onChange={(event) =>
+                  setDraft((data) => ({
+                    ...data,
+                    mfa_enabled: event.target.checked,
+                  }))
                 }
               />
             }
-            label={t("users.form.mfa_enabled")}
+            label={translate("users.form.mfa_enabled")}
           />
           {editing && (
             <FormControlLabel
@@ -751,12 +776,15 @@ function UsersPageInner() {
                 <Switch
                   checked={draft.is_active}
                   disabled={editing.id === currentUserId}
-                  onChange={(e) =>
-                    setDraft((d) => ({ ...d, is_active: e.target.checked }))
+                  onChange={(event) =>
+                    setDraft((data) => ({
+                      ...data,
+                      is_active: event.target.checked,
+                    }))
                   }
                 />
               }
-              label={t("users.form.is_active")}
+              label={translate("users.form.is_active")}
             />
           )}
           <Stack direction="row" spacing={1}>
@@ -771,10 +799,10 @@ function UsersPageInner() {
                 (!editing && draft.username.trim().length < 2)
               }
             >
-              {t("actions.save")}
+              {translate("actions.save")}
             </Button>
             <Button onClick={() => setDrawerOpen(false)}>
-              {t("actions.cancel")}
+              {translate("actions.cancel")}
             </Button>
           </Stack>
         </Stack>
@@ -791,7 +819,9 @@ function UsersPageInner() {
         fullWidth
         maxWidth="xs"
       >
-        <DialogTitle>{t("users.form.create_territory_title")}</DialogTitle>
+        <DialogTitle>
+          {translate("users.form.create_territory_title")}
+        </DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
             {createTerritoryError && (
@@ -799,12 +829,12 @@ function UsersPageInner() {
             )}
             <TextField
               autoFocus
-              label={t("users.form.create_territory_name")}
+              label={translate("users.form.create_territory_name")}
               value={createTerritoryName}
-              onChange={(e) => setCreateTerritoryName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
+              onChange={(event) => setCreateTerritoryName(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
                   createTerritoryMutation.mutate(createTerritoryName);
                 }
               }}
@@ -817,14 +847,14 @@ function UsersPageInner() {
             onClick={() => setCreateTerritoryOpen(false)}
             disabled={createTerritoryMutation.isPending}
           >
-            {t("actions.cancel")}
+            {translate("actions.cancel")}
           </Button>
           <Button
             variant="contained"
             disabled={createTerritoryMutation.isPending}
             onClick={() => createTerritoryMutation.mutate(createTerritoryName)}
           >
-            {t("actions.save")}
+            {translate("actions.save")}
           </Button>
         </DialogActions>
       </Dialog>
@@ -833,15 +863,17 @@ function UsersPageInner() {
         open={Boolean(removeTarget)}
         onClose={() => setRemoveTarget(null)}
       >
-        <DialogTitle>{t("users.remove_title")}</DialogTitle>
+        <DialogTitle>{translate("users.remove_title")}</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            {t("users.remove_confirm", { username: removeTarget?.username })}
+            {translate("users.remove_confirm", {
+              username: removeTarget?.username,
+            })}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setRemoveTarget(null)}>
-            {t("actions.cancel")}
+            {translate("actions.cancel")}
           </Button>
           <Button
             color="error"
@@ -851,7 +883,7 @@ function UsersPageInner() {
               if (removeTarget) removeMutation.mutate(removeTarget.id);
             }}
           >
-            {t("actions.remove")}
+            {translate("actions.remove")}
           </Button>
         </DialogActions>
       </Dialog>

@@ -62,10 +62,12 @@ const STATES: CylinderState[] = [
 const BASES: OwnershipBasis[] = ["OURS", "SUPPLIER", "CUSTOMER"];
 
 export default function CylindersPage() {
-  const { t } = useTranslation();
-  const locale = useUiStore((s) => s.locale);
+  const { t: translate } = useTranslation();
+  const locale = useUiStore((state) => state.locale);
   const router = useRouter();
-  const canWrite = useSessionStore((s) => s.hasCapability("cylinders:write"));
+  const canWrite = useSessionStore((state) =>
+    state.hasCapability("cylinders:write"),
+  );
   const {
     territories,
     localities,
@@ -179,39 +181,39 @@ export default function CylindersPage() {
     () => [
       {
         field: "serial_number",
-        headerName: t("cylinders.columns.serial"),
+        headerName: translate("cylinders.columns.serial"),
         flex: 1,
         minWidth: 120,
       },
       {
         field: "owner_name",
-        headerName: t("cylinders.columns.owner"),
+        headerName: translate("cylinders.columns.owner"),
         width: 160,
         sortable: false,
       },
       {
         field: "current_holder_name",
-        headerName: t("cylinders.columns.holder"),
+        headerName: translate("cylinders.columns.holder"),
         width: 180,
         sortable: false,
         valueFormatter: (value: string | null | undefined) => value ?? "—",
       },
       {
         field: "current_location_name",
-        headerName: t("cylinders.columns.city"),
+        headerName: translate("cylinders.columns.city"),
         width: 140,
         sortable: false,
         valueFormatter: (value: string | null | undefined) => value ?? "—",
       },
       {
         field: "gas_code",
-        headerName: t("cylinders.columns.gas"),
+        headerName: translate("cylinders.columns.gas"),
         width: 110,
         sortable: false,
       },
       {
         field: "capacity_m3",
-        headerName: t("cylinders.columns.capacity"),
+        headerName: translate("cylinders.columns.capacity"),
         width: 110,
         sortable: false,
         valueGetter: (_v, row: Cylinder) =>
@@ -219,19 +221,19 @@ export default function CylindersPage() {
       },
       {
         field: "ownership_basis",
-        headerName: t("cylinders.columns.basis"),
+        headerName: translate("cylinders.columns.basis"),
         width: 120,
         sortable: false,
-        valueFormatter: (value: string) => t(`enums.basis.${value}`),
+        valueFormatter: (value: string) => translate(`enums.basis.${value}`),
       },
       {
         field: "state",
-        headerName: t("cylinders.columns.state"),
+        headerName: translate("cylinders.columns.state"),
         width: 160,
         renderCell: (params) => (
           <Chip
             size="small"
-            label={t(`enums.cylinder_state.${params.value}`)}
+            label={translate(`enums.cylinder_state.${params.value}`)}
             color={
               params.value === "AT_CLIENT"
                 ? "warning"
@@ -244,14 +246,15 @@ export default function CylindersPage() {
       },
       {
         field: "condition",
-        headerName: t("cylinders.columns.condition"),
+        headerName: translate("cylinders.columns.condition"),
         width: 100,
         sortable: false,
-        valueFormatter: (value: string) => t(`enums.condition.${value}`),
+        valueFormatter: (value: string) =>
+          translate(`enums.condition.${value}`),
       },
       {
         field: "home_territory_id",
-        headerName: t("cylinders.columns.territory"),
+        headerName: translate("cylinders.columns.territory"),
         width: 140,
         sortable: false,
         valueFormatter: (value: number | null) => territoryLabel(value),
@@ -285,7 +288,7 @@ export default function CylindersPage() {
                     setLossTarget(params.row);
                   }}
                 >
-                  {t("actions.report_loss")}
+                  {translate("actions.report_loss")}
                 </Button>
               )}
               {canReplace && (
@@ -296,7 +299,7 @@ export default function CylindersPage() {
                     setReplaceTarget(params.row);
                   }}
                 >
-                  {t("actions.replace")}
+                  {translate("actions.replace")}
                 </Button>
               )}
             </Stack>
@@ -304,7 +307,7 @@ export default function CylindersPage() {
         },
       },
     ],
-    [t, canWrite, territoryLabel],
+    [translate, canWrite, territoryLabel],
   );
 
   const resetPaging = () => {
@@ -320,14 +323,14 @@ export default function CylindersPage() {
         alignItems={{ md: "center" }}
         justifyContent="space-between"
       >
-        <Typography variant="h5">{t("cylinders.title")}</Typography>
+        <Typography variant="h5">{translate("cylinders.title")}</Typography>
         {canWrite && (
           <Button
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => setDrawerOpen(true)}
           >
-            {t("actions.register_cylinder")}
+            {translate("actions.register_cylinder")}
           </Button>
         )}
       </Stack>
@@ -335,24 +338,26 @@ export default function CylindersPage() {
       <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
         <TextField
           size="small"
-          label={t("cylinders.filters.serial")}
+          label={translate("cylinders.filters.serial")}
           value={search}
-          onChange={(e) => handleSearchChange(e.target.value)}
+          onChange={(event) => handleSearchChange(event.target.value)}
           sx={{ minWidth: 200 }}
         />
         <FormControl size="small" sx={{ minWidth: 220 }}>
-          <InputLabel>{t("cylinders.filters.location")}</InputLabel>
+          <InputLabel>{translate("cylinders.filters.location")}</InputLabel>
           <Select
-            label={t("cylinders.filters.location")}
+            label={translate("cylinders.filters.location")}
             value={locationFilter}
-            onChange={(e) => {
-              setLocationFilter(e.target.value);
+            onChange={(event) => {
+              setLocationFilter(event.target.value);
               setClient(null);
               resetPaging();
             }}
           >
-            <MenuItem value="">{t("clients.filters.all")}</MenuItem>
-            <ListSubheader>{t("cylinders.filters.depots")}</ListSubheader>
+            <MenuItem value="">{translate("clients.filters.all")}</MenuItem>
+            <ListSubheader>
+              {translate("cylinders.filters.depots")}
+            </ListSubheader>
             {territories.map((territory) => (
               <MenuItem
                 key={`territory-${territory.id}`}
@@ -361,7 +366,9 @@ export default function CylindersPage() {
                 {territory.name}
               </MenuItem>
             ))}
-            <ListSubheader>{t("cylinders.filters.cities")}</ListSubheader>
+            <ListSubheader>
+              {translate("cylinders.filters.cities")}
+            </ListSubheader>
             {localities.map((locality) => (
               <MenuItem
                 key={`locality-${locality.id}`}
@@ -384,13 +391,13 @@ export default function CylindersPage() {
               ? [
                   client,
                   ...(clientsSearch.data?.data ?? []).filter(
-                    (c) => c.id !== client.id,
+                    (client) => client.id !== client.id,
                   ),
                 ]
               : (clientsSearch.data?.data ?? [])
           }
           getOptionLabel={(option: Client) => option.name}
-          isOptionEqualToValue={(a, b) => a.id === b.id}
+          isOptionEqualToValue={(left, right) => left.id === right.id}
           loading={clientsSearch.isFetching}
           value={client}
           onChange={(_, value) => {
@@ -401,41 +408,44 @@ export default function CylindersPage() {
             if (reason !== "reset") setClientQuery(value);
           }}
           renderInput={(params) => (
-            <TextField {...params} label={t("cylinders.filters.client")} />
+            <TextField
+              {...params}
+              label={translate("cylinders.filters.client")}
+            />
           )}
         />
         <FormControl size="small" sx={{ minWidth: 180 }}>
-          <InputLabel>{t("cylinders.filters.state")}</InputLabel>
+          <InputLabel>{translate("cylinders.filters.state")}</InputLabel>
           <Select
-            label={t("cylinders.filters.state")}
+            label={translate("cylinders.filters.state")}
             value={stateFilter}
-            onChange={(e) => {
-              setStateFilter(e.target.value as CylinderState | "");
+            onChange={(event) => {
+              setStateFilter(event.target.value as CylinderState | "");
               resetPaging();
             }}
           >
-            <MenuItem value="">{t("clients.filters.all")}</MenuItem>
+            <MenuItem value="">{translate("clients.filters.all")}</MenuItem>
             {STATES.map((state) => (
               <MenuItem key={state} value={state}>
-                {t(`enums.cylinder_state.${state}`)}
+                {translate(`enums.cylinder_state.${state}`)}
               </MenuItem>
             ))}
           </Select>
         </FormControl>
         <FormControl size="small" sx={{ minWidth: 160 }}>
-          <InputLabel>{t("cylinders.filters.basis")}</InputLabel>
+          <InputLabel>{translate("cylinders.filters.basis")}</InputLabel>
           <Select
-            label={t("cylinders.filters.basis")}
+            label={translate("cylinders.filters.basis")}
             value={basisFilter}
-            onChange={(e) => {
-              setBasisFilter(e.target.value as OwnershipBasis | "");
+            onChange={(event) => {
+              setBasisFilter(event.target.value as OwnershipBasis | "");
               resetPaging();
             }}
           >
-            <MenuItem value="">{t("clients.filters.all")}</MenuItem>
+            <MenuItem value="">{translate("clients.filters.all")}</MenuItem>
             {BASES.map((basis) => (
               <MenuItem key={basis} value={basis}>
-                {t(`enums.basis.${basis}`)}
+                {translate(`enums.basis.${basis}`)}
               </MenuItem>
             ))}
           </Select>
@@ -443,7 +453,7 @@ export default function CylindersPage() {
       </Stack>
 
       {cylindersQuery.isError && (
-        <Alert severity="error">{t("errors.load_failed")}</Alert>
+        <Alert severity="error">{translate("errors.load_failed")}</Alert>
       )}
 
       <Box sx={{ flex: 1, minHeight: 400 }}>
@@ -485,7 +495,7 @@ export default function CylindersPage() {
                 spacing={2}
               >
                 <Typography color="text.secondary">
-                  {t("cylinders.empty")}
+                  {translate("cylinders.empty")}
                 </Typography>
                 {canWrite && (
                   <Button
@@ -493,7 +503,7 @@ export default function CylindersPage() {
                     startIcon={<AddIcon />}
                     onClick={() => setDrawerOpen(true)}
                   >
-                    {t("actions.register_cylinder")}
+                    {translate("actions.register_cylinder")}
                   </Button>
                 )}
               </Stack>

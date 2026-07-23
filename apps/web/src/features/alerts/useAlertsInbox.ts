@@ -8,8 +8,10 @@ import { useNotificationStore } from "@/store/notificationStore";
 
 /** Polls open alert count into `notificationStore` while the shell is mounted. */
 export function useAlertsInbox() {
-  const canRead = useSessionStore((s) => s.hasCapability("alerts:read"));
-  const setUnread = useNotificationStore((s) => s.setUnreadFromAlerts);
+  const canRead = useSessionStore((state) =>
+    state.hasCapability("alerts:read"),
+  );
+  const setUnread = useNotificationStore((state) => state.setUnreadFromAlerts);
 
   const summaryQuery = useQuery({
     queryKey: ["alerts", "summary"],

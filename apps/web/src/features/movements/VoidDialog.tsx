@@ -23,7 +23,7 @@ interface Props {
 }
 
 export function VoidDialog({ open, movement, onClose }: Props) {
-  const { t } = useTranslation();
+  const { t: translate } = useTranslation();
   const queryClient = useQueryClient();
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +56,7 @@ export function VoidDialog({ open, movement, onClose }: Props) {
         setError(err.message);
         return;
       }
-      setError(t("errors.generic"));
+      setError(translate("errors.generic"));
     },
   });
 
@@ -64,14 +64,14 @@ export function VoidDialog({ open, movement, onClose }: Props) {
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
-      <DialogTitle>{t("movements.void.title")}</DialogTitle>
+      <DialogTitle>{translate("movements.void.title")}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
           {movement && (
             <Typography variant="body2" color="text.secondary">
-              {t("movements.void.summary", {
+              {translate("movements.void.summary", {
                 serial: movement.cylinder_serial,
-                state: t(`enums.movement_state.${movement.state}`),
+                state: translate(`enums.movement_state.${movement.state}`),
               })}
             </Typography>
           )}
@@ -81,21 +81,21 @@ export function VoidDialog({ open, movement, onClose }: Props) {
             required
             multiline
             minRows={2}
-            label={t("movements.void.reason")}
+            label={translate("movements.void.reason")}
             value={reason}
-            onChange={(e) => setReason(e.target.value)}
+            onChange={(event) => setReason(event.target.value)}
           />
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t("actions.cancel")}</Button>
+        <Button onClick={onClose}>{translate("actions.cancel")}</Button>
         <Button
           color="warning"
           variant="contained"
           disabled={invalid || mutation.isPending}
           onClick={() => mutation.mutate()}
         >
-          {t("movements.void.confirm")}
+          {translate("movements.void.confirm")}
         </Button>
       </DialogActions>
     </Dialog>

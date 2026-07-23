@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z as zod } from "zod";
 import { IsoDate, PageMeta, paginated, PaginationQuery } from "./common";
 import {
   CapacityUnit,
@@ -10,58 +10,58 @@ import {
   PackagingKind,
 } from "./enums";
 
-export const Cylinder = z.object({
-  id: z.number().int(),
-  owner_party_id: z.number().int(),
-  owner_name: z.string().optional(),
-  serial_number: z.string(),
+export const Cylinder = zod.object({
+  id: zod.number().int(),
+  owner_party_id: zod.number().int(),
+  owner_name: zod.string().optional(),
+  serial_number: zod.string(),
   gas_code: GasCode.nullable(),
   /** Magnitude; unit is capacity_unit (D-18). Legacy column name. */
-  capacity_m3: z.number().nullable(),
+  capacity_m3: zod.number().nullable(),
   capacity_unit: CapacityUnit,
   ownership_basis: OwnershipBasis,
   packaging: PackagingKind,
-  battery_id: z.number().int().nullable(),
-  home_territory_id: z.number().int().nullable(),
+  battery_id: zod.number().int().nullable(),
+  home_territory_id: zod.number().int().nullable(),
   state: CylinderState,
   condition: CylinderCondition,
   acquisition_date: IsoDate.nullable(),
-  version: z.number().int(),
-  created_at: z.string().datetime(),
-  updated_at: z.string().datetime().optional(),
-  current_holder_party_id: z.number().int().nullable().optional(),
-  current_holder_name: z.string().nullable().optional(),
-  current_movement_id: z.number().int().nullable().optional(),
+  version: zod.number().int(),
+  created_at: zod.string().datetime(),
+  updated_at: zod.string().datetime().optional(),
+  current_holder_party_id: zod.number().int().nullable().optional(),
+  current_holder_name: zod.string().nullable().optional(),
+  current_movement_id: zod.number().int().nullable().optional(),
   /** Current city: client locality/territory when out, else home depot when in stock. */
-  current_location_name: z.string().nullable().optional(),
+  current_location_name: zod.string().nullable().optional(),
 });
-export type Cylinder = z.infer<typeof Cylinder>;
+export type Cylinder = zod.infer<typeof Cylinder>;
 
-export const CreateCylinderInput = z.object({
-  owner_party_id: z.number().int(),
-  serial_number: z.string().min(1),
+export const CreateCylinderInput = zod.object({
+  owner_party_id: zod.number().int(),
+  serial_number: zod.string().min(1),
   gas_code: GasCode.nullable().optional(),
-  capacity_m3: z.coerce.number().positive().nullable().optional(),
+  capacity_m3: zod.coerce.number().positive().nullable().optional(),
   capacity_unit: CapacityUnit.default("M3").optional(),
   ownership_basis: OwnershipBasis,
   packaging: PackagingKind.default("SINGLE"),
-  home_territory_id: z.number().int().nullable().optional(),
+  home_territory_id: zod.number().int().nullable().optional(),
   acquisition_date: IsoDate.nullable().optional(),
   condition: CylinderCondition.default("EMPTY"),
 });
-export type CreateCylinderInput = z.infer<typeof CreateCylinderInput>;
+export type CreateCylinderInput = zod.infer<typeof CreateCylinderInput>;
 
 /**
  * Correct mutable attributes that do not rewrite the custody ledger
  * (gas, capacity, home depot, acquisition date). State/owner/serial
  * changes use dedicated endpoints.
  */
-export const UpdateCylinderInput = z
+export const UpdateCylinderInput = zod
   .object({
     gas_code: GasCode.nullable().optional(),
-    capacity_m3: z.coerce.number().positive().nullable().optional(),
+    capacity_m3: zod.coerce.number().positive().nullable().optional(),
     capacity_unit: CapacityUnit.optional(),
-    home_territory_id: z.number().int().nullable().optional(),
+    home_territory_id: zod.number().int().nullable().optional(),
     acquisition_date: IsoDate.nullable().optional(),
   })
   .refine(
@@ -73,11 +73,11 @@ export const UpdateCylinderInput = z
       value.acquisition_date !== undefined,
     { message: "At least one field is required" },
   );
-export type UpdateCylinderInput = z.infer<typeof UpdateCylinderInput>;
+export type UpdateCylinderInput = zod.infer<typeof UpdateCylinderInput>;
 
 export const CylinderListQuery = PaginationQuery.extend({
-  q: z.string().optional(),
-  sort: z
+  q: zod.string().optional(),
+  sort: zod
     .enum([
       "serial_number",
       "-serial_number",
@@ -89,59 +89,62 @@ export const CylinderListQuery = PaginationQuery.extend({
     .default("serial_number"),
   "filter[state]": CylinderState.optional(),
   "filter[gas_code]": GasCode.optional(),
-  "filter[owner_party_id]": z.coerce.number().int().optional(),
+  "filter[owner_party_id]": zod.coerce.number().int().optional(),
   "filter[ownership_basis]": OwnershipBasis.optional(),
-  "filter[territory_id]": z.coerce.number().int().optional(),
+  "filter[territory_id]": zod.coerce.number().int().optional(),
   /** Current city: open movement at a client with this locality. */
-  "filter[locality_id]": z.coerce.number().int().optional(),
+  "filter[locality_id]": zod.coerce.number().int().optional(),
   /** Current holder: open movement at this client party. */
-  "filter[holder_party_id]": z.coerce.number().int().optional(),
+  "filter[holder_party_id]": zod.coerce.number().int().optional(),
   "filter[packaging]": PackagingKind.optional(),
   /**
    * Rentable stock only: IN_STOCK_EMPTY/FULL, ownership OURS|SUPPLIER,
    * not a packed battery member, and no OPEN movement (not with a client).
    */
-  "filter[available_for_rental]": z
+  "filter[available_for_rental]": zod
     .enum(["true", "false"])
     .optional()
     .transform((value) => value === "true"),
 });
-export type CylinderListQuery = z.infer<typeof CylinderListQuery>;
+export type CylinderListQuery = zod.infer<typeof CylinderListQuery>;
 
 export const CylinderListResponse = paginated(Cylinder);
-export type CylinderListResponse = z.infer<typeof CylinderListResponse>;
+export type CylinderListResponse = zod.infer<typeof CylinderListResponse>;
 
-export const ReportCylinderLossInput = z.object({
-  outcome: z.enum(["LOST", "BROKEN"]),
-  client_party_id: z.number().int().optional(),
+export const ReportCylinderLossInput = zod.object({
+  outcome: zod.enum(["LOST", "BROKEN"]),
+  client_party_id: zod.number().int().optional(),
   occurred_on: IsoDate,
-  note: z.string().nullable().optional(),
+  note: zod.string().nullable().optional(),
 });
-export type ReportCylinderLossInput = z.infer<typeof ReportCylinderLossInput>;
+export type ReportCylinderLossInput = zod.infer<typeof ReportCylinderLossInput>;
 
-export const AlertRecord = z.object({
-  id: z.number().int(),
-  alert_type: z.string(),
-  entity_table: z.string().nullable(),
-  entity_id: z.number().int().nullable(),
-  severity: z.number().int(),
-  created_at: z.string().datetime(),
-  resolved_at: z.string().datetime().nullable(),
-  assigned_role: z.string().nullable(),
+export const AlertRecord = zod.object({
+  id: zod.number().int(),
+  alert_type: zod.string(),
+  entity_table: zod.string().nullable(),
+  entity_id: zod.number().int().nullable(),
+  severity: zod.number().int(),
+  created_at: zod.string().datetime(),
+  resolved_at: zod.string().datetime().nullable(),
+  assigned_role: zod.string().nullable(),
 });
-export type AlertRecord = z.infer<typeof AlertRecord>;
+export type AlertRecord = zod.infer<typeof AlertRecord>;
 
-export const ReportCylinderLossResponse = z.object({
+export const ReportCylinderLossResponse = zod.object({
   cylinder: Cylinder,
   alert: AlertRecord.nullable(),
 });
-export type ReportCylinderLossResponse = z.infer<
+export type ReportCylinderLossResponse = zod.infer<
   typeof ReportCylinderLossResponse
 >;
 
 /** Source of a circulation timeline row (client movement vs supplier loan). */
-export const CylinderHistoryEventSource = z.enum(["MOVEMENT", "SUPPLIER_LOAN"]);
-export type CylinderHistoryEventSource = z.infer<
+export const CylinderHistoryEventSource = zod.enum([
+  "MOVEMENT",
+  "SUPPLIER_LOAN",
+]);
+export type CylinderHistoryEventSource = zod.infer<
   typeof CylinderHistoryEventSource
 >;
 
@@ -149,41 +152,41 @@ export type CylinderHistoryEventSource = z.infer<
  * Kind shown on the cylinder ledger. Extends movement kinds with supplier-loan
  * loops so devoluciones al proveedor appear alongside client custody.
  */
-export const CylinderHistoryKind = z.enum([
+export const CylinderHistoryKind = zod.enum([
   "RENTAL",
   "REFILL",
   "SUPPLIER_LOAN",
 ]);
-export type CylinderHistoryKind = z.infer<typeof CylinderHistoryKind>;
+export type CylinderHistoryKind = zod.infer<typeof CylinderHistoryKind>;
 
 /** Circulation timeline row (GET /cylinders/{id}/history). */
-export const CylinderHistoryRow = z.object({
+export const CylinderHistoryRow = zod.object({
   event_source: CylinderHistoryEventSource,
-  movement_id: z.number().int().nullable(),
-  loan_id: z.number().int().nullable(),
-  holder_party_id: z.number().int(),
-  holder_name: z.string(),
+  movement_id: zod.number().int().nullable(),
+  loan_id: zod.number().int().nullable(),
+  holder_party_id: zod.number().int(),
+  holder_name: zod.string(),
   gas_code: GasCode.nullable(),
   movement_kind: CylinderHistoryKind,
   delivery_date: IsoDate,
   return_date: IsoDate.nullable(),
-  rental_days: z.number().int().nullable(),
+  rental_days: zod.number().int().nullable(),
   state: MovementState,
-  note: z.string().nullable(),
+  note: zod.string().nullable(),
 });
-export type CylinderHistoryRow = z.infer<typeof CylinderHistoryRow>;
+export type CylinderHistoryRow = zod.infer<typeof CylinderHistoryRow>;
 
 export const CylinderHistoryQuery = PaginationQuery.extend({
-  sort: z.enum(["delivery_date", "-delivery_date"]).default("-delivery_date"),
+  sort: zod.enum(["delivery_date", "-delivery_date"]).default("-delivery_date"),
   "filter[delivery_date][gte]": IsoDate.optional(),
   "filter[delivery_date][lte]": IsoDate.optional(),
-  "filter[holder_party_id]": z.coerce.number().int().optional(),
+  "filter[holder_party_id]": zod.coerce.number().int().optional(),
 });
-export type CylinderHistoryQuery = z.infer<typeof CylinderHistoryQuery>;
+export type CylinderHistoryQuery = zod.infer<typeof CylinderHistoryQuery>;
 
-export const CylinderHistoryResponse = z.object({
-  cylinder_id: z.number().int(),
-  data: z.array(CylinderHistoryRow),
+export const CylinderHistoryResponse = zod.object({
+  cylinder_id: zod.number().int(),
+  data: zod.array(CylinderHistoryRow),
   page: PageMeta,
 });
-export type CylinderHistoryResponse = z.infer<typeof CylinderHistoryResponse>;
+export type CylinderHistoryResponse = zod.infer<typeof CylinderHistoryResponse>;

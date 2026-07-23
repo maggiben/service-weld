@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z as zod } from "zod";
 import { IsoDate, paginated, PaginationQuery } from "./common";
 import { CapacityUnit, GasCode, RatePeriod } from "./enums";
 
@@ -10,55 +10,55 @@ export const CYLINDER_CAPACITY_KG_OPTIONS = [
   5, 10, 15, 20, 25, 30, 40, 45, 50,
 ] as const;
 
-export const RentalRate = z.object({
-  id: z.number().int(),
-  client_party_id: z.number().int().nullable(),
-  client_name: z.string().nullable().optional(),
+export const RentalRate = zod.object({
+  id: zod.number().int(),
+  client_party_id: zod.number().int().nullable(),
+  client_name: zod.string().nullable().optional(),
   gas_code: GasCode.nullable(),
   /** Null = any cylinder size. Magnitude is in capacity_unit (D-18). */
-  capacity_m3: z.number().nullable(),
+  capacity_m3: zod.number().nullable(),
   capacity_unit: CapacityUnit,
   period: RatePeriod,
-  amount: z.number(),
+  amount: zod.number(),
   effective_from: IsoDate,
   effective_to: IsoDate.nullable(),
 });
-export type RentalRate = z.infer<typeof RentalRate>;
+export type RentalRate = zod.infer<typeof RentalRate>;
 
-export const CreateRentalRateInput = z.object({
-  client_party_id: z.number().int().nullable().optional(),
+export const CreateRentalRateInput = zod.object({
+  client_party_id: zod.number().int().nullable().optional(),
   gas_code: GasCode.nullable().optional(),
-  capacity_m3: z.coerce.number().positive().nullable().optional(),
+  capacity_m3: zod.coerce.number().positive().nullable().optional(),
   capacity_unit: CapacityUnit.default("M3").optional(),
   period: RatePeriod.default("DAILY"),
-  amount: z.coerce.number().nonnegative(),
+  amount: zod.coerce.number().nonnegative(),
   effective_from: IsoDate,
   effective_to: IsoDate.nullable().optional(),
 });
-export type CreateRentalRateInput = z.infer<typeof CreateRentalRateInput>;
+export type CreateRentalRateInput = zod.infer<typeof CreateRentalRateInput>;
 
-export const UpdateRentalRateInput = z.object({
-  client_party_id: z.number().int().nullable().optional(),
+export const UpdateRentalRateInput = zod.object({
+  client_party_id: zod.number().int().nullable().optional(),
   gas_code: GasCode.nullable().optional(),
-  capacity_m3: z.coerce.number().positive().nullable().optional(),
+  capacity_m3: zod.coerce.number().positive().nullable().optional(),
   capacity_unit: CapacityUnit.optional(),
   period: RatePeriod.optional(),
-  amount: z.coerce.number().nonnegative().optional(),
+  amount: zod.coerce.number().nonnegative().optional(),
   effective_from: IsoDate.optional(),
   effective_to: IsoDate.nullable().optional(),
 });
-export type UpdateRentalRateInput = z.infer<typeof UpdateRentalRateInput>;
+export type UpdateRentalRateInput = zod.infer<typeof UpdateRentalRateInput>;
 
 export const RentalRateListQuery = PaginationQuery.extend({
-  sort: z
+  sort: zod
     .enum(["effective_from", "-effective_from"])
     .default("-effective_from"),
-  "filter[client_party_id]": z.coerce.number().int().optional(),
+  "filter[client_party_id]": zod.coerce.number().int().optional(),
   "filter[gas_code]": GasCode.optional(),
-  "filter[capacity_m3]": z.coerce.number().positive().optional(),
+  "filter[capacity_m3]": zod.coerce.number().positive().optional(),
   "filter[capacity_unit]": CapacityUnit.optional(),
 });
-export type RentalRateListQuery = z.infer<typeof RentalRateListQuery>;
+export type RentalRateListQuery = zod.infer<typeof RentalRateListQuery>;
 
 export const RentalRateListResponse = paginated(RentalRate);
-export type RentalRateListResponse = z.infer<typeof RentalRateListResponse>;
+export type RentalRateListResponse = zod.infer<typeof RentalRateListResponse>;

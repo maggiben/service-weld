@@ -53,10 +53,14 @@ import { useUiStore } from "../store/uiStore";
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 
 export default function MovementsPage() {
-  const { t } = useTranslation();
-  const locale = useUiStore((s) => s.locale);
-  const canWrite = useSessionStore((s) => s.hasCapability("movements:write"));
-  const canVoid = useSessionStore((s) => s.hasCapability("movements:void"));
+  const { t: translate } = useTranslation();
+  const locale = useUiStore((state) => state.locale);
+  const canWrite = useSessionStore((state) =>
+    state.hasCapability("movements:write"),
+  );
+  const canVoid = useSessionStore((state) =>
+    state.hasCapability("movements:void"),
+  );
   const { localities } = useLocations();
 
   const cityOptions = useMemo(
@@ -170,59 +174,60 @@ export default function MovementsPage() {
     () => [
       {
         field: "delivery_date",
-        headerName: t("movements.columns.delivery"),
+        headerName: translate("movements.columns.delivery"),
         width: 120,
       },
       {
         field: "return_date",
-        headerName: t("movements.columns.return"),
+        headerName: translate("movements.columns.return"),
         width: 120,
         sortable: false,
         valueGetter: (_v, row) => row.return_date ?? "—",
       },
       {
         field: "cylinder_serial",
-        headerName: t("movements.columns.serial"),
+        headerName: translate("movements.columns.serial"),
         width: 120,
         sortable: false,
       },
       {
         field: "holder_name",
-        headerName: t("movements.columns.holder"),
+        headerName: translate("movements.columns.holder"),
         flex: 1,
         minWidth: 160,
         sortable: false,
       },
       {
         field: "property_basis",
-        headerName: t("movements.columns.property"),
+        headerName: translate("movements.columns.property"),
         width: 120,
         sortable: false,
-        valueFormatter: (value: string) => t(`enums.basis.${value}`),
+        valueFormatter: (value: string) => translate(`enums.basis.${value}`),
       },
       {
         field: "movement_kind",
-        headerName: t("movements.columns.kind"),
+        headerName: translate("movements.columns.kind"),
         width: 110,
         sortable: false,
-        valueFormatter: (value: string) => t(`enums.movement_kind.${value}`),
+        valueFormatter: (value: string) =>
+          translate(`enums.movement_kind.${value}`),
       },
       {
         field: "gas_code",
-        headerName: t("movements.columns.gas"),
+        headerName: translate("movements.columns.gas"),
         width: 100,
         sortable: false,
       },
       {
         field: "rental_days",
-        headerName: t("movements.columns.rental_days"),
+        headerName: translate("movements.columns.rental_days"),
         width: 110,
         type: "number",
         valueGetter: (_v, row) => displayRentalDays(row),
       },
       {
         field: "state",
-        headerName: t("movements.columns.state"),
+        headerName: translate("movements.columns.state"),
         width: 120,
         sortable: false,
         renderCell: (params) => {
@@ -234,7 +239,7 @@ export default function MovementsPage() {
             return (
               <Chip
                 size="small"
-                label={t("enums.movement_state.REFILLED")}
+                label={translate("enums.movement_state.REFILLED")}
                 color="success"
               />
             );
@@ -242,7 +247,7 @@ export default function MovementsPage() {
           return (
             <Chip
               size="small"
-              label={t(`enums.movement_state.${params.value}`)}
+              label={translate(`enums.movement_state.${params.value}`)}
               color={
                 params.value === "OPEN"
                   ? "warning"
@@ -256,7 +261,7 @@ export default function MovementsPage() {
       },
       {
         field: "actions",
-        headerName: t("movements.columns.actions"),
+        headerName: translate("movements.columns.actions"),
         width: 260,
         sortable: false,
         align: "right",
@@ -275,14 +280,14 @@ export default function MovementsPage() {
                       size="small"
                       onClick={() => setReturnTarget(params.row)}
                     >
-                      {t("actions.return")}
+                      {translate("actions.return")}
                     </Button>
                   ) : null}
                   <Button
                     size="small"
                     onClick={() => setSwapTarget(params.row)}
                   >
-                    {t("actions.swap")}
+                    {translate("actions.swap")}
                   </Button>
                 </>
               ) : null}
@@ -292,7 +297,7 @@ export default function MovementsPage() {
                   color="warning"
                   onClick={() => setVoidTarget(params.row)}
                 >
-                  {t("actions.void")}
+                  {translate("actions.void")}
                 </Button>
               ) : null}
             </Stack>
@@ -300,7 +305,7 @@ export default function MovementsPage() {
         },
       },
     ],
-    [t, canWrite, canVoid],
+    [translate, canWrite, canVoid],
   );
 
   const resetPaging = () => {
@@ -317,10 +322,10 @@ export default function MovementsPage() {
         justifyContent="space-between"
       >
         <Stack direction="row" spacing={1.5} alignItems="baseline">
-          <Typography variant="h5">{t("movements.title")}</Typography>
+          <Typography variant="h5">{translate("movements.title")}</Typography>
           {pageMeta?.total_estimate != null && (
             <Typography variant="body2" color="text.secondary">
-              {t("movements.total", {
+              {translate("movements.total", {
                 count: pageMeta.total_estimate,
               })}
             </Typography>
@@ -333,21 +338,21 @@ export default function MovementsPage() {
               startIcon={<SwapHorizIcon />}
               onClick={() => setSwapPickOpen(true)}
             >
-              {t("actions.swap")}
+              {translate("actions.swap")}
             </Button>
             <Button
               variant="contained"
               startIcon={<AddIcon />}
               onClick={() => setDeliverOpen(true)}
             >
-              {t("actions.new_delivery")}
+              {translate("actions.new_delivery")}
             </Button>
           </Stack>
         )}
       </Stack>
 
       <Alert severity="info" sx={{ py: 0.5 }}>
-        {t("movements.swap.list_hint")}
+        {translate("movements.swap.list_hint")}
       </Alert>
       <Stack
         direction={{ xs: "column", md: "row" }}
@@ -356,54 +361,54 @@ export default function MovementsPage() {
       >
         <TextField
           size="small"
-          label={t("movements.filters.serial")}
+          label={translate("movements.filters.serial")}
           value={search}
-          onChange={(e) => handleSearchChange(e.target.value)}
+          onChange={(event) => handleSearchChange(event.target.value)}
           sx={{ minWidth: 200 }}
         />
         <FormControlLabel
           control={
             <Switch
               checked={openOnly}
-              onChange={(e) => {
-                setOpenOnly(e.target.checked);
-                if (e.target.checked) setKindFilter("");
+              onChange={(event) => {
+                setOpenOnly(event.target.checked);
+                if (event.target.checked) setKindFilter("");
                 resetPaging();
               }}
             />
           }
-          label={t("movements.filters.open_only")}
+          label={translate("movements.filters.open_only")}
         />
         <FormControl size="small" sx={{ minWidth: 140 }} disabled={openOnly}>
-          <InputLabel>{t("movements.filters.kind")}</InputLabel>
+          <InputLabel>{translate("movements.filters.kind")}</InputLabel>
           <Select
-            label={t("movements.filters.kind")}
+            label={translate("movements.filters.kind")}
             value={openOnly ? "RENTAL" : kindFilter}
-            onChange={(e) => {
-              setKindFilter(e.target.value as MovementKind | "");
+            onChange={(event) => {
+              setKindFilter(event.target.value as MovementKind | "");
               resetPaging();
             }}
           >
-            <MenuItem value="">{t("clients.filters.all")}</MenuItem>
+            <MenuItem value="">{translate("clients.filters.all")}</MenuItem>
             <MenuItem value="RENTAL">
-              {t("enums.movement_kind.RENTAL")}
+              {translate("enums.movement_kind.RENTAL")}
             </MenuItem>
             <MenuItem value="REFILL">
-              {t("enums.movement_kind.REFILL")}
+              {translate("enums.movement_kind.REFILL")}
             </MenuItem>
           </Select>
         </FormControl>
         <FormControl size="small" sx={{ minWidth: 140 }}>
-          <InputLabel>{t("movements.filters.state")}</InputLabel>
+          <InputLabel>{translate("movements.filters.state")}</InputLabel>
           <Select
-            label={t("movements.filters.state")}
+            label={translate("movements.filters.state")}
             value={stateFilter}
-            onChange={(e) => {
-              setStateFilter(e.target.value as MovementState | "");
+            onChange={(event) => {
+              setStateFilter(event.target.value as MovementState | "");
               resetPaging();
             }}
           >
-            <MenuItem value="">{t("clients.filters.all")}</MenuItem>
+            <MenuItem value="">{translate("clients.filters.all")}</MenuItem>
             {(
               [
                 "OPEN",
@@ -415,7 +420,7 @@ export default function MovementsPage() {
               ] as MovementState[]
             ).map((state) => (
               <MenuItem key={state} value={state}>
-                {t(`enums.movement_state.${state}`)}
+                {translate(`enums.movement_state.${state}`)}
               </MenuItem>
             ))}
           </Select>
@@ -425,18 +430,18 @@ export default function MovementsPage() {
           sx={{ minWidth: 180 }}
           disabled={client != null}
         >
-          <InputLabel>{t("movements.filters.locality")}</InputLabel>
+          <InputLabel>{translate("movements.filters.locality")}</InputLabel>
           <Select
-            label={t("movements.filters.locality")}
+            label={translate("movements.filters.locality")}
             value={cityFilter}
-            onChange={(e) => {
-              const value = e.target.value;
+            onChange={(event) => {
+              const value = event.target.value;
               setCityFilter(value === "" ? "" : Number(value));
               setClient(null);
               resetPaging();
             }}
           >
-            <MenuItem value="">{t("clients.filters.all")}</MenuItem>
+            <MenuItem value="">{translate("clients.filters.all")}</MenuItem>
             {cityOptions.map((locality) => (
               <MenuItem key={locality.id} value={locality.id}>
                 {locality.name}
@@ -455,13 +460,13 @@ export default function MovementsPage() {
               ? [
                   client,
                   ...(clientsSearch.data?.data ?? []).filter(
-                    (c) => c.id !== client.id,
+                    (client) => client.id !== client.id,
                   ),
                 ]
               : (clientsSearch.data?.data ?? [])
           }
           getOptionLabel={(option: Client) => option.name}
-          isOptionEqualToValue={(a, b) => a.id === b.id}
+          isOptionEqualToValue={(left, right) => left.id === right.id}
           loading={clientsSearch.isFetching}
           value={client}
           onChange={(_, value) => {
@@ -472,13 +477,16 @@ export default function MovementsPage() {
             if (reason !== "reset") setClientQuery(value);
           }}
           renderInput={(params) => (
-            <TextField {...params} label={t("movements.filters.client")} />
+            <TextField
+              {...params}
+              label={translate("movements.filters.client")}
+            />
           )}
         />
       </Stack>
 
       {movementsQuery.isError && (
-        <Alert severity="error">{t("errors.load_failed")}</Alert>
+        <Alert severity="error">{translate("errors.load_failed")}</Alert>
       )}
 
       <Box sx={{ flex: 1, minHeight: 400 }}>
@@ -519,7 +527,7 @@ export default function MovementsPage() {
                 spacing={2}
               >
                 <Typography color="text.secondary">
-                  {t("movements.empty")}
+                  {translate("movements.empty")}
                 </Typography>
                 {canWrite && (
                   <Button
@@ -527,7 +535,7 @@ export default function MovementsPage() {
                     startIcon={<AddIcon />}
                     onClick={() => setDeliverOpen(true)}
                   >
-                    {t("actions.new_delivery")}
+                    {translate("actions.new_delivery")}
                   </Button>
                 )}
               </Stack>

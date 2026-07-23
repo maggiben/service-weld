@@ -153,10 +153,10 @@ export const useOutboxStore = create<OutboxState>()(
         })),
       pendingCount: () =>
         get().items.filter(
-          (i) => i.status === "queued" || i.status === "syncing",
+          (item) => item.status === "queued" || item.status === "syncing",
         ).length,
       conflictCount: () =>
-        get().items.filter((i) => i.status === "conflict").length,
+        get().items.filter((item) => item.status === "conflict").length,
     }),
     {
       name: "weld.field.outbox",

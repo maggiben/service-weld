@@ -16,8 +16,8 @@ import { startOutboxSyncer } from "@/sync/syncer";
 
 export default function FieldShell({ children }: PropsWithChildren) {
   const pathname = usePathname();
-  const pending = useOutboxStore((s) => s.pendingCount());
-  const conflicts = useOutboxStore((s) => s.conflictCount());
+  const pending = useOutboxStore((state) => state.pendingCount());
+  const conflicts = useOutboxStore((state) => state.conflictCount());
   const syncBadge = pending + conflicts;
 
   useEffect(() => startOutboxSyncer(), []);

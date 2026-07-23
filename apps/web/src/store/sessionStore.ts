@@ -26,6 +26,14 @@ const empty = {
   user: null as MeUser | null,
 };
 
+export function partializeSession(state: SessionState) {
+  return {
+    accessToken: state.accessToken,
+    refreshToken: state.refreshToken,
+    user: state.user,
+  };
+}
+
 export const useSessionStore = create<SessionState>()(
   persist(
     (set, get) => ({
@@ -35,16 +43,15 @@ export const useSessionStore = create<SessionState>()(
       setUser: (user) => set({ user }),
       clearSession: () => set({ ...empty }),
       hasCapability: (capability) =>
-        get().user?.capabilities.includes(capability) ?? false,
-      isAuthenticated: () => Boolean(get().accessToken),
+        get().user?.capabilities?.includes(capability) ?? false,
+      // Tokens alone are not enough — login sets tokens before /me returns.
+      // Requiring `user` prevents RedirectIfAuthed from racing into gated routes
+      // with an empty capability set (→ /forbidden loop).
+      isAuthenticated: () => Boolean(get().accessToken && get().user),
     }),
     {
       name: "weld.session",
-      partialize: (state) => ({
-        accessToken: state.accessToken,
-        refreshToken: state.refreshToken,
-        user: state.user,
-      }),
+      partialize: partializeSession,
     },
   ),
 );

@@ -25,14 +25,14 @@ const SERVICES: { key: string; Icon: SvgIconComponent }[] = [
 ];
 
 export function ServicesSection() {
-  const { t } = useTranslation("landing");
+  const { t: translate } = useTranslation("landing");
 
   return (
     <LandingSection
       id="services"
-      eyebrow={t("services.eyebrow")}
-      title={t("services.title")}
-      subtitle={t("services.subtitle")}
+      eyebrow={translate("services.eyebrow")}
+      title={translate("services.title")}
+      subtitle={translate("services.subtitle")}
     >
       <Stack spacing={{ xs: 3.5, md: 4.5 }}>
         <Box
@@ -51,7 +51,7 @@ export function ServicesSection() {
           <Box
             component="img"
             src={COMPANY.images.services}
-            alt={t("services.imageAlt")}
+            alt={translate("services.imageAlt")}
             width={900}
             height={900}
             loading="lazy"
@@ -97,14 +97,14 @@ export function ServicesSection() {
                   variant="h6"
                   sx={{ mb: 1, fontWeight: 650 }}
                 >
-                  {t(`services.items.${key}.title`)}
+                  {translate(`services.items.${key}.title`)}
                 </Typography>
                 <Typography
                   variant="body2"
                   color="text.secondary"
                   sx={{ lineHeight: 1.65 }}
                 >
-                  {t(`services.items.${key}.body`)}
+                  {translate(`services.items.${key}.body`)}
                 </Typography>
               </Box>
             </Grid>

@@ -48,46 +48,46 @@ function ContactRow({ Icon, label, value, pending }: RowProps) {
 }
 
 export function ContactSection() {
-  const { t } = useTranslation("landing");
+  const { t: translate } = useTranslation("landing");
   const address = formatAddressLines(COMPANY.address).join("\n");
 
   return (
     <LandingSection
       id="contact"
-      eyebrow={t("contact.eyebrow")}
-      title={t("contact.title")}
-      subtitle={t("contact.subtitle")}
+      eyebrow={translate("contact.eyebrow")}
+      title={translate("contact.title")}
+      subtitle={translate("contact.subtitle")}
       bgcolor="background.paper"
     >
       <Stack spacing={3} sx={{ maxWidth: 520 }}>
         <ContactRow
           Icon={PlaceOutlinedIcon}
-          label={t("contact.addressLabel")}
+          label={translate("contact.addressLabel")}
           value={address}
         />
         {/* TODO(013): publish phone once verified against an official source */}
         <ContactRow
           Icon={PhoneOutlinedIcon}
-          label={t("contact.phoneLabel")}
-          value={t("contact.phonePending")}
+          label={translate("contact.phoneLabel")}
+          value={translate("contact.phonePending")}
           pending
         />
         {/* TODO(013): publish email once verified */}
         <ContactRow
           Icon={EmailOutlinedIcon}
-          label={t("contact.emailLabel")}
-          value={t("contact.emailPending")}
+          label={translate("contact.emailLabel")}
+          value={translate("contact.emailPending")}
           pending
         />
         {/* TODO(013): publish business hours once verified */}
         <ContactRow
           Icon={ScheduleOutlinedIcon}
-          label={t("contact.hoursLabel")}
-          value={t("contact.hoursPending")}
+          label={translate("contact.hoursLabel")}
+          value={translate("contact.hoursPending")}
           pending
         />
         <Typography variant="caption" color="text.secondary">
-          {t("contact.verifyNote")}
+          {translate("contact.verifyNote")}
         </Typography>
       </Stack>
     </LandingSection>

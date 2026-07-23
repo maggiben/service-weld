@@ -82,8 +82,8 @@ describe("member labels", () => {
 
 describe("fromCylinder / fromBatteryMembers", () => {
   it("maps cylinder and battery members", () => {
-    const c = cylinder({ id: 3, serial_number: "Z", owner_name: "Own" });
-    assert.deepEqual(fromCylinder(c), {
+    const item = cylinder({ id: 3, serial_number: "Z", owner_name: "Own" });
+    assert.deepEqual(fromCylinder(item), {
       id: 3,
       serial_number: "Z",
       gas_code: "O2",
@@ -269,48 +269,57 @@ describe("buildOwnerOptions / mergeMemberOptions", () => {
       cylinder({ id: 1, serial_number: "ignored" }),
       cylinder({ id: 2, serial_number: "new" }),
     ]);
-    assert.equal(merged.find((m) => m.id === 1)?.serial_number, "kept");
-    assert.equal(merged.find((m) => m.id === 2)?.serial_number, "new");
+    assert.equal(
+      merged.find((member) => member.id === 1)?.serial_number,
+      "kept",
+    );
+    assert.equal(
+      merged.find((member) => member.id === 2)?.serial_number,
+      "new",
+    );
   });
 });
 
 describe("batteryFormErrorMessage", () => {
-  const t = (key: string) => `t:${key}`;
+  const translate = (key: string) => `t:${key}`;
 
   it("maps known codes and falls back", () => {
     assert.equal(
       batteryFormErrorMessage(
         new ApiClientError("TOO_FEW_MEMBERS", "x", 400),
-        t,
+        translate,
       ),
       "t:errors.too_few_members",
     );
     assert.equal(
       batteryFormErrorMessage(
         new ApiClientError("MEMBER_ALREADY_PACKED", "x", 400),
-        t,
+        translate,
       ),
       "t:errors.member_already_packed",
     );
     assert.equal(
       batteryFormErrorMessage(
         new ApiClientError("OTHER", "raw message", 500),
-        t,
+        translate,
       ),
       "raw message",
     );
     assert.equal(
       batteryFormErrorMessage(
         Object.assign(new Error("too few"), { code: "TOO_FEW_MEMBERS" }),
-        t,
+        translate,
       ),
       "t:errors.too_few_members",
     );
     assert.equal(
-      batteryFormErrorMessage(new Error("boom"), t),
+      batteryFormErrorMessage(new Error("boom"), translate),
       "t:errors.generic",
     );
-    assert.equal(batteryFormErrorMessage("string", t), "t:errors.generic");
+    assert.equal(
+      batteryFormErrorMessage("string", translate),
+      "t:errors.generic",
+    );
   });
 });
 
@@ -338,9 +347,9 @@ describe("resolveMemberTokens", () => {
       null,
       {
         fetchCylinder: async (id) => {
-          const c = byId[id];
-          if (!c) throw new Error("missing");
-          return c;
+          const item = byId[id];
+          if (!item) throw new Error("missing");
+          return item;
         },
         onNotPackable: (id) => notPackable.push(id),
         onNotFound: (id) => notFound.push(id),
@@ -348,7 +357,7 @@ describe("resolveMemberTokens", () => {
     );
 
     assert.deepEqual(
-      resolved.map((m) => m.id),
+      resolved.map((member) => member.id),
       [1, 2],
     );
     assert.deepEqual(notPackable, [3]);
@@ -375,7 +384,7 @@ describe("resolveMemberTokens", () => {
       },
     );
     assert.deepEqual(
-      resolved.map((m) => m.id),
+      resolved.map((member) => member.id),
       [8],
     );
     assert.equal(fetches, 0);

@@ -26,7 +26,7 @@ interface Props {
 }
 
 export function ReplaceCylinderDialog({ open, cylinder, onClose }: Props) {
-  const { t } = useTranslation();
+  const { t: translate } = useTranslation();
   const queryClient = useQueryClient();
   const [replacementId, setReplacementId] = useState<number | "">("");
   const [clientId, setClientId] = useState<number | "">("");
@@ -87,28 +87,28 @@ export function ReplaceCylinderDialog({ open, cylinder, onClose }: Props) {
     onError: (err) => {
       if (err instanceof ApiClientError) {
         if (err.code === "REPLACEMENT_NOT_AVAILABLE") {
-          setError(t("errors.replacement_not_available"));
+          setError(translate("errors.replacement_not_available"));
           return;
         }
         setError(err.message);
         return;
       }
-      setError(t("errors.generic"));
+      setError(translate("errors.generic"));
     },
   });
 
   const candidates = (stockQuery.data?.data ?? []).filter(
-    (c) => c.id !== cylinder?.id && c.packaging !== "BATTERY_MEMBER",
+    (item) => item.id !== cylinder?.id && item.packaging !== "BATTERY_MEMBER",
   );
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
-      <DialogTitle>{t("cylinders.replace.title")}</DialogTitle>
+      <DialogTitle>{translate("cylinders.replace.title")}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
           {cylinder && (
             <Typography variant="body2" color="text.secondary">
-              {t("cylinders.replace.summary", {
+              {translate("cylinders.replace.summary", {
                 serial: cylinder.serial_number,
               })}
             </Typography>
@@ -117,54 +117,56 @@ export function ReplaceCylinderDialog({ open, cylinder, onClose }: Props) {
           <TextField
             select
             fullWidth
-            label={t("cylinders.replace.replacement")}
+            label={translate("cylinders.replace.replacement")}
             value={replacementId}
-            onChange={(e) =>
+            onChange={(event) =>
               setReplacementId(
-                e.target.value === "" ? "" : Number(e.target.value),
+                event.target.value === "" ? "" : Number(event.target.value),
               )
             }
           >
-            {candidates.map((c) => (
-              <MenuItem key={c.id} value={c.id}>
-                {c.serial_number}
-                {c.gas_code ? ` · ${c.gas_code}` : ""}
+            {candidates.map((candidate) => (
+              <MenuItem key={candidate.id} value={candidate.id}>
+                {candidate.serial_number}
+                {candidate.gas_code ? ` · ${candidate.gas_code}` : ""}
               </MenuItem>
             ))}
           </TextField>
           <TextField
             select
             fullWidth
-            label={t("cylinders.replace.client")}
+            label={translate("cylinders.replace.client")}
             value={clientId}
-            onChange={(e) =>
-              setClientId(e.target.value === "" ? "" : Number(e.target.value))
+            onChange={(event) =>
+              setClientId(
+                event.target.value === "" ? "" : Number(event.target.value),
+              )
             }
           >
-            {(clientsQuery.data?.data ?? []).map((c) => (
-              <MenuItem key={c.id} value={c.id}>
-                {c.name}
+            {(clientsQuery.data?.data ?? []).map((client) => (
+              <MenuItem key={client.id} value={client.id}>
+                {client.name}
               </MenuItem>
             ))}
           </TextField>
           <DatePicker
-            label={t("cylinders.replace.occurred_on")}
+            label={translate("cylinders.replace.occurred_on")}
             value={dayjs(occurredOn)}
-            onChange={(v: Dayjs | null) => {
-              if (v) setOccurredOn(v.format("YYYY-MM-DD"));
+            onChange={(value: Dayjs | null) => {
+              if (value) setOccurredOn(value.format("YYYY-MM-DD"));
             }}
             slotProps={{ textField: { fullWidth: true } }}
           />
           <TextField
             fullWidth
-            label={t("cylinders.replace.note")}
+            label={translate("cylinders.replace.note")}
             value={note}
-            onChange={(e) => setNote(e.target.value)}
+            onChange={(event) => setNote(event.target.value)}
           />
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t("actions.cancel")}</Button>
+        <Button onClick={onClose}>{translate("actions.cancel")}</Button>
         <Button
           variant="contained"
           disabled={
@@ -175,7 +177,7 @@ export function ReplaceCylinderDialog({ open, cylinder, onClose }: Props) {
           }
           onClick={() => mutation.mutate()}
         >
-          {t("cylinders.replace.confirm")}
+          {translate("cylinders.replace.confirm")}
         </Button>
       </DialogActions>
     </Dialog>

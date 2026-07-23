@@ -44,6 +44,7 @@ import {
 } from "./features/migration/migrationLogic";
 import { toClientFormValues } from "./features/clients/clientFormLogic";
 import { clientCustodyLabel } from "./features/clients/clientLedgerLogic";
+import { homePathForCapabilities } from "./auth/homePath";
 import {
   allTerritoriesSelected,
   emptyUserDraft,
@@ -207,10 +208,10 @@ describe("movementLogic", () => {
 
 describe("transfer / loan / audit / migration", () => {
   it("labels and advances stages", () => {
-    const t = (key: string) =>
+    const translate = (key: string) =>
       key === "transfers.party_types.CLIENT" ? "Cliente" : key;
-    assert.equal(partyTypeLabel(t, "CLIENT"), "Cliente");
-    assert.equal(partyTypeLabel(t, "UNKNOWN"), "UNKNOWN");
+    assert.equal(partyTypeLabel(translate, "CLIENT"), "Cliente");
+    assert.equal(partyTypeLabel(translate, "UNKNOWN"), "UNKNOWN");
     assert.equal(nextLoanStage("RECEIVED"), "OUT_TO_CLIENT");
     assert.equal(nextLoanStage("RETURNED_TO_SUPPLIER"), null);
 
@@ -265,20 +266,23 @@ describe("billingLogic", () => {
       }).kind,
       "mixed",
     );
-    const t = (key: string, opts?: Record<string, unknown>) =>
+    const translate = (key: string, opts?: Record<string, unknown>) =>
       `${key}:${JSON.stringify(opts ?? {})}`;
-    assert.equal(formatInvoiceDaysBreakdown({ charge_lines: [] }, t), "—");
+    assert.equal(
+      formatInvoiceDaysBreakdown({ charge_lines: [] }, translate),
+      "—",
+    );
     assert.match(
       formatInvoiceDaysBreakdown(
         { charge_lines: [{ quantity: 2 }, { quantity: 2 }] },
-        t,
+        translate,
       ),
       /uniform/,
     );
     assert.match(
       formatInvoiceDaysBreakdown(
         { charge_lines: [{ quantity: 2 }, { quantity: 3 }] },
-        t,
+        translate,
       ),
       /mixed/,
     );
@@ -310,54 +314,54 @@ describe("clientFormLogic / clientLedgerLogic", () => {
       true,
     );
 
-    const t = ((key: string) => key) as never;
+    const translate = ((key: string) => key) as never;
     const openRental: Pick<
       MovementEvent,
       "state" | "return_date" | "movement_kind"
     > = { state: "OPEN", return_date: null, movement_kind: "RENTAL" };
     assert.equal(
-      clientCustodyLabel(openRental, t),
+      clientCustodyLabel(openRental, translate),
       "clients.detail.custody.on_loan",
     );
     assert.equal(
       clientCustodyLabel(
         { state: "OPEN", return_date: null, movement_kind: "REFILL" },
-        t,
+        translate,
       ),
       "clients.detail.custody.refill_open",
     );
     assert.equal(
       clientCustodyLabel(
         { state: "CLOSED", return_date: "2024-01-01", movement_kind: "RENTAL" },
-        t,
+        translate,
       ),
       "clients.detail.custody.returned",
     );
     assert.equal(
       clientCustodyLabel(
         { state: "CLOSED", return_date: "2024-01-01", movement_kind: "REFILL" },
-        t,
+        translate,
       ),
       "clients.detail.custody.refill_closed",
     );
     assert.equal(
       clientCustodyLabel(
         { state: "SWAPPED", return_date: null, movement_kind: "RENTAL" },
-        t,
+        translate,
       ),
       "enums.movement_state.SWAPPED",
     );
     assert.equal(
       clientCustodyLabel(
         { state: "LOST", return_date: null, movement_kind: "RENTAL" },
-        t,
+        translate,
       ),
       "enums.movement_state.LOST",
     );
     assert.equal(
       clientCustodyLabel(
         { state: "SOLD", return_date: null, movement_kind: "RENTAL" },
-        t,
+        translate,
       ),
       "enums.movement_state.SOLD",
     );
@@ -366,9 +370,9 @@ describe("clientFormLogic / clientLedgerLogic", () => {
 
 describe("userFormLogic", () => {
   it("creates empty drafts and matches territories", () => {
-    const d = emptyUserDraft();
-    assert.equal(d.username, "");
-    assert.deepEqual(d.roles, ["CLERK"]);
+    const data = emptyUserDraft();
+    assert.equal(data.username, "");
+    assert.deepEqual(data.roles, ["CLERK"]);
     assert.equal(
       findExistingTerritory(" Norte ", [
         { id: 1, name: "norte" },
@@ -390,5 +394,18 @@ describe("userFormLogic", () => {
     assert.equal(allTerritoriesSelected([], []), false);
     assert.deepEqual(nextTerritorySelection([1], available), [1, 2, 3]);
     assert.deepEqual(nextTerritorySelection([1, 2, 3], available), []);
+  });
+});
+
+describe("homePathForCapabilities", () => {
+  it("picks the first granted route and falls back to settings", () => {
+    assert.equal(homePathForCapabilities(["clients:read"]), "/clients");
+    assert.equal(
+      homePathForCapabilities(["cylinders:read", "movements:read"]),
+      "/cylinders",
+    );
+    assert.equal(homePathForCapabilities(["admin:write"]), "/settings");
+    assert.equal(homePathForCapabilities([]), "/settings");
+    assert.equal(homePathForCapabilities(null), "/settings");
   });
 });

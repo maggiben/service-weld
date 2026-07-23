@@ -20,17 +20,17 @@ type ColumnOpts = {
 };
 
 export function buildOutstandingColumns(
-  t: TFunction,
+  translate: TFunction,
   opts: ColumnOpts = {},
 ): GridColDef<ClientAccountOutstandingRow>[] {
-  const w = opts.compact
+  const wrap = opts.compact
     ? { gas: 90, kind: 110, delivery: 130, days: 120, state: 130 }
     : { gas: 100, kind: 120, delivery: 140, days: 130, state: 140 };
 
   return [
     {
       field: "serial",
-      headerName: t("clients.detail.columns.serial"),
+      headerName: translate("clients.detail.columns.serial"),
       flex: 1,
       minWidth: opts.compact ? 110 : 120,
       renderCell: (params) => (
@@ -45,26 +45,27 @@ export function buildOutstandingColumns(
     },
     {
       field: "gas_code",
-      headerName: t("clients.detail.columns.gas"),
-      width: w.gas,
+      headerName: translate("clients.detail.columns.gas"),
+      width: wrap.gas,
       valueFormatter: (value: string | null) => value ?? "—",
     },
     {
       field: "movement_kind",
-      headerName: t("clients.detail.columns.kind"),
-      width: w.kind,
-      valueFormatter: (value: string) => t(`enums.movement_kind.${value}`),
+      headerName: translate("clients.detail.columns.kind"),
+      width: wrap.kind,
+      valueFormatter: (value: string) =>
+        translate(`enums.movement_kind.${value}`),
     },
     {
       field: "delivery_date",
-      headerName: t("clients.detail.columns.delivery"),
-      width: w.delivery,
+      headerName: translate("clients.detail.columns.delivery"),
+      width: wrap.delivery,
       valueFormatter: (value: string) => formatLedgerDate(value),
     },
     {
       field: "accrued_days",
-      headerName: t("clients.detail.columns.accrued_days"),
-      width: w.days,
+      headerName: translate("clients.detail.columns.accrued_days"),
+      width: wrap.days,
       type: "number",
       renderCell: (params) => (
         <Chip
@@ -82,8 +83,8 @@ export function buildOutstandingColumns(
     },
     {
       field: "custody",
-      headerName: t("clients.detail.columns.state"),
-      width: w.state,
+      headerName: translate("clients.detail.columns.state"),
+      width: wrap.state,
       sortable: false,
       valueGetter: (_v, row) => row.movement_kind,
       renderCell: (params) => (
@@ -91,8 +92,8 @@ export function buildOutstandingColumns(
           size="small"
           label={
             params.row.movement_kind === "REFILL"
-              ? t("clients.detail.custody.refill_open")
-              : t("clients.detail.custody.on_loan")
+              ? translate("clients.detail.custody.refill_open")
+              : translate("clients.detail.custody.on_loan")
           }
           color="warning"
         />
@@ -102,11 +103,11 @@ export function buildOutstandingColumns(
 }
 
 export function buildHistoryColumns(
-  t: TFunction,
+  translate: TFunction,
   tab: "history" | "rentals" | "refills",
   opts: ColumnOpts = {},
 ): GridColDef<MovementEvent>[] {
-  const w = opts.compact
+  const wrap = opts.compact
     ? {
         gas: 90,
         kind: 110,
@@ -127,7 +128,7 @@ export function buildHistoryColumns(
   const cols: GridColDef<MovementEvent>[] = [
     {
       field: "cylinder_serial",
-      headerName: t("clients.detail.columns.serial"),
+      headerName: translate("clients.detail.columns.serial"),
       flex: 1,
       minWidth: opts.compact ? 110 : 120,
       renderCell: (params) => (
@@ -142,26 +143,27 @@ export function buildHistoryColumns(
     },
     {
       field: "gas_code",
-      headerName: t("clients.detail.columns.gas"),
-      width: w.gas,
+      headerName: translate("clients.detail.columns.gas"),
+      width: wrap.gas,
       valueFormatter: (value: string | null) => value ?? "—",
     },
     {
       field: "movement_kind",
-      headerName: t("clients.detail.columns.kind"),
-      width: w.kind,
-      valueFormatter: (value: string) => t(`enums.movement_kind.${value}`),
+      headerName: translate("clients.detail.columns.kind"),
+      width: wrap.kind,
+      valueFormatter: (value: string) =>
+        translate(`enums.movement_kind.${value}`),
     },
     {
       field: "delivery_date",
-      headerName: t("clients.detail.columns.delivery"),
-      width: w.delivery,
+      headerName: translate("clients.detail.columns.delivery"),
+      width: wrap.delivery,
       valueFormatter: (value: string) => formatLedgerDate(value),
     },
     {
       field: "return_date",
-      headerName: t("clients.detail.columns.return"),
-      width: w.ret,
+      headerName: translate("clients.detail.columns.return"),
+      width: wrap.ret,
       valueFormatter: (value: string | null) => formatLedgerDate(value),
     },
   ];
@@ -170,8 +172,8 @@ export function buildHistoryColumns(
   if (tab !== "refills") {
     cols.push({
       field: "rental_days",
-      headerName: t("clients.detail.columns.rental_days"),
-      width: w.days,
+      headerName: translate("clients.detail.columns.rental_days"),
+      width: wrap.days,
       type: "number",
       valueGetter: (_v, row) => displayRentalDays(row),
     });
@@ -179,14 +181,14 @@ export function buildHistoryColumns(
 
   cols.push({
     field: "state",
-    headerName: t("clients.detail.columns.state"),
-    width: w.state,
+    headerName: translate("clients.detail.columns.state"),
+    width: wrap.state,
     renderCell: (params) => {
       const returned = params.row.return_date != null;
       return (
         <Chip
           size="small"
-          label={clientCustodyLabel(params.row, t)}
+          label={clientCustodyLabel(params.row, translate)}
           color={movementStateChipColor(params.row.state, returned)}
         />
       );

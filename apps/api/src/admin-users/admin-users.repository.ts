@@ -38,8 +38,8 @@ function mapUser(
     username: row.username,
     email: row.email,
     roles,
-    territories: territories.map((t) => t.name),
-    territory_ids: territories.map((t) => t.id),
+    territories: territories.map((territory) => territory.name),
+    territory_ids: territories.map((territory) => territory.id),
     is_active: row.is_active,
     mfa_enabled: row.mfa_enabled,
     last_login_at: row.last_login_at ? row.last_login_at.toISOString() : null,
@@ -369,10 +369,10 @@ export class AdminUsersRepository {
       .execute();
 
     return {
-      roles: roleRows.map((r) => r.code as RoleCode),
-      territories: territoryRows.map((t) => ({
-        id: Number(t.id),
-        name: t.name,
+      roles: roleRows.map((row) => row.code as RoleCode),
+      territories: territoryRows.map((row) => ({
+        id: Number(row.id),
+        name: row.name,
       })),
     };
   }
@@ -387,7 +387,7 @@ export class AdminUsersRepository {
     if (rows.length !== roles.length) {
       throw ApiErrors.validationFailed("One or more roles are invalid");
     }
-    return rows.map((r) => Number(r.id));
+    return rows.map((row) => Number(row.id));
   }
 
   private async assertTerritoryIds(ids: number[]): Promise<void> {

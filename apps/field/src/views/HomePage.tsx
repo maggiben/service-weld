@@ -29,10 +29,10 @@ function useOnline(): boolean {
 
 export default function HomePage() {
   const online = useOnline();
-  const user = useSessionStore((s) => s.user);
-  const clearSession = useSessionStore((s) => s.clearSession);
-  const pending = useOutboxStore((s) => s.pendingCount());
-  const conflicts = useOutboxStore((s) => s.conflictCount());
+  const user = useSessionStore((state) => state.user);
+  const clearSession = useSessionStore((state) => state.clearSession);
+  const pending = useOutboxStore((state) => state.pendingCount());
+  const conflicts = useOutboxStore((state) => state.conflictCount());
   const router = useRouter();
 
   const logout = async () => {

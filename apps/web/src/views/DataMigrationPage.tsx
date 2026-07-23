@@ -49,17 +49,17 @@ import { useNotificationStore } from "../store/notificationStore";
 
 function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
+  const left = document.createElement("a");
+  left.href = url;
+  left.download = filename;
+  left.click();
   URL.revokeObjectURL(url);
 }
 
 function DataMigrationPageInner() {
-  const { t } = useTranslation();
+  const { t: translate } = useTranslation();
   const queryClient = useQueryClient();
-  const pushToast = useNotificationStore((s) => s.pushToast);
+  const pushToast = useNotificationStore((state) => state.pushToast);
   const [tab, setTab] = useState(0);
   const [label, setLabel] = useState("");
   const [confirmSync, setConfirmSync] = useState(false);
@@ -86,9 +86,9 @@ function DataMigrationPageInner() {
   const statusQuery = useQuery({
     queryKey: ["migration-data-status"],
     queryFn: () => api.getMigrationDataStatus(),
-    refetchInterval: (q) => {
-      const job = q.state.data?.live_job;
-      if (q.state.data?.busy || job?.state === "running") return 1000;
+    refetchInterval: (query) => {
+      const job = query.state.data?.live_job;
+      if (query.state.data?.busy || job?.state === "running") return 1000;
       return false;
     },
   });
@@ -115,13 +115,13 @@ function DataMigrationPageInner() {
         Record<string, unknown> | undefined;
       if (liveJob.kind === "sync") {
         pushToast(
-          t("migration_data.sync_ok", {
+          translate("migration_data.sync_ok", {
             snapshot: String(liveJob.result?.snapshot_id ?? "—"),
           }),
         );
       } else {
         pushToast(
-          t("migration_data.dry_run_ok", {
+          translate("migration_data.dry_run_ok", {
             clean: String(report?.imported_clean ?? "—"),
             flagged: String(report?.flagged ?? "—"),
           }),
@@ -129,9 +129,9 @@ function DataMigrationPageInner() {
       }
       void invalidate();
     } else if (liveJob.state === "failed") {
-      pushToast(liveJob.error ?? t("migration_data.job_failed"));
+      pushToast(liveJob.error ?? translate("migration_data.job_failed"));
     }
-  }, [liveJob, jobDialogOpen, confirmSync, pushToast, t]);
+  }, [liveJob, jobDialogOpen, confirmSync, pushToast, translate]);
 
   useEffect(() => {
     if (!terminalOpen || !terminalRef.current) return;
@@ -150,7 +150,7 @@ function DataMigrationPageInner() {
         onProgress: (pct) => setUploadPct((prev) => ({ ...prev, [slot]: pct })),
       }),
     onSuccess: () => {
-      pushToast(t("migration_data.upload_ok"));
+      pushToast(translate("migration_data.upload_ok"));
       void invalidate();
     },
     onError: (err) => pushToast(migrationErrorMessage(err)),
@@ -186,7 +186,7 @@ function DataMigrationPageInner() {
   const rollbackMut = useMutation({
     mutationFn: (snapshot_id: string) => api.rollbackMigration({ snapshot_id }),
     onSuccess: () => {
-      pushToast(t("migration_data.rollback_ok"));
+      pushToast(translate("migration_data.rollback_ok"));
       setRollbackId(null);
       void invalidate();
     },
@@ -210,7 +210,7 @@ function DataMigrationPageInner() {
       const { blob, filename } = await api.downloadMigrationExport(dataset);
       downloadBlob(blob, filename);
     },
-    onSuccess: () => pushToast(t("migration_data.export_ok")),
+    onSuccess: () => pushToast(translate("migration_data.export_ok")),
     onError: (err) => pushToast(migrationErrorMessage(err)),
   });
 
@@ -218,7 +218,7 @@ function DataMigrationPageInner() {
     mutationFn: () =>
       api.purgeBusinessData({ confirmation: MIGRATION_PURGE_CONFIRMATION }),
     onSuccess: () => {
-      pushToast(t("migration_data.purge_ok"));
+      pushToast(translate("migration_data.purge_ok"));
       setPurgeOpen(false);
       setPurgeConfirm("");
       void invalidate();
@@ -236,7 +236,7 @@ function DataMigrationPageInner() {
     uploadingSlot != null;
   const purgePhraseOk = purgeConfirm.trim() === MIGRATION_PURGE_CONFIRMATION;
   const guideBySlot = new Map(
-    (status?.workbook_guide ?? []).map((g) => [g.slot, g]),
+    (status?.workbook_guide ?? []).map((gas) => [gas.slot, gas]),
   );
 
   const onPick = (slot: MigrationWorkbookSlot, fileList: FileList | null) => {
@@ -254,10 +254,10 @@ function DataMigrationPageInner() {
     <Stack spacing={2}>
       <Box>
         <Typography variant="h5" gutterBottom>
-          {t("migration_data.title")}
+          {translate("migration_data.title")}
         </Typography>
         <Typography color="text.secondary" maxWidth={720}>
-          {t("migration_data.subtitle")}
+          {translate("migration_data.subtitle")}
         </Typography>
       </Box>
 
@@ -270,36 +270,42 @@ function DataMigrationPageInner() {
 
       <Tabs
         value={tab}
-        onChange={(_, v: number) => setTab(v)}
+        onChange={(_, value: number) => setTab(value)}
         variant="scrollable"
         allowScrollButtonsMobile
       >
         <Tab
           icon={<CloudUploadIcon />}
           iconPosition="start"
-          label={t("migration_data.tab_import")}
+          label={translate("migration_data.tab_import")}
         />
         <Tab
           icon={<CloudDownloadIcon />}
           iconPosition="start"
-          label={t("migration_data.tab_export")}
+          label={translate("migration_data.tab_export")}
         />
         <Tab
           icon={<HistoryIcon />}
           iconPosition="start"
-          label={t("migration_data.tab_versions")}
+          label={translate("migration_data.tab_versions")}
         />
       </Tabs>
 
       {tab === 0 && (
         <Stack spacing={2}>
-          <Alert severity="info">{t("migration_data.import_help")}</Alert>
-          <Alert severity="warning">{t("migration_data.xls_only")}</Alert>
+          <Alert severity="info">
+            {translate("migration_data.import_help")}
+          </Alert>
+          <Alert severity="warning">
+            {translate("migration_data.xls_only")}
+          </Alert>
 
           {(["junin", "chacabuco", "propios"] as MigrationWorkbookSlot[]).map(
             (slot) => {
               const guide = guideBySlot.get(slot);
-              const uploaded = status?.uploads.find((u) => u.slot === slot);
+              const uploaded = status?.uploads.find(
+                (item) => item.slot === slot,
+              );
               const pct = uploadPct[slot];
               const isUploading = uploadingSlot === slot;
               return (
@@ -324,7 +330,7 @@ function DataMigrationPageInner() {
                           <Chip
                             size="small"
                             color="info"
-                            label={t("migration_data.uploading", {
+                            label={translate("migration_data.uploading", {
                               pct: pct ?? 0,
                             })}
                           />
@@ -332,13 +338,13 @@ function DataMigrationPageInner() {
                           <Chip
                             size="small"
                             color="success"
-                            label={t("migration_data.uploaded")}
+                            label={translate("migration_data.uploaded")}
                           />
                         ) : (
                           <Chip
                             size="small"
                             color="warning"
-                            label={t("migration_data.missing")}
+                            label={translate("migration_data.missing")}
                           />
                         )}
                       </Stack>
@@ -346,7 +352,7 @@ function DataMigrationPageInner() {
                         {guide?.description}
                       </Typography>
                       <Typography variant="caption" display="block" mt={0.5}>
-                        {t("migration_data.expect_file", {
+                        {translate("migration_data.expect_file", {
                           name: guide?.filename_hint ?? `${slot}.xls`,
                         })}
                       </Typography>
@@ -365,7 +371,7 @@ function DataMigrationPageInner() {
                             mb={0.5}
                           >
                             <Typography variant="caption">
-                              {t("migration_data.upload_progress")}
+                              {translate("migration_data.upload_progress")}
                             </Typography>
                             <Typography variant="caption">
                               {pct ?? 0}%
@@ -386,9 +392,9 @@ function DataMigrationPageInner() {
                         type="file"
                         accept=".xls,application/vnd.ms-excel"
                         hidden
-                        onChange={(e) => {
-                          onPick(slot, e.target.files);
-                          e.target.value = "";
+                        onChange={(event) => {
+                          onPick(slot, event.target.files);
+                          event.target.value = "";
                         }}
                       />
                       <Button
@@ -404,8 +410,8 @@ function DataMigrationPageInner() {
                         onClick={() => fileRefs.current[slot]?.click()}
                       >
                         {uploaded
-                          ? t("migration_data.replace")
-                          : t("migration_data.upload")}
+                          ? translate("migration_data.replace")
+                          : translate("migration_data.upload")}
                       </Button>
                     </Box>
                   </Stack>
@@ -417,10 +423,10 @@ function DataMigrationPageInner() {
           <Divider />
 
           <TextField
-            label={t("migration_data.version_label")}
+            label={translate("migration_data.version_label")}
             value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            helperText={t("migration_data.version_label_help")}
+            onChange={(event) => setLabel(event.target.value)}
+            helperText={translate("migration_data.version_label_help")}
             fullWidth
             disabled={busy}
           />
@@ -431,7 +437,7 @@ function DataMigrationPageInner() {
               disabled={busy || !status?.ready_to_run}
               onClick={() => startJobMut.mutate("dry_run")}
             >
-              {t("migration_data.dry_run")}
+              {translate("migration_data.dry_run")}
             </Button>
             <Button
               variant="contained"
@@ -440,7 +446,7 @@ function DataMigrationPageInner() {
               disabled={busy || !status?.ready_to_run}
               onClick={() => setConfirmSync(true)}
             >
-              {t("migration_data.sync")}
+              {translate("migration_data.sync")}
             </Button>
             {(jobRunning || liveJob) && (
               <Button
@@ -451,14 +457,14 @@ function DataMigrationPageInner() {
                   setTerminalOpen(true);
                 }}
               >
-                {t("migration_data.open_terminal")}
+                {translate("migration_data.open_terminal")}
               </Button>
             )}
           </Stack>
 
           {!status?.ready_to_run && status && (
             <Alert severity="warning">
-              {t("migration_data.missing_slots", {
+              {translate("migration_data.missing_slots", {
                 slots: status.missing_slots.join(", "),
               })}
             </Alert>
@@ -467,7 +473,7 @@ function DataMigrationPageInner() {
           {status?.last_report && (
             <Paper variant="outlined" sx={{ p: 2 }}>
               <Typography variant="subtitle2" gutterBottom>
-                {t("migration_data.last_report")}
+                {translate("migration_data.last_report")}
                 {status.last_report_at
                   ? ` · ${new Date(status.last_report_at).toLocaleString()}`
                   : ""}
@@ -493,7 +499,9 @@ function DataMigrationPageInner() {
 
       {tab === 1 && (
         <Stack spacing={2}>
-          <Alert severity="info">{t("migration_data.export_help")}</Alert>
+          <Alert severity="info">
+            {translate("migration_data.export_help")}
+          </Alert>
           {(
             [
               ["all", "migration_data.export_all"],
@@ -512,10 +520,10 @@ function DataMigrationPageInner() {
               >
                 <Box>
                   <Typography variant="subtitle1" fontWeight={600}>
-                    {t(labelKey)}
+                    {translate(labelKey)}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {t(`${labelKey}_help`)}
+                    {translate(`${labelKey}_help`)}
                   </Typography>
                 </Box>
                 <Button
@@ -532,7 +540,7 @@ function DataMigrationPageInner() {
                     exportMut.mutate(dataset as MigrationExportDataset)
                   }
                 >
-                  {t("migration_data.download")}
+                  {translate("migration_data.download")}
                 </Button>
               </Stack>
             </Paper>
@@ -542,9 +550,13 @@ function DataMigrationPageInner() {
 
       {tab === 2 && (
         <Stack spacing={2}>
-          <Alert severity="info">{t("migration_data.versions_help")}</Alert>
+          <Alert severity="info">
+            {translate("migration_data.versions_help")}
+          </Alert>
           {(status?.snapshots.length ?? 0) === 0 && (
-            <Alert severity="warning">{t("migration_data.no_snapshots")}</Alert>
+            <Alert severity="warning">
+              {translate("migration_data.no_snapshots")}
+            </Alert>
           )}
           {status?.snapshots.map((snap) => (
             <Paper key={snap.id} variant="outlined" sx={{ p: 2 }}>
@@ -568,7 +580,7 @@ function DataMigrationPageInner() {
                         size="small"
                         color="success"
                         icon={<VerifiedIcon />}
-                        label={t("migration_data.marked_good")}
+                        label={translate("migration_data.marked_good")}
                       />
                     )}
                   </Stack>
@@ -584,7 +596,7 @@ function DataMigrationPageInner() {
                   {snap.row_counts && (
                     <Typography variant="caption" display="block">
                       {Object.entries(snap.row_counts)
-                        .map(([k, v]) => `${k}: ${v}`)
+                        .map(([key, value]) => `${key}: ${value}`)
                         .join(" · ")}
                     </Typography>
                   )}
@@ -602,8 +614,8 @@ function DataMigrationPageInner() {
                     }
                   >
                     {snap.marked_good
-                      ? t("migration_data.unmark_good")
-                      : t("migration_data.mark_good")}
+                      ? translate("migration_data.unmark_good")
+                      : translate("migration_data.mark_good")}
                   </Button>
                   <Button
                     size="small"
@@ -612,7 +624,7 @@ function DataMigrationPageInner() {
                     disabled={busy}
                     onClick={() => setRollbackId(snap.id)}
                   >
-                    {t("migration_data.rollback")}
+                    {translate("migration_data.rollback")}
                   </Button>
                 </Stack>
               </Stack>
@@ -636,16 +648,16 @@ function DataMigrationPageInner() {
               color="error"
               gutterBottom
             >
-              {t("migration_data.danger_zone")}
+              {translate("migration_data.danger_zone")}
             </Typography>
             <Alert severity="error" sx={{ mb: 2 }}>
-              {t("migration_data.purge_warning")}
+              {translate("migration_data.purge_warning")}
             </Alert>
             <Typography variant="body2" color="text.secondary" paragraph>
-              {t("migration_data.purge_keeps")}
+              {translate("migration_data.purge_keeps")}
             </Typography>
             <Typography variant="body2" color="text.secondary" paragraph>
-              {t("migration_data.purge_deletes")}
+              {translate("migration_data.purge_deletes")}
             </Typography>
             <Button
               variant="contained"
@@ -657,7 +669,7 @@ function DataMigrationPageInner() {
                 setPurgeOpen(true);
               }}
             >
-              {t("migration_data.purge_button")}
+              {translate("migration_data.purge_button")}
             </Button>
           </Paper>
         </Stack>
@@ -667,10 +679,12 @@ function DataMigrationPageInner() {
         open={confirmSync}
         onClose={() => !startJobMut.isPending && setConfirmSync(false)}
       >
-        <DialogTitle>{t("migration_data.sync_confirm_title")}</DialogTitle>
+        <DialogTitle>
+          {translate("migration_data.sync_confirm_title")}
+        </DialogTitle>
         <DialogContent>
           <DialogContentText>
-            {t("migration_data.sync_confirm_body")}
+            {translate("migration_data.sync_confirm_body")}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
@@ -678,7 +692,7 @@ function DataMigrationPageInner() {
             onClick={() => setConfirmSync(false)}
             disabled={startJobMut.isPending}
           >
-            {t("actions.cancel")}
+            {translate("actions.cancel")}
           </Button>
           <Button
             variant="contained"
@@ -693,7 +707,7 @@ function DataMigrationPageInner() {
               )
             }
           >
-            {t("migration_data.sync")}
+            {translate("migration_data.sync")}
           </Button>
         </DialogActions>
       </Dialog>
@@ -707,8 +721,8 @@ function DataMigrationPageInner() {
       >
         <DialogTitle>
           {liveJob?.kind === "dry_run"
-            ? t("migration_data.job_title_dry_run")
-            : t("migration_data.job_title_sync")}
+            ? translate("migration_data.job_title_dry_run")
+            : translate("migration_data.job_title_sync")}
         </DialogTitle>
         <DialogContent dividers>
           <Stack spacing={2}>
@@ -717,26 +731,31 @@ function DataMigrationPageInner() {
                 <Chip
                   size="small"
                   color="info"
-                  label={t("migration_data.job_running")}
+                  label={translate("migration_data.job_running")}
                 />
               ) : liveJob?.state === "succeeded" ? (
                 <Chip
                   size="small"
                   color="success"
-                  label={t("migration_data.job_succeeded")}
+                  label={translate("migration_data.job_succeeded")}
                 />
               ) : liveJob?.state === "failed" ? (
                 <Chip
                   size="small"
                   color="error"
-                  label={t("migration_data.job_failed")}
+                  label={translate("migration_data.job_failed")}
                 />
               ) : (
-                <Chip size="small" label={t("migration_data.job_idle")} />
+                <Chip
+                  size="small"
+                  label={translate("migration_data.job_idle")}
+                />
               )}
               {liveJob?.phase && (
                 <Typography variant="body2" color="text.secondary">
-                  {t("migration_data.job_phase", { phase: liveJob.phase })}
+                  {translate("migration_data.job_phase", {
+                    phase: liveJob.phase,
+                  })}
                 </Typography>
               )}
             </Stack>
@@ -744,7 +763,7 @@ function DataMigrationPageInner() {
             <Box>
               <Stack direction="row" justifyContent="space-between" mb={0.5}>
                 <Typography variant="caption">
-                  {t("migration_data.job_progress")}
+                  {translate("migration_data.job_progress")}
                 </Typography>
                 <Typography variant="caption">
                   {progressPct != null ? `${progressPct}%` : "…"}
@@ -772,13 +791,13 @@ function DataMigrationPageInner() {
                 <Stack direction="row" spacing={1} alignItems="center">
                   <TerminalIcon fontSize="small" />
                   <Typography variant="subtitle2">
-                    {t("migration_data.terminal_title")}
+                    {translate("migration_data.terminal_title")}
                   </Typography>
                 </Stack>
                 <IconButton
                   size="small"
-                  onClick={() => setTerminalOpen((v) => !v)}
-                  aria-label={t("migration_data.terminal_toggle")}
+                  onClick={() => setTerminalOpen((value) => !value)}
+                  aria-label={translate("migration_data.terminal_toggle")}
                 >
                   {terminalOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                 </IconButton>
@@ -805,7 +824,7 @@ function DataMigrationPageInner() {
                 >
                   {(liveJob?.lines?.length
                     ? liveJob.lines
-                    : [t("migration_data.terminal_waiting")]
+                    : [translate("migration_data.terminal_waiting")]
                   ).join("\n")}
                 </Box>
               </Collapse>
@@ -818,8 +837,8 @@ function DataMigrationPageInner() {
             disabled={!canCloseJobDialog}
           >
             {jobRunning
-              ? t("migration_data.job_running_hint")
-              : t("actions.close")}
+              ? translate("migration_data.job_running_hint")
+              : translate("actions.close")}
           </Button>
         </DialogActions>
       </Dialog>
@@ -828,15 +847,17 @@ function DataMigrationPageInner() {
         open={Boolean(rollbackId)}
         onClose={() => !busy && setRollbackId(null)}
       >
-        <DialogTitle>{t("migration_data.rollback_confirm_title")}</DialogTitle>
+        <DialogTitle>
+          {translate("migration_data.rollback_confirm_title")}
+        </DialogTitle>
         <DialogContent>
           <DialogContentText>
-            {t("migration_data.rollback_confirm_body")}
+            {translate("migration_data.rollback_confirm_body")}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setRollbackId(null)} disabled={busy}>
-            {t("actions.cancel")}
+            {translate("actions.cancel")}
           </Button>
           <Button
             variant="contained"
@@ -851,7 +872,7 @@ function DataMigrationPageInner() {
               )
             }
           >
-            {t("migration_data.rollback")}
+            {translate("migration_data.rollback")}
           </Button>
         </DialogActions>
       </Dialog>
@@ -867,15 +888,15 @@ function DataMigrationPageInner() {
         fullWidth
       >
         <DialogTitle color="error.main">
-          {t("migration_data.purge_confirm_title")}
+          {translate("migration_data.purge_confirm_title")}
         </DialogTitle>
         <DialogContent>
           <DialogContentText component="div">
             <Alert severity="error" sx={{ mb: 2 }}>
-              {t("migration_data.purge_confirm_body")}
+              {translate("migration_data.purge_confirm_body")}
             </Alert>
             <Typography variant="body2" paragraph>
-              {t("migration_data.purge_type_prompt", {
+              {translate("migration_data.purge_type_prompt", {
                 phrase: MIGRATION_PURGE_CONFIRMATION,
               })}
             </Typography>
@@ -883,9 +904,9 @@ function DataMigrationPageInner() {
           <TextField
             autoFocus
             fullWidth
-            label={t("migration_data.purge_type_label")}
+            label={translate("migration_data.purge_type_label")}
             value={purgeConfirm}
-            onChange={(e) => setPurgeConfirm(e.target.value)}
+            onChange={(event) => setPurgeConfirm(event.target.value)}
             disabled={busy}
             placeholder={MIGRATION_PURGE_CONFIRMATION}
             inputProps={{ autoComplete: "off", spellCheck: false }}
@@ -899,7 +920,7 @@ function DataMigrationPageInner() {
             }}
             disabled={busy}
           >
-            {t("actions.cancel")}
+            {translate("actions.cancel")}
           </Button>
           <Button
             variant="contained"
@@ -914,7 +935,7 @@ function DataMigrationPageInner() {
               )
             }
           >
-            {t("migration_data.purge_button")}
+            {translate("migration_data.purge_button")}
           </Button>
         </DialogActions>
       </Dialog>

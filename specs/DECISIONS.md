@@ -132,7 +132,8 @@ Legend: **D-n** decision · resolves inconsistency **I-n** / missing **M-n** fro
 ### D-16 — Quality gates: hooks + ≥80% coverage _(process)_
 
 - **Coverage:** every workspace package MUST stay at **≥80%** lines, branches, functions, and statements. Gate: `pnpm run test:coverage` (`scripts/check-coverage.mjs`). Same threshold in CI and in the **pre-push** hook.
-- **pre-commit:** secrets scan → Prettier (lint-staged) → typecheck. **pre-push:** coverage gate.
+- **pre-commit:** secrets scan → dependency advisories → **identifier length ≥2** (`check:id-length`) → Prettier (lint-staged) → typecheck. **pre-push:** coverage gate.
+- **Identifier length:** value bindings (locals, params, catch vars, value imports, function names) in `apps/` and `packages/` MUST be ≥2 characters (single-letter names forbidden); only `_` is allowed as a short unused placeholder. Prefer contextual names (`event`, `row`, `state`); two-letter idioms (`id`, `db`) are OK — do not invent numbered clones (`database2`). Type-only constructs are exempt. Enforced by `scripts/check-id-length.mjs` on every commit.
 - **Policy:** do not create a commit until pre-commit checks pass; do not push until coverage passes; do not skip hooks (`--no-verify`) unless the operator explicitly requests a bypass. Specs `010` / `012` / `000` and `docs/DEVELOPMENT.md` are authoritative.
 
 ### D-18 — Cylinder capacity units: m³ and kg _(product)_

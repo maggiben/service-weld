@@ -21,15 +21,15 @@ interface Props {
   onSelect: (movement: MovementEvent) => void;
 }
 
-function movementLabel(m: MovementEvent): string {
-  const serial = m.cylinder_serial ?? `#${m.cylinder_id}`;
-  const holder = m.holder_name ?? `#${m.holder_party_id}`;
-  return `${serial} · ${holder} · ${m.delivery_date}`;
+function movementLabel(member: MovementEvent): string {
+  const serial = member.cylinder_serial ?? `#${member.cylinder_id}`;
+  const holder = member.holder_name ?? `#${member.holder_party_id}`;
+  return `${serial} · ${holder} · ${member.delivery_date}`;
 }
 
 /** Pick an OPEN movement to start a swap from the toolbar. */
 export function SwapPickDialog({ open, onClose, onSelect }: Props) {
-  const { t } = useTranslation();
+  const { t: translate } = useTranslation();
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [selected, setSelected] = useState<MovementEvent | null>(null);
@@ -61,23 +61,23 @@ export function SwapPickDialog({ open, onClose, onSelect }: Props) {
 
   const options = useMemo(() => {
     const rows = openMovements.data?.data ?? [];
-    const q = query.trim().toLowerCase();
-    if (!q) return rows;
+    const needle = query.trim().toLowerCase();
+    if (!needle) return rows;
     // Client-side refine for holder name / id while typing (serial is server-side via q).
-    return rows.filter((m) => {
+    return rows.filter((row) => {
       const hay =
-        `${m.cylinder_serial ?? ""} ${m.holder_name ?? ""} ${m.id}`.toLowerCase();
-      return hay.includes(q);
+        `${row.cylinder_serial ?? ""} ${row.holder_name ?? ""} ${row.id}`.toLowerCase();
+      return hay.includes(needle);
     });
   }, [openMovements.data, query]);
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>{t("movements.swap.pick_title")}</DialogTitle>
+      <DialogTitle>{translate("movements.swap.pick_title")}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
           <Typography variant="body2" color="text.secondary">
-            {t("movements.swap.pick_hint")}
+            {translate("movements.swap.pick_hint")}
           </Typography>
           <Autocomplete
             options={options}
@@ -85,7 +85,7 @@ export function SwapPickDialog({ open, onClose, onSelect }: Props) {
             getOptionLabel={(option) =>
               typeof option === "string" ? option : movementLabel(option)
             }
-            isOptionEqualToValue={(a, b) => a.id === b.id}
+            isOptionEqualToValue={(left, right) => left.id === right.id}
             filterOptions={(opts) => opts}
             value={selected}
             onChange={(_, value) => setSelected(value)}
@@ -95,8 +95,8 @@ export function SwapPickDialog({ open, onClose, onSelect }: Props) {
             renderInput={(params) => (
               <TextField
                 {...params}
-                label={t("movements.swap.pick_movement")}
-                placeholder={t("movements.swap.pick_placeholder")}
+                label={translate("movements.swap.pick_movement")}
+                placeholder={translate("movements.swap.pick_placeholder")}
                 autoFocus
               />
             )}
@@ -104,7 +104,7 @@ export function SwapPickDialog({ open, onClose, onSelect }: Props) {
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{t("actions.cancel")}</Button>
+        <Button onClick={onClose}>{translate("actions.cancel")}</Button>
         <Button
           variant="contained"
           disabled={!selected}
@@ -113,7 +113,7 @@ export function SwapPickDialog({ open, onClose, onSelect }: Props) {
             onSelect(selected);
           }}
         >
-          {t("actions.continue")}
+          {translate("actions.continue")}
         </Button>
       </DialogActions>
     </Dialog>

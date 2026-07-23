@@ -35,7 +35,7 @@ import { formatActorLabel } from "../features/audit/auditLogic";
 const ACTIONS: AuditAction[] = ["INSERT", "UPDATE", "DELETE", "VOID"];
 
 function AuditLogsPageInner() {
-  const { t } = useTranslation();
+  const { t: translate } = useTranslation();
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
     page: 0,
     pageSize: 50,
@@ -97,51 +97,53 @@ function AuditLogsPageInner() {
 
   const resetPaging = () => {
     setCursors([undefined]);
-    setPaginationModel((p) => ({ ...p, page: 0 }));
+    setPaginationModel((part) => ({ ...part, page: 0 }));
   };
 
   const columns = useMemo<GridColDef<AuditLogEntry>[]>(
     () => [
       {
         field: "occurred_at",
-        headerName: t("audit.columns.occurred"),
+        headerName: translate("audit.columns.occurred"),
         width: 190,
         valueFormatter: (value: string) => new Date(value).toLocaleString(),
       },
       {
         field: "actor_username",
-        headerName: t("audit.columns.actor"),
+        headerName: translate("audit.columns.actor"),
         width: 160,
-        valueGetter: (_value, row) => formatActorLabel(row, t),
+        valueGetter: (_value, row) => formatActorLabel(row, translate),
       },
       {
         field: "actor_role",
-        headerName: t("audit.columns.role"),
+        headerName: translate("audit.columns.role"),
         width: 140,
         valueFormatter: (value: string | null) =>
-          value ? t(`enums.role.${value}`, { defaultValue: value }) : "—",
+          value
+            ? translate(`enums.role.${value}`, { defaultValue: value })
+            : "—",
       },
       {
         field: "action",
-        headerName: t("audit.columns.action"),
+        headerName: translate("audit.columns.action"),
         width: 100,
       },
       {
         field: "entity_table",
-        headerName: t("audit.columns.entity"),
+        headerName: translate("audit.columns.entity"),
         flex: 1,
         minWidth: 140,
       },
       {
         field: "entity_id",
-        headerName: t("audit.columns.entity_id"),
+        headerName: translate("audit.columns.entity_id"),
         width: 100,
         valueFormatter: (value: number | null) =>
           value == null ? "—" : String(value),
       },
       {
         field: "source",
-        headerName: t("audit.columns.source"),
+        headerName: translate("audit.columns.source"),
         width: 100,
         valueFormatter: (value: string | null) => value ?? "—",
       },
@@ -152,26 +154,26 @@ function AuditLogsPageInner() {
         sortable: false,
         renderCell: (params) => (
           <Button size="small" onClick={() => setSelected(params.row)}>
-            {t("audit.view_diff")}
+            {translate("audit.view_diff")}
           </Button>
         ),
       },
     ],
-    [t],
+    [translate],
   );
 
   return (
     <Box>
       <Typography variant="h5" gutterBottom>
-        {t("audit.title")}
+        {translate("audit.title")}
       </Typography>
       <Typography color="text.secondary" sx={{ mb: 2 }}>
-        {t("audit.subtitle")}
+        {translate("audit.subtitle")}
       </Typography>
 
       {logsQuery.isError && (
         <Alert severity="error" sx={{ mb: 2 }}>
-          {t("errors.generic")}
+          {translate("errors.generic")}
         </Alert>
       )}
 
@@ -183,36 +185,36 @@ function AuditLogsPageInner() {
       >
         <TextField
           size="small"
-          label={t("audit.filters.entity_table")}
+          label={translate("audit.filters.entity_table")}
           value={entityTable}
-          onChange={(e) => {
-            setEntityTable(e.target.value);
+          onChange={(event) => {
+            setEntityTable(event.target.value);
             resetPaging();
           }}
         />
         <TextField
           size="small"
-          label={t("audit.filters.actor")}
+          label={translate("audit.filters.actor")}
           value={actorUsername}
-          onChange={(e) => {
-            setActorUsername(e.target.value);
+          onChange={(event) => {
+            setActorUsername(event.target.value);
             resetPaging();
           }}
         />
         <FormControl size="small" sx={{ minWidth: 140 }}>
-          <InputLabel>{t("audit.filters.action")}</InputLabel>
+          <InputLabel>{translate("audit.filters.action")}</InputLabel>
           <Select
-            label={t("audit.filters.action")}
+            label={translate("audit.filters.action")}
             value={action}
-            onChange={(e) => {
-              setAction(e.target.value as AuditAction | "");
+            onChange={(event) => {
+              setAction(event.target.value as AuditAction | "");
               resetPaging();
             }}
           >
-            <MenuItem value="">{t("audit.filters.all")}</MenuItem>
-            {ACTIONS.map((a) => (
-              <MenuItem key={a} value={a}>
-                {a}
+            <MenuItem value="">{translate("audit.filters.all")}</MenuItem>
+            {ACTIONS.map((option) => (
+              <MenuItem key={option} value={option}>
+                {option}
               </MenuItem>
             ))}
           </Select>
@@ -220,10 +222,10 @@ function AuditLogsPageInner() {
         <TextField
           size="small"
           type="date"
-          label={t("audit.filters.from")}
+          label={translate("audit.filters.from")}
           value={fromDate}
-          onChange={(e) => {
-            setFromDate(e.target.value);
+          onChange={(event) => {
+            setFromDate(event.target.value);
             resetPaging();
           }}
           slotProps={{ inputLabel: { shrink: true } }}
@@ -231,10 +233,10 @@ function AuditLogsPageInner() {
         <TextField
           size="small"
           type="date"
-          label={t("audit.filters.to")}
+          label={translate("audit.filters.to")}
           value={toDate}
-          onChange={(e) => {
-            setToDate(e.target.value);
+          onChange={(event) => {
+            setToDate(event.target.value);
             resetPaging();
           }}
           slotProps={{ inputLabel: { shrink: true } }}
@@ -263,7 +265,7 @@ function AuditLogsPageInner() {
             noRowsOverlay: () => (
               <Stack height="100%" alignItems="center" justifyContent="center">
                 <Typography color="text.secondary">
-                  {t("audit.empty")}
+                  {translate("audit.empty")}
                 </Typography>
               </Stack>
             ),
@@ -277,7 +279,7 @@ function AuditLogsPageInner() {
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle>{t("audit.diff_title")}</DialogTitle>
+        <DialogTitle>{translate("audit.diff_title")}</DialogTitle>
         <DialogContent dividers>
           {selected && (
             <Stack spacing={2}>
@@ -289,16 +291,16 @@ function AuditLogsPageInner() {
                 {new Date(selected.occurred_at).toLocaleString()}
               </Typography>
               <Typography variant="body2">
-                <strong>{t("audit.columns.actor")}:</strong>{" "}
-                {formatActorLabel(selected, t)}
+                <strong>{translate("audit.columns.actor")}:</strong>{" "}
+                {formatActorLabel(selected, translate)}
                 {selected.actor_role
-                  ? ` (${t(`enums.role.${selected.actor_role}`, { defaultValue: selected.actor_role })})`
+                  ? ` (${translate(`enums.role.${selected.actor_role}`, { defaultValue: selected.actor_role })})`
                   : ""}
                 {selected.source ? ` · ${selected.source}` : ""}
               </Typography>
               <Box>
                 <Typography variant="subtitle2" gutterBottom>
-                  {t("audit.before")}
+                  {translate("audit.before")}
                 </Typography>
                 <Box
                   component="pre"
@@ -316,7 +318,7 @@ function AuditLogsPageInner() {
               </Box>
               <Box>
                 <Typography variant="subtitle2" gutterBottom>
-                  {t("audit.after")}
+                  {translate("audit.after")}
                 </Typography>
                 <Box
                   component="pre"
@@ -337,7 +339,7 @@ function AuditLogsPageInner() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setSelected(null)}>
-            {t("actions.close")}
+            {translate("actions.close")}
           </Button>
         </DialogActions>
       </Dialog>

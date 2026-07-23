@@ -49,7 +49,7 @@ export function ClientLedgerDrawer({
   open,
   onClose,
 }: ClientLedgerDrawerProps) {
-  const { t } = useTranslation();
+  const { t: translate } = useTranslation();
   const [tab, setTab] = useState<LedgerTab>("outstanding");
   const [openOnly, setOpenOnly] = useState(false);
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
@@ -134,16 +134,20 @@ export function ClientLedgerDrawer({
   const pageMeta = accountQuery.data?.page;
 
   const outstandingColumns = useMemo(
-    () => buildOutstandingColumns(t, { compact: true }),
-    [t],
+    () => buildOutstandingColumns(translate, { compact: true }),
+    [translate],
   );
 
   const historyColumns = useMemo(
     () =>
-      buildHistoryColumns(t, tab === "refills" ? "refills" : "history", {
-        compact: true,
-      }),
-    [t, tab],
+      buildHistoryColumns(
+        translate,
+        tab === "refills" ? "refills" : "history",
+        {
+          compact: true,
+        },
+      ),
+    [translate, tab],
   );
 
   return (
@@ -165,7 +169,7 @@ export function ClientLedgerDrawer({
           <Box>
             <Typography variant="h6">{title}</Typography>
             <Typography variant="body2" color="text.secondary">
-              {t("billing.ledger.subtitle")}
+              {translate("billing.ledger.subtitle")}
             </Typography>
           </Box>
           <Stack direction="row" spacing={1}>
@@ -176,11 +180,11 @@ export function ClientLedgerDrawer({
                 size="small"
                 variant="outlined"
               >
-                {t("billing.ledger.open_full")}
+                {translate("billing.ledger.open_full")}
               </Button>
             )}
             <Button size="small" onClick={onClose}>
-              {t("actions.close")}
+              {translate("actions.close")}
             </Button>
           </Stack>
         </Stack>
@@ -189,15 +193,15 @@ export function ClientLedgerDrawer({
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
             <Chip
               size="small"
-              label={`${t("clients.detail.kpi.outstanding")}: ${summary.open_count}`}
+              label={`${translate("clients.detail.kpi.outstanding")}: ${summary.open_count}`}
             />
             <Chip
               size="small"
-              label={`${t("clients.detail.kpi.rentals")}: ${summary.open_rental_count}`}
+              label={`${translate("clients.detail.kpi.rentals")}: ${summary.open_rental_count}`}
             />
             <Chip
               size="small"
-              label={`${t("clients.detail.kpi.refills")}: ${summary.open_refill_count}`}
+              label={`${translate("clients.detail.kpi.refills")}: ${summary.open_refill_count}`}
             />
           </Stack>
         )}
@@ -210,11 +214,20 @@ export function ClientLedgerDrawer({
         >
           <Tab
             value="outstanding"
-            label={t("clients.detail.tabs.outstanding")}
+            label={translate("clients.detail.tabs.outstanding")}
           />
-          <Tab value="history" label={t("clients.detail.tabs.history")} />
-          <Tab value="rentals" label={t("clients.detail.tabs.rentals")} />
-          <Tab value="refills" label={t("clients.detail.tabs.refills")} />
+          <Tab
+            value="history"
+            label={translate("clients.detail.tabs.history")}
+          />
+          <Tab
+            value="rentals"
+            label={translate("clients.detail.tabs.rentals")}
+          />
+          <Tab
+            value="refills"
+            label={translate("clients.detail.tabs.refills")}
+          />
         </Tabs>
 
         {!isOutstandingTab && (
@@ -222,15 +235,15 @@ export function ClientLedgerDrawer({
             control={
               <Switch
                 checked={openOnly}
-                onChange={(e) => setOpenOnly(e.target.checked)}
+                onChange={(event) => setOpenOnly(event.target.checked)}
               />
             }
-            label={t("clients.detail.filters.open_only")}
+            label={translate("clients.detail.filters.open_only")}
           />
         )}
 
         {(clientQuery.isError || accountQuery.isError) && (
-          <Alert severity="error">{t("errors.load_failed")}</Alert>
+          <Alert severity="error">{translate("errors.load_failed")}</Alert>
         )}
 
         <Box sx={{ flex: 1, minHeight: 0 }}>
@@ -253,7 +266,7 @@ export function ClientLedgerDrawer({
                     justifyContent="center"
                   >
                     <Typography color="text.secondary">
-                      {t("clients.detail.empty")}
+                      {translate("clients.detail.empty")}
                     </Typography>
                   </Stack>
                 ),
@@ -285,7 +298,7 @@ export function ClientLedgerDrawer({
                     justifyContent="center"
                   >
                     <Typography color="text.secondary">
-                      {t("clients.detail.empty")}
+                      {translate("clients.detail.empty")}
                     </Typography>
                   </Stack>
                 ),

@@ -16,7 +16,7 @@ import { LandingSection } from "./LandingSection";
 
 /** Lazy-loads the map iframe when the section approaches the viewport (013 C6). */
 export function MapSection() {
-  const { t } = useTranslation("landing");
+  const { t: translate } = useTranslation("landing");
   const hostRef = useRef<HTMLDivElement | null>(null);
   const [showMap, setShowMap] = useState(false);
   const address = formatAddressOneLine();
@@ -32,7 +32,7 @@ export function MapSection() {
     }
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries.some((e) => e.isIntersecting)) {
+        if (entries.some((entry) => entry.isIntersecting)) {
           setShowMap(true);
           observer.disconnect();
         }
@@ -44,7 +44,11 @@ export function MapSection() {
   }, [showMap]);
 
   return (
-    <LandingSection id="map" eyebrow={t("map.eyebrow")} title={t("map.title")}>
+    <LandingSection
+      id="map"
+      eyebrow={translate("map.eyebrow")}
+      title={translate("map.title")}
+    >
       <Stack spacing={2}>
         <Stack
           direction={{ xs: "column", sm: "row" }}
@@ -63,7 +67,7 @@ export function MapSection() {
             color="primary"
             endIcon={<OpenInNewIcon />}
           >
-            {t("map.directions")}
+            {translate("map.directions")}
           </Button>
         </Stack>
         <Box
@@ -80,7 +84,7 @@ export function MapSection() {
           {showMap ? (
             <Box
               component="iframe"
-              title={t("map.iframeTitle")}
+              title={translate("map.iframeTitle")}
               src={embedSrc}
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"

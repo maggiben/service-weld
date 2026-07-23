@@ -13,7 +13,7 @@ export { movementStateChipColor };
  */
 export function clientCustodyLabel(
   row: Pick<MovementEvent, "state" | "return_date" | "movement_kind">,
-  t: TFunction,
+  translate: TFunction,
 ): string {
   const isRefill = row.movement_kind === "REFILL";
   const returned =
@@ -24,19 +24,20 @@ export function clientCustodyLabel(
     row.state === "SOLD";
 
   if (returned) {
-    if (row.state === "SWAPPED") return t("enums.movement_state.SWAPPED");
-    if (row.state === "LOST") return t("enums.movement_state.LOST");
-    if (row.state === "SOLD") return t("enums.movement_state.SOLD");
-    if (row.state === "VOID") return t("enums.movement_state.VOID");
+    if (row.state === "SWAPPED")
+      return translate("enums.movement_state.SWAPPED");
+    if (row.state === "LOST") return translate("enums.movement_state.LOST");
+    if (row.state === "SOLD") return translate("enums.movement_state.SOLD");
+    if (row.state === "VOID") return translate("enums.movement_state.VOID");
     return isRefill
-      ? t("clients.detail.custody.refill_closed")
-      : t("clients.detail.custody.returned");
+      ? translate("clients.detail.custody.refill_closed")
+      : translate("clients.detail.custody.returned");
   }
 
   if (row.state === "OPEN") {
     return isRefill
-      ? t("clients.detail.custody.refill_open")
-      : t("clients.detail.custody.on_loan");
+      ? translate("clients.detail.custody.refill_open")
+      : translate("clients.detail.custody.on_loan");
   }
-  return t(`enums.movement_state.${row.state as MovementState}`);
+  return translate(`enums.movement_state.${row.state as MovementState}`);
 }

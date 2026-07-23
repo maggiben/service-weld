@@ -52,7 +52,7 @@ export function DeliverDrawer({
   prefillCylinderId,
   prefillHolderId,
 }: Props) {
-  const { t } = useTranslation();
+  const { t: translate } = useTranslation();
   const queryClient = useQueryClient();
   const [conflictError, setConflictError] = useState<string | null>(null);
   const [cylinderQuery, setCylinderQuery] = useState("");
@@ -91,10 +91,10 @@ export function DeliverDrawer({
   const cylindersSearch = useQuery({
     queryKey: ["cylinders", "picker", "deliver", movementKind, cylinderQuery],
     queryFn: async () => {
-      const q = cylinderQuery || undefined;
+      const query = cylinderQuery || undefined;
       if (movementKind === "REFILL") {
         const res = await api.listCylinders({
-          q,
+          q: query,
           limit: 30,
           "filter[ownership_basis]": "CUSTOMER",
         });
@@ -105,7 +105,7 @@ export function DeliverDrawer({
       }
       // Rental: only cylinders available to rent (in plant stock, not with a client).
       const res = await api.listCylinders({
-        q,
+        q: query,
         limit: 30,
         "filter[available_for_rental]": true,
       });
@@ -132,7 +132,7 @@ export function DeliverDrawer({
         : isRefillPickable(selectedCylinder));
     if (
       selectedStillValid &&
-      !fromSearch.some((c) => c.id === selectedCylinder.id)
+      !fromSearch.some((item) => item.id === selectedCylinder.id)
     ) {
       return [selectedCylinder, ...fromSearch];
     }
@@ -141,7 +141,10 @@ export function DeliverDrawer({
 
   const clientOptions = useMemo(() => {
     const fromSearch = clientsSearch.data?.data ?? [];
-    if (selectedClient && !fromSearch.some((c) => c.id === selectedClient.id)) {
+    if (
+      selectedClient &&
+      !fromSearch.some((item) => item.id === selectedClient.id)
+    ) {
       return [selectedClient, ...fromSearch];
     }
     return fromSearch;
@@ -207,28 +210,31 @@ export function DeliverDrawer({
     onError: (error) => {
       if (error instanceof ApiClientError) {
         if (error.code === "CYLINDER_ALREADY_OUT") {
-          setConflictError(t("errors.cylinder_already_out"));
+          setConflictError(translate("errors.cylinder_already_out"));
           return;
         }
         if (error.code === "CYLINDER_TERMINAL") {
-          setConflictError(t("errors.cylinder_terminal"));
+          setConflictError(translate("errors.cylinder_terminal"));
           return;
         }
         if (error.code === "KIND_BASIS_MISMATCH") {
-          setConflictError(t("errors.kind_basis_mismatch"));
+          setConflictError(translate("errors.kind_basis_mismatch"));
           return;
         }
       }
       if (!applyServerErrors(error, setError, "cylinder_id")) {
         setConflictError(
-          error instanceof ApiClientError ? error.message : t("errors.generic"),
+          error instanceof ApiClientError
+            ? error.message
+            : translate("errors.generic"),
         );
       }
     },
   });
 
   const handleClose = () => {
-    if (isDirty && !window.confirm(t("movements.form.unsaved_confirm"))) return;
+    if (isDirty && !window.confirm(translate("movements.form.unsaved_confirm")))
+      return;
     onClose();
   };
 
@@ -243,17 +249,17 @@ export function DeliverDrawer({
     >
       <Box
         component="form"
-        onSubmit={handleSubmit((v) => create.mutate(v))}
+        onSubmit={handleSubmit((value) => create.mutate(value))}
         sx={{ p: 3, height: "100%", display: "flex", flexDirection: "column" }}
       >
         <Typography variant="h6" sx={{ mb: 1 }}>
           {movementKind === "REFILL"
-            ? t("movements.form.title_refill")
-            : t("movements.form.title_rental")}
+            ? translate("movements.form.title_refill")
+            : translate("movements.form.title_rental")}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          {t("movements.form.kind_subtitle", {
-            kind: t(`enums.movement_kind.${movementKind}`),
+          {translate("movements.form.kind_subtitle", {
+            kind: translate(`enums.movement_kind.${movementKind}`),
           })}
         </Typography>
 
@@ -269,7 +275,9 @@ export function DeliverDrawer({
             control={control}
             render={({ field }) => (
               <FormControl fullWidth>
-                <FormLabel sx={{ mb: 1 }}>{t("movements.form.kind")}</FormLabel>
+                <FormLabel sx={{ mb: 1 }}>
+                  {translate("movements.form.kind")}
+                </FormLabel>
                 <ToggleButtonGroup
                   exclusive
                   fullWidth
@@ -280,10 +288,10 @@ export function DeliverDrawer({
                   }}
                 >
                   <ToggleButton value="RENTAL">
-                    {t("enums.movement_kind.RENTAL")}
+                    {translate("enums.movement_kind.RENTAL")}
                   </ToggleButton>
                   <ToggleButton value="REFILL">
-                    {t("enums.movement_kind.REFILL")}
+                    {translate("enums.movement_kind.REFILL")}
                   </ToggleButton>
                 </ToggleButtonGroup>
               </FormControl>
@@ -292,8 +300,8 @@ export function DeliverDrawer({
 
           <Alert severity="info" sx={{ py: 0.5 }}>
             {movementKind === "REFILL"
-              ? t("movements.form.hint_refill")
-              : t("movements.form.hint_rental")}
+              ? translate("movements.form.hint_refill")
+              : translate("movements.form.hint_rental")}
           </Alert>
 
           <Controller
@@ -307,7 +315,7 @@ export function DeliverDrawer({
                     ? option
                     : cylinderPickerLabel(option)
                 }
-                isOptionEqualToValue={(a, b) => a.id === b.id}
+                isOptionEqualToValue={(left, right) => left.id === right.id}
                 getOptionDisabled={(option) =>
                   movementKind === "RENTAL"
                     ? !isRentalPickable(option)
@@ -326,14 +334,14 @@ export function DeliverDrawer({
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    label={t("movements.form.cylinder")}
+                    label={translate("movements.form.cylinder")}
                     required
                     error={Boolean(errors.cylinder_id) || field.value === 0}
                     helperText={
                       errors.cylinder_id?.message ??
                       (movementKind === "REFILL"
-                        ? t("movements.form.cylinder_hint_refill")
-                        : t("movements.form.cylinder_hint_rental"))
+                        ? translate("movements.form.cylinder_hint_refill")
+                        : translate("movements.form.cylinder_hint_rental"))
                     }
                   />
                 )}
@@ -343,15 +351,15 @@ export function DeliverDrawer({
 
           {movementKind === "REFILL" ? (
             <TextField
-              label={t("movements.form.owner_client")}
+              label={translate("movements.form.owner_client")}
               value={
                 selectedCylinder?.owner_name ??
                 (selectedCylinder ? `#${selectedCylinder.owner_party_id}` : "")
               }
               fullWidth
               InputProps={{ readOnly: true }}
-              helperText={t("movements.form.owner_client_hint")}
-              placeholder={t("movements.form.owner_client_placeholder")}
+              helperText={translate("movements.form.owner_client_hint")}
+              placeholder={translate("movements.form.owner_client_placeholder")}
             />
           ) : (
             <Controller
@@ -363,7 +371,7 @@ export function DeliverDrawer({
                   getOptionLabel={(option) =>
                     typeof option === "string" ? option : option.name
                   }
-                  isOptionEqualToValue={(a, b) => a.id === b.id}
+                  isOptionEqualToValue={(left, right) => left.id === right.id}
                   loading={clientsSearch.isFetching}
                   filterOptions={(opts) => opts}
                   onInputChange={(_, value, reason) => {
@@ -377,7 +385,7 @@ export function DeliverDrawer({
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      label={t("movements.form.holder")}
+                      label={translate("movements.form.holder")}
                       required
                       error={
                         Boolean(errors.holder_party_id) || field.value === 0
@@ -395,12 +403,14 @@ export function DeliverDrawer({
             control={control}
             render={({ field }) => (
               <FormControl fullWidth>
-                <InputLabel>{t("movements.form.gas")}</InputLabel>
+                <InputLabel>{translate("movements.form.gas")}</InputLabel>
                 <Select
-                  label={t("movements.form.gas")}
+                  label={translate("movements.form.gas")}
                   value={field.value ?? ""}
                   displayEmpty
-                  onChange={(e) => field.onChange(e.target.value || null)}
+                  onChange={(event) =>
+                    field.onChange(event.target.value || null)
+                  }
                 >
                   <MenuItem value="">
                     <em>—</em>
@@ -422,8 +432,8 @@ export function DeliverDrawer({
               <DatePicker
                 label={
                   movementKind === "REFILL"
-                    ? t("movements.form.refill_date")
-                    : t("movements.form.delivery_date")
+                    ? translate("movements.form.refill_date")
+                    : translate("movements.form.delivery_date")
                 }
                 value={field.value ? dayjs(field.value) : null}
                 onChange={(value: Dayjs | null) =>
@@ -448,8 +458,8 @@ export function DeliverDrawer({
               <TextField
                 {...field}
                 value={field.value ?? ""}
-                onChange={(e) => field.onChange(e.target.value || null)}
-                label={t("movements.form.note")}
+                onChange={(event) => field.onChange(event.target.value || null)}
+                label={translate("movements.form.note")}
                 fullWidth
                 multiline
                 minRows={2}
@@ -464,13 +474,13 @@ export function DeliverDrawer({
           justifyContent="flex-end"
           sx={{ pt: 2 }}
         >
-          <Button onClick={handleClose}>{t("actions.cancel")}</Button>
+          <Button onClick={handleClose}>{translate("actions.cancel")}</Button>
           <Button
             type="submit"
             variant="contained"
             disabled={isSubmitting || create.isPending}
           >
-            {t("actions.save")}
+            {translate("actions.save")}
           </Button>
         </Stack>
       </Box>

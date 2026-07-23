@@ -1,205 +1,207 @@
-import { z } from "zod";
+import { z as zod } from "zod";
 import { IsoDate, PageMeta, PaginationQuery } from "./common";
 import { GasCode, OwnershipBasis } from "./enums";
 
-export const ReportEnvelope = <T extends z.ZodTypeAny>(row: T) =>
-  z.object({
-    data: z.array(row),
-    generated_at: z.string().datetime(),
+export const ReportEnvelope = <T extends zod.ZodTypeAny>(row: T) =>
+  zod.object({
+    data: zod.array(row),
+    generated_at: zod.string().datetime(),
     page: PageMeta.optional(),
   });
 
-export const FleetRow = z.object({
-  group_key: z.string(),
-  state: z.string().optional(),
+export const FleetRow = zod.object({
+  group_key: zod.string(),
+  state: zod.string().optional(),
   gas_code: GasCode.nullable().optional(),
-  owner_party_id: z.number().int().optional(),
-  owner_name: z.string().optional(),
-  locality_id: z.number().int().nullable().optional(),
-  locality_name: z.string().nullable().optional(),
-  client_party_id: z.number().int().optional(),
-  client_name: z.string().optional(),
-  count: z.number().int(),
+  owner_party_id: zod.number().int().optional(),
+  owner_name: zod.string().optional(),
+  locality_id: zod.number().int().nullable().optional(),
+  locality_name: zod.string().nullable().optional(),
+  client_party_id: zod.number().int().optional(),
+  client_name: zod.string().optional(),
+  count: zod.number().int(),
 });
-export type FleetRow = z.infer<typeof FleetRow>;
+export type FleetRow = zod.infer<typeof FleetRow>;
 
-export const FleetQuery = z.object({
-  group_by: z
+export const FleetQuery = zod.object({
+  group_by: zod
     .enum(["state", "gas_code", "owner", "locality", "client"])
     .default("state"),
-  "filter[owner_party_id]": z.coerce.number().int().optional(),
+  "filter[owner_party_id]": zod.coerce.number().int().optional(),
   "filter[gas_code]": GasCode.optional(),
 });
-export type FleetQuery = z.infer<typeof FleetQuery>;
+export type FleetQuery = zod.infer<typeof FleetQuery>;
 
-export const FloatAgingRow = z.object({
-  movement_id: z.number().int(),
-  cylinder_id: z.number().int(),
-  serial_number: z.string(),
-  client_party_id: z.number().int(),
-  client_name: z.string(),
+export const FloatAgingRow = zod.object({
+  movement_id: zod.number().int(),
+  cylinder_id: zod.number().int(),
+  serial_number: zod.string(),
+  client_party_id: zod.number().int(),
+  client_name: zod.string(),
   delivery_date: IsoDate,
-  days_out: z.number().int(),
-  bucket: z.enum([">30", ">90", ">180", ">365", "≤30"]),
+  days_out: zod.number().int(),
+  bucket: zod.enum([">30", ">90", ">180", ">365", "≤30"]),
 });
-export type FloatAgingRow = z.infer<typeof FloatAgingRow>;
+export type FloatAgingRow = zod.infer<typeof FloatAgingRow>;
 
 export const FloatAgingQuery = PaginationQuery.extend({
-  sort: z.enum(["days_out", "-days_out"]).default("-days_out"),
-  bucket: z.enum([">30", ">90", ">180", ">365"]).optional(),
-  "filter[territory_id]": z.coerce.number().int().optional(),
+  sort: zod.enum(["days_out", "-days_out"]).default("-days_out"),
+  bucket: zod.enum([">30", ">90", ">180", ">365"]).optional(),
+  "filter[territory_id]": zod.coerce.number().int().optional(),
   as_of: IsoDate.optional(),
 });
-export type FloatAgingQuery = z.infer<typeof FloatAgingQuery>;
+export type FloatAgingQuery = zod.infer<typeof FloatAgingQuery>;
 
-export const RentalReportRow = z.object({
-  client_party_id: z.number().int(),
-  client_name: z.string(),
+export const RentalReportRow = zod.object({
+  client_party_id: zod.number().int(),
+  client_name: zod.string(),
   gas_code: GasCode.nullable(),
-  rental_days: z.number(),
-  revenue: z.number(),
-  movement_count: z.number().int(),
+  rental_days: zod.number(),
+  revenue: zod.number(),
+  movement_count: zod.number().int(),
 });
-export type RentalReportRow = z.infer<typeof RentalReportRow>;
+export type RentalReportRow = zod.infer<typeof RentalReportRow>;
 
-export const RentalReportQuery = z.object({
+export const RentalReportQuery = zod.object({
   period_start: IsoDate,
   period_end: IsoDate,
-  "filter[territory_id]": z.coerce.number().int().optional(),
+  "filter[territory_id]": zod.coerce.number().int().optional(),
   "filter[gas_code]": GasCode.optional(),
-  "filter[client_party_id]": z.coerce.number().int().optional(),
-  "filter[cylinder_id]": z.coerce.number().int().optional(),
+  "filter[client_party_id]": zod.coerce.number().int().optional(),
+  "filter[cylinder_id]": zod.coerce.number().int().optional(),
 });
-export type RentalReportQuery = z.infer<typeof RentalReportQuery>;
+export type RentalReportQuery = zod.infer<typeof RentalReportQuery>;
 
-export const LossReportRow = z.object({
-  owner_party_id: z.number().int(),
-  owner_name: z.string(),
+export const LossReportRow = zod.object({
+  owner_party_id: zod.number().int(),
+  owner_name: zod.string(),
   ownership_basis: OwnershipBasis,
-  state: z.enum(["LOST", "BROKEN"]),
-  count: z.number().int(),
-  liability: z.enum(["SUPPLIER", "OURS", "CUSTOMER"]),
+  state: zod.enum(["LOST", "BROKEN"]),
+  count: zod.number().int(),
+  liability: zod.enum(["SUPPLIER", "OURS", "CUSTOMER"]),
 });
-export type LossReportRow = z.infer<typeof LossReportRow>;
+export type LossReportRow = zod.infer<typeof LossReportRow>;
 
-export const LossReportQuery = z.object({
+export const LossReportQuery = zod.object({
   period_start: IsoDate.optional(),
   period_end: IsoDate.optional(),
-  "filter[owner_party_id]": z.coerce.number().int().optional(),
+  "filter[owner_party_id]": zod.coerce.number().int().optional(),
 });
-export type LossReportQuery = z.infer<typeof LossReportQuery>;
+export type LossReportQuery = zod.infer<typeof LossReportQuery>;
 
-export const SupplierReturnsRow = z.object({
-  loan_id: z.number().int(),
-  cylinder_id: z.number().int(),
-  serial_number: z.string().optional(),
-  supplier_party_id: z.number().int(),
-  supplier_name: z.string(),
-  stage: z.string(),
+export const SupplierReturnsRow = zod.object({
+  loan_id: zod.number().int(),
+  cylinder_id: zod.number().int(),
+  serial_number: zod.string().optional(),
+  supplier_party_id: zod.number().int(),
+  supplier_name: zod.string(),
+  stage: zod.string(),
   received_from_supplier: IsoDate.nullable(),
-  days_open: z.number().int(),
+  days_open: zod.number().int(),
 });
-export type SupplierReturnsRow = z.infer<typeof SupplierReturnsRow>;
+export type SupplierReturnsRow = zod.infer<typeof SupplierReturnsRow>;
 
 export const SupplierReturnsQuery = PaginationQuery.extend({
-  sort: z.enum(["days_open", "-days_open"]).default("-days_open"),
-  min_days: z.coerce.number().int().min(0).optional(),
-  "filter[supplier_party_id]": z.coerce.number().int().optional(),
+  sort: zod.enum(["days_open", "-days_open"]).default("-days_open"),
+  min_days: zod.coerce.number().int().min(0).optional(),
+  "filter[supplier_party_id]": zod.coerce.number().int().optional(),
   as_of: IsoDate.optional(),
 });
-export type SupplierReturnsQuery = z.infer<typeof SupplierReturnsQuery>;
+export type SupplierReturnsQuery = zod.infer<typeof SupplierReturnsQuery>;
 
-export const CylinderLifeRow = z.object({
-  event_source: z.enum(["MOVEMENT", "SUPPLIER_LOAN"]),
-  movement_id: z.number().int().nullable(),
-  loan_id: z.number().int().nullable(),
-  holder_party_id: z.number().int(),
-  holder_name: z.string(),
-  movement_kind: z.string(),
+export const CylinderLifeRow = zod.object({
+  event_source: zod.enum(["MOVEMENT", "SUPPLIER_LOAN"]),
+  movement_id: zod.number().int().nullable(),
+  loan_id: zod.number().int().nullable(),
+  holder_party_id: zod.number().int(),
+  holder_name: zod.string(),
+  movement_kind: zod.string(),
   delivery_date: IsoDate,
   return_date: IsoDate.nullable(),
-  rental_days: z.number().int().nullable(),
-  state: z.string(),
-  note: z.string().nullable(),
+  rental_days: zod.number().int().nullable(),
+  state: zod.string(),
+  note: zod.string().nullable(),
 });
-export type CylinderLifeRow = z.infer<typeof CylinderLifeRow>;
+export type CylinderLifeRow = zod.infer<typeof CylinderLifeRow>;
 
-export const DataQualityRow = z.object({
-  id: z.number().int(),
-  source: z.string(),
-  reason: z.string(),
-  sheet: z.string().nullable().optional(),
-  row_ref: z.string().nullable().optional(),
-  status: z.string(),
-  created_at: z.string().datetime(),
+export const DataQualityRow = zod.object({
+  id: zod.number().int(),
+  source: zod.string(),
+  reason: zod.string(),
+  sheet: zod.string().nullable().optional(),
+  row_ref: zod.string().nullable().optional(),
+  status: zod.string(),
+  created_at: zod.string().datetime(),
 });
-export type DataQualityRow = z.infer<typeof DataQualityRow>;
+export type DataQualityRow = zod.infer<typeof DataQualityRow>;
 
 export const DataQualityQuery = PaginationQuery.extend({
-  sort: z.enum(["created_at", "-created_at"]).default("-created_at"),
-  "filter[type]": z.string().optional(),
+  sort: zod.enum(["created_at", "-created_at"]).default("-created_at"),
+  "filter[type]": zod.string().optional(),
 });
-export type DataQualityQuery = z.infer<typeof DataQualityQuery>;
+export type DataQualityQuery = zod.infer<typeof DataQualityQuery>;
 
-export const MedicalStatementRow = z.object({
-  client_party_id: z.number().int(),
-  client_name: z.string(),
-  deliveries: z.number().int(),
-  rental_days: z.number(),
-  accessory_rentals: z.number().int(),
+export const MedicalStatementRow = zod.object({
+  client_party_id: zod.number().int(),
+  client_name: zod.string(),
+  deliveries: zod.number().int(),
+  rental_days: zod.number(),
+  accessory_rentals: zod.number().int(),
 });
-export type MedicalStatementRow = z.infer<typeof MedicalStatementRow>;
+export type MedicalStatementRow = zod.infer<typeof MedicalStatementRow>;
 
-export const MedicalStatementQuery = z.object({
+export const MedicalStatementQuery = zod.object({
   period_start: IsoDate,
   period_end: IsoDate,
-  "filter[client_party_id]": z.coerce.number().int().optional(),
+  "filter[client_party_id]": zod.coerce.number().int().optional(),
 });
-export type MedicalStatementQuery = z.infer<typeof MedicalStatementQuery>;
+export type MedicalStatementQuery = zod.infer<typeof MedicalStatementQuery>;
 
-export const CylinderLifeQuery = z.object({
+export const CylinderLifeQuery = zod.object({
   gte: IsoDate.optional(),
   lte: IsoDate.optional(),
 });
-export type CylinderLifeQuery = z.infer<typeof CylinderLifeQuery>;
+export type CylinderLifeQuery = zod.infer<typeof CylinderLifeQuery>;
 
 export const FleetReportResponse = ReportEnvelope(FleetRow);
-export type FleetReportResponse = z.infer<typeof FleetReportResponse>;
+export type FleetReportResponse = zod.infer<typeof FleetReportResponse>;
 
 export const FloatAgingReportResponse = ReportEnvelope(FloatAgingRow).extend({
   page: PageMeta,
 });
-export type FloatAgingReportResponse = z.infer<typeof FloatAgingReportResponse>;
+export type FloatAgingReportResponse = zod.infer<
+  typeof FloatAgingReportResponse
+>;
 
 export const RentalReportResponse = ReportEnvelope(RentalReportRow);
-export type RentalReportResponse = z.infer<typeof RentalReportResponse>;
+export type RentalReportResponse = zod.infer<typeof RentalReportResponse>;
 
 export const LossReportResponse = ReportEnvelope(LossReportRow);
-export type LossReportResponse = z.infer<typeof LossReportResponse>;
+export type LossReportResponse = zod.infer<typeof LossReportResponse>;
 
 export const SupplierReturnsReportResponse = ReportEnvelope(
   SupplierReturnsRow,
 ).extend({
   page: PageMeta,
 });
-export type SupplierReturnsReportResponse = z.infer<
+export type SupplierReturnsReportResponse = zod.infer<
   typeof SupplierReturnsReportResponse
 >;
 
 export const CylinderLifeReportResponse = ReportEnvelope(CylinderLifeRow);
-export type CylinderLifeReportResponse = z.infer<
+export type CylinderLifeReportResponse = zod.infer<
   typeof CylinderLifeReportResponse
 >;
 
 export const DataQualityReportResponse = ReportEnvelope(DataQualityRow).extend({
   page: PageMeta,
 });
-export type DataQualityReportResponse = z.infer<
+export type DataQualityReportResponse = zod.infer<
   typeof DataQualityReportResponse
 >;
 
 export const MedicalStatementReportResponse =
   ReportEnvelope(MedicalStatementRow);
-export type MedicalStatementReportResponse = z.infer<
+export type MedicalStatementReportResponse = zod.infer<
   typeof MedicalStatementReportResponse
 >;

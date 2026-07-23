@@ -18,7 +18,7 @@ async function bootstrap(): Promise<void> {
 
   const extraOrigins = (config.get("CORS_ORIGINS", { infer: true }) ?? "")
     .split(",")
-    .map((o) => o.trim())
+    .map((item) => item.trim())
     .filter(Boolean);
   app.enableCors({
     origin: [
@@ -57,7 +57,6 @@ async function bootstrap(): Promise<void> {
 
   const port = config.get("API_PORT", { infer: true });
   await app.listen(port);
-  // eslint-disable-next-line no-console
   console.log(`API listening on :${port}${prefix} — docs at /api/docs`);
 }
 

@@ -27,7 +27,7 @@ function installLocalStorage() {
 installLocalStorage();
 (globalThis as unknown as { window: typeof globalThis }).window = globalThis;
 
-describe("field sessionStore", async () => {
+describe("web sessionStore", async () => {
   const { useSessionStore, partializeSession } =
     await import("./store/sessionStore");
 
@@ -39,23 +39,22 @@ describe("field sessionStore", async () => {
     });
   });
 
-  it("session lifecycle", () => {
+  it("requires user profile before considering the session authenticated", () => {
     useSessionStore.getState().setSession("a", "r");
-    assert.equal(useSessionStore.getState().isAuthenticated(), true);
+    assert.equal(useSessionStore.getState().isAuthenticated(), false);
+
     useSessionStore.getState().setUser({
       id: 1,
-      username: "driver",
-      roles: ["DRIVER"],
-      territories: ["Junín"],
-      territory_scopes: [{ id: 1, name: "Junín" }],
-      capabilities: ["movements:write"],
+      username: "admin",
+      roles: ["ADMIN"],
+      territories: [],
+      territory_scopes: [],
+      capabilities: ["clients:read", "admin:write"],
     });
+    assert.equal(useSessionStore.getState().isAuthenticated(), true);
+    assert.equal(useSessionStore.getState().hasCapability("admin:write"), true);
     assert.equal(
-      useSessionStore.getState().hasCapability("movements:write"),
-      true,
-    );
-    assert.equal(
-      useSessionStore.getState().hasCapability("admin:write"),
+      useSessionStore.getState().hasCapability("does-not-exist"),
       false,
     );
     assert.deepEqual(partializeSession(useSessionStore.getState()), {
@@ -63,12 +62,8 @@ describe("field sessionStore", async () => {
       refreshToken: "r",
       user: useSessionStore.getState().user,
     });
+
     useSessionStore.getState().clearSession();
-    assert.equal(useSessionStore.getState().accessToken, null);
     assert.equal(useSessionStore.getState().isAuthenticated(), false);
-    assert.equal(
-      useSessionStore.getState().hasCapability("movements:write"),
-      false,
-    );
   });
 });

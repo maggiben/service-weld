@@ -46,7 +46,7 @@ function SerialLink({
       component={NextLink}
       href={`/cylinders/${cylinderId}`}
       underline="hover"
-      onClick={(e) => e.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
     >
       {serial}
     </Link>
@@ -54,8 +54,10 @@ function SerialLink({
 }
 
 export default function ReconciliationPage() {
-  const { t } = useTranslation();
-  const canWrite = useSessionStore((s) => s.hasCapability("cylinders:write"));
+  const { t: translate } = useTranslation();
+  const canWrite = useSessionStore((state) =>
+    state.hasCapability("cylinders:write"),
+  );
   const queryClient = useQueryClient();
   const [tab, setTab] = useState(0);
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
@@ -111,7 +113,7 @@ export default function ReconciliationPage() {
         counted_on: countedOn,
         serial_numbers: serials
           .split(/[\n,]+/)
-          .map((s) => s.trim())
+          .map((item) => item.trim())
           .filter(Boolean),
         cylinder_ids: [],
         full_plant_count: fullPlantCount,
@@ -119,7 +121,7 @@ export default function ReconciliationPage() {
     onSuccess: (result) => {
       setVarianceRows(result.rows);
       setSummary(
-        t("reconciliation.count.summary", {
+        translate("reconciliation.count.summary", {
           matched: result.matched,
           elsewhere: result.present_elsewhere,
           absent: result.absent_here,
@@ -134,99 +136,100 @@ export default function ReconciliationPage() {
     () => [
       {
         field: "serial_number",
-        headerName: t("reconciliation.outstanding.columns.serial"),
+        headerName: translate("reconciliation.outstanding.columns.serial"),
         width: 130,
-        renderCell: (p) => (
-          <SerialLink cylinderId={p.row.cylinder_id} serial={p.value} />
+        renderCell: (part) => (
+          <SerialLink cylinderId={part.row.cylinder_id} serial={part.value} />
         ),
       },
       {
         field: "cylinder_state",
-        headerName: t("reconciliation.outstanding.columns.state"),
+        headerName: translate("reconciliation.outstanding.columns.state"),
         width: 150,
-        renderCell: (p) => (
+        renderCell: (part) => (
           <Chip
             size="small"
-            color={cylinderStateChipColor(p.value)}
-            label={t(`enums.cylinder_state.${p.value}`)}
+            color={cylinderStateChipColor(part.value)}
+            label={translate(`enums.cylinder_state.${part.value}`)}
           />
         ),
       },
       {
         field: "client_name",
-        headerName: t("reconciliation.outstanding.columns.held_by"),
+        headerName: translate("reconciliation.outstanding.columns.held_by"),
         flex: 1.2,
         minWidth: 180,
-        renderCell: (p) => (
+        renderCell: (part) => (
           <Chip
             size="small"
             color="info"
             variant="outlined"
-            label={t("reconciliation.held_by", { name: p.value })}
+            label={translate("reconciliation.held_by", { name: part.value })}
           />
         ),
       },
       {
         field: "gas_code",
-        headerName: t("reconciliation.outstanding.columns.gas"),
+        headerName: translate("reconciliation.outstanding.columns.gas"),
         width: 90,
       },
       {
         field: "delivery_date",
-        headerName: t("reconciliation.outstanding.columns.delivery"),
+        headerName: translate("reconciliation.outstanding.columns.delivery"),
         width: 120,
       },
       {
         field: "accrued_days",
-        headerName: t("reconciliation.outstanding.columns.days"),
+        headerName: translate("reconciliation.outstanding.columns.days"),
         width: 100,
       },
       {
         field: "to_verify",
-        headerName: t("reconciliation.outstanding.columns.verify"),
+        headerName: translate("reconciliation.outstanding.columns.verify"),
         width: 110,
-        renderCell: (p) =>
-          p.value ? (
+        renderCell: (part) =>
+          part.value ? (
             <Chip
               size="small"
               color="warning"
-              label={t("reconciliation.to_verify")}
+              label={translate("reconciliation.to_verify")}
             />
           ) : (
             "—"
           ),
       },
     ],
-    [t],
+    [translate],
   );
 
   const varianceColumns = useMemo<GridColDef<ReconciliationVarianceRow>[]>(
     () => [
       {
         field: "kind",
-        headerName: t("reconciliation.count.columns.kind"),
+        headerName: translate("reconciliation.count.columns.kind"),
         width: 160,
-        valueFormatter: (v: string) => t(`enums.variance_kind.${v}`),
+        valueFormatter: (value: string) =>
+          translate(`enums.variance_kind.${value}`),
       },
       {
         field: "serial_number",
-        headerName: t("reconciliation.count.columns.serial"),
+        headerName: translate("reconciliation.count.columns.serial"),
         width: 130,
-        renderCell: (p) => (
-          <SerialLink cylinderId={p.row.cylinder_id} serial={p.value} />
+        renderCell: (part) => (
+          <SerialLink cylinderId={part.row.cylinder_id} serial={part.value} />
         ),
       },
       {
         field: "system_state",
-        headerName: t("reconciliation.count.columns.state"),
+        headerName: translate("reconciliation.count.columns.state"),
         width: 150,
-        renderCell: (p) =>
-          p.value ? (
+        renderCell: (part) =>
+          part.value ? (
             <Chip
               size="small"
-              color={cylinderStateChipColor(p.value)}
-              label={t(`enums.cylinder_state.${p.value}`, {
-                defaultValue: p.value,
+              color={cylinderStateChipColor(part.value)}
+              label={translate(`enums.cylinder_state.${part.value}`, {
+                defaultValue: part.value,
               })}
             />
           ) : (
@@ -235,16 +238,16 @@ export default function ReconciliationPage() {
       },
       {
         field: "holder_name",
-        headerName: t("reconciliation.count.columns.held_by"),
+        headerName: translate("reconciliation.count.columns.held_by"),
         flex: 1,
         minWidth: 160,
-        renderCell: (p) =>
-          p.value ? (
+        renderCell: (part) =>
+          part.value ? (
             <Chip
               size="small"
               color="info"
               variant="outlined"
-              label={t("reconciliation.held_by", { name: p.value })}
+              label={translate("reconciliation.held_by", { name: part.value })}
             />
           ) : (
             "—"
@@ -252,13 +255,13 @@ export default function ReconciliationPage() {
       },
       {
         field: "suggested_action",
-        headerName: t("reconciliation.count.columns.action"),
+        headerName: translate("reconciliation.count.columns.action"),
         width: 120,
-        valueFormatter: (v: string | undefined) =>
-          v ? t(`enums.suggested_action.${v}`) : "—",
+        valueFormatter: (value: string | undefined) =>
+          value ? translate(`enums.suggested_action.${value}`) : "—",
       },
     ],
-    [t],
+    [translate],
   );
 
   return (
@@ -266,9 +269,11 @@ export default function ReconciliationPage() {
       sx={{ display: "flex", flexDirection: "column", gap: 2, height: "100%" }}
     >
       <Box>
-        <Typography variant="h5">{t("reconciliation.title")}</Typography>
+        <Typography variant="h5">
+          {translate("reconciliation.title")}
+        </Typography>
         <Typography color="text.secondary" sx={{ mt: 0.5, maxWidth: 720 }}>
-          {t("reconciliation.subtitle")}
+          {translate("reconciliation.subtitle")}
         </Typography>
         <Stack
           direction="row"
@@ -280,28 +285,30 @@ export default function ReconciliationPage() {
           <Chip
             size="small"
             color={tab === 0 ? "primary" : "default"}
-            label={t("reconciliation.pills.outstanding")}
+            label={translate("reconciliation.pills.outstanding")}
             onClick={() => setTab(0)}
           />
           <Chip
             size="small"
             color={tab === 1 ? "primary" : "default"}
-            label={t("reconciliation.pills.count")}
+            label={translate("reconciliation.pills.count")}
             onClick={() => setTab(1)}
           />
         </Stack>
       </Box>
 
-      <Tabs value={tab} onChange={(_, v) => setTab(v)}>
-        <Tab label={t("reconciliation.tabs.outstanding")} />
-        <Tab label={t("reconciliation.tabs.count")} />
+      <Tabs value={tab} onChange={(_, value) => setTab(value)}>
+        <Tab label={translate("reconciliation.tabs.outstanding")} />
+        <Tab label={translate("reconciliation.tabs.count")} />
       </Tabs>
 
       {tab === 0 && (
         <Stack spacing={2} sx={{ flex: 1, minHeight: 0 }}>
-          <Alert severity="info">{t("reconciliation.outstanding.help")}</Alert>
+          <Alert severity="info">
+            {translate("reconciliation.outstanding.help")}
+          </Alert>
           {outstandingQuery.isError && (
-            <Alert severity="error">{t("errors.load_failed")}</Alert>
+            <Alert severity="error">{translate("errors.load_failed")}</Alert>
           )}
           <Box sx={{ flex: 1, minHeight: 360 }}>
             <DataGrid
@@ -330,39 +337,43 @@ export default function ReconciliationPage() {
 
       {tab === 1 && (
         <Stack spacing={2}>
-          <Alert severity="info">{t("reconciliation.count.help")}</Alert>
+          <Alert severity="info">
+            {translate("reconciliation.count.help")}
+          </Alert>
           {!canWrite && (
-            <Alert severity="info">{t("reconciliation.count.read_only")}</Alert>
+            <Alert severity="info">
+              {translate("reconciliation.count.read_only")}
+            </Alert>
           )}
           <TextField
-            label={t("reconciliation.count.date")}
+            label={translate("reconciliation.count.date")}
             type="date"
             value={countedOn}
-            onChange={(e) => setCountedOn(e.target.value)}
+            onChange={(event) => setCountedOn(event.target.value)}
             InputLabelProps={{ shrink: true }}
             sx={{ maxWidth: 220 }}
           />
           <TextField
-            label={t("reconciliation.count.serials")}
+            label={translate("reconciliation.count.serials")}
             value={serials}
-            onChange={(e) => setSerials(e.target.value)}
+            onChange={(event) => setSerials(event.target.value)}
             multiline
             minRows={4}
-            helperText={t("reconciliation.count.serials_hint")}
+            helperText={translate("reconciliation.count.serials_hint")}
           />
           <FormControlLabel
             control={
               <Checkbox
                 checked={fullPlantCount}
-                onChange={(e) => setFullPlantCount(e.target.checked)}
+                onChange={(event) => setFullPlantCount(event.target.checked)}
                 disabled={!canWrite}
               />
             }
-            label={t("reconciliation.count.full_plant")}
+            label={translate("reconciliation.count.full_plant")}
           />
           {fullPlantCount && (
             <Alert severity="warning">
-              {t("reconciliation.count.full_plant_warning")}
+              {translate("reconciliation.count.full_plant_warning")}
             </Alert>
           )}
           <Button
@@ -371,11 +382,11 @@ export default function ReconciliationPage() {
             onClick={() => countMutation.mutate()}
             sx={{ alignSelf: "flex-start" }}
           >
-            {t("actions.run_count")}
+            {translate("actions.run_count")}
           </Button>
           {summary && <Alert severity="info">{summary}</Alert>}
           {countMutation.isError && (
-            <Alert severity="error">{t("errors.generic")}</Alert>
+            <Alert severity="error">{translate("errors.generic")}</Alert>
           )}
           <Box sx={{ minHeight: 320 }}>
             <DataGrid

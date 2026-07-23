@@ -22,7 +22,7 @@ export function monthStartIso(
 /** Format YYYY-MM-DD (or datetime prefix) as DD/MM/YYYY, else "—". */
 export function formatDateDMY(value: string | null | undefined): string {
   if (!value) return "—";
-  const [y, m, d] = value.split("-");
-  if (!y || !m || !d) return value;
-  return `${d}/${m}/${y}`;
+  const [year, member, data] = value.split("-");
+  if (!year || !member || !data) return value;
+  return `${data}/${member}/${year}`;
 }

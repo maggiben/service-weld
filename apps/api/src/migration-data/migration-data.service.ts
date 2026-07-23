@@ -369,7 +369,7 @@ export class MigrationDataService implements OnModuleInit {
     const accepted = this.startImport(body);
     // Wait until job finishes (used by older callers / tests).
     while (this.busy) {
-      await new Promise((r) => setTimeout(r, 200));
+      await new Promise((row) => setTimeout(row, 200));
     }
     if (this.liveJob?.state === "failed") {
       throw new BadRequestException(
@@ -434,12 +434,12 @@ export class MigrationDataService implements OnModuleInit {
       lower.includes("movements inserted")
     ) {
       this.setLivePhase("load_movements", 82);
-      const m = /(\d+)\s*$/.exec(line.replace(/,/g, ""));
-      if (m) {
-        const n = Number(m[1]);
-        if (Number.isFinite(n) && n > 0) {
+      const member = /(\d+)\s*$/.exec(line.replace(/,/g, ""));
+      if (member) {
+        const num = Number(member[1]);
+        if (Number.isFinite(num) && num > 0) {
           // Soft ramp while movements stream in.
-          this.liveJob.progress_pct = Math.min(95, 82 + Math.floor(n / 5000));
+          this.liveJob.progress_pct = Math.min(95, 82 + Math.floor(num / 5000));
         }
       }
     } else if (lower.includes("wrote report")) {
@@ -500,7 +500,7 @@ export class MigrationDataService implements OnModuleInit {
       const truncated = [...BUSINESS_TABLES];
       await sql
         .raw(
-          `TRUNCATE TABLE ${truncated.map((t) => `"${t}"`).join(", ")} RESTART IDENTITY CASCADE`,
+          `TRUNCATE TABLE ${truncated.map((territory) => `"${territory}"`).join(", ")} RESTART IDENTITY CASCADE`,
         )
         .execute(this.db);
 
@@ -755,15 +755,15 @@ function extractLastJson(stdout: string): string | null {
   let depth = 0;
   let start = -1;
   let last: string | null = null;
-  for (let i = 0; i < trimmed.length; i++) {
-    const ch = trimmed[i];
+  for (let index = 0; index < trimmed.length; index++) {
+    const ch = trimmed[index];
     if (ch === "{") {
-      if (depth === 0) start = i;
+      if (depth === 0) start = index;
       depth++;
     } else if (ch === "}") {
       depth--;
       if (depth === 0 && start >= 0) {
-        last = trimmed.slice(start, i + 1);
+        last = trimmed.slice(start, index + 1);
         start = -1;
       }
     }

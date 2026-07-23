@@ -10,7 +10,7 @@ import { appLoginUrl } from "@/site";
 import { COMPANY } from "../company";
 
 export function HeroSection() {
-  const { t } = useTranslation("landing");
+  const { t: translate } = useTranslation("landing");
 
   return (
     <Box
@@ -78,7 +78,7 @@ export function HeroSection() {
               fontWeight: 700,
             }}
           >
-            {t("hero.headline")}
+            {translate("hero.headline")}
           </Typography>
           <Typography
             variant="body1"
@@ -89,7 +89,7 @@ export function HeroSection() {
               maxWidth: 540,
             }}
           >
-            {t("hero.description")}
+            {translate("hero.description")}
           </Typography>
           <Stack
             direction={{ xs: "column", sm: "row" }}
@@ -103,7 +103,7 @@ export function HeroSection() {
               size="large"
               sx={{ px: 3.5, py: 1.25 }}
             >
-              {t("hero.ctaLogin")}
+              {translate("hero.ctaLogin")}
             </Button>
             <Button
               href="#contact"
@@ -120,7 +120,7 @@ export function HeroSection() {
                 },
               }}
             >
-              {t("hero.ctaContact")}
+              {translate("hero.ctaContact")}
             </Button>
           </Stack>
         </Stack>

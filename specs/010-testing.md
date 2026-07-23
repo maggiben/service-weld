@@ -18,7 +18,7 @@ Guarantee that the implementation enforces the domain rules, that the API honors
 - R8. **Auth tests**: RBAC denials, territory scoping, MFA gating, medical-data hiding.
 - R9. **Global coverage gate ≥80%**: every workspace package (`apps/api`, `apps/web`, `apps/field`, `apps/www`, `packages/domain`, `packages/schemas`, `packages/api-client`) MUST meet **≥80%** coverage on **lines, branches, functions, and statements**. Enforced by `pnpm run test:coverage` (`scripts/check-coverage.mjs`; override only via `COVERAGE_THRESHOLD`, default `80`). This is a hard gate — not aspirational.
 - R10. **Local git quality gates** (see `012` R8 / `docs/DEVELOPMENT.md`):
-  - **pre-commit** (`.husky/pre-commit`): `check:secrets` → lint-staged (Prettier on staged files) → `typecheck`.
+  - **pre-commit** (`.husky/pre-commit`): `check:secrets` → `check:deps` → `check:id-length` (value bindings ≥2 chars; only `_` allowed short) → lint-staged (Prettier on staged files) → `typecheck`.
   - **pre-push** (`.husky/pre-push`): `test:coverage` (≥80% global gate).
   - Agents and humans MUST run the same checks before creating a commit; never bypass hooks (`--no-verify`) unless the user explicitly requests it.
 

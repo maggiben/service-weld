@@ -1,78 +1,78 @@
-import { z } from "zod";
+import { z as zod } from "zod";
 import { IsoDate, paginated, PaginationQuery } from "./common";
 import { GasCode, MovementKind, MovementState, OwnershipBasis } from "./enums";
 
-export const MovementEvent = z.object({
-  id: z.number().int(),
-  request_id: z.string().uuid(),
-  cylinder_id: z.number().int(),
-  holder_party_id: z.number().int(),
-  holder_name: z.string().optional(),
+export const MovementEvent = zod.object({
+  id: zod.number().int(),
+  request_id: zod.string().uuid(),
+  cylinder_id: zod.number().int(),
+  holder_party_id: zod.number().int(),
+  holder_name: zod.string().optional(),
   movement_kind: MovementKind,
   property_basis: OwnershipBasis,
   gas_code: GasCode.nullable(),
   delivery_date: IsoDate,
   return_date: IsoDate.nullable(),
-  rental_days: z.number().int().nullable(),
-  origin_party_id: z.number().int().nullable(),
-  swap_with_cyl_id: z.number().int().nullable(),
-  remito_id: z.number().int().nullable(),
+  rental_days: zod.number().int().nullable(),
+  origin_party_id: zod.number().int().nullable(),
+  swap_with_cyl_id: zod.number().int().nullable(),
+  remito_id: zod.number().int().nullable(),
   state: MovementState,
-  note: z.string().nullable(),
-  version: z.number().int(),
-  created_at: z.string().datetime(),
-  cylinder_serial: z.string().optional(),
+  note: zod.string().nullable(),
+  version: zod.number().int(),
+  created_at: zod.string().datetime(),
+  cylinder_serial: zod.string().optional(),
 });
-export type MovementEvent = z.infer<typeof MovementEvent>;
+export type MovementEvent = zod.infer<typeof MovementEvent>;
 
-export const CreateMovementInput = z.object({
-  cylinder_id: z.number().int(),
-  holder_party_id: z.number().int(),
+export const CreateMovementInput = zod.object({
+  cylinder_id: zod.number().int(),
+  holder_party_id: zod.number().int(),
   movement_kind: MovementKind,
   gas_code: GasCode.nullable().optional(),
   delivery_date: IsoDate,
-  origin_party_id: z.number().int().nullable().optional(),
-  remito_number: z.string().nullable().optional(),
-  note: z.string().nullable().optional(),
-  request_id: z.string().uuid().optional(),
+  origin_party_id: zod.number().int().nullable().optional(),
+  remito_number: zod.string().nullable().optional(),
+  note: zod.string().nullable().optional(),
+  request_id: zod.string().uuid().optional(),
 });
-export type CreateMovementInput = z.infer<typeof CreateMovementInput>;
+export type CreateMovementInput = zod.infer<typeof CreateMovementInput>;
 
-export const ReturnMovementInput = z.object({
+export const ReturnMovementInput = zod.object({
   return_date: IsoDate,
 });
-export type ReturnMovementInput = z.infer<typeof ReturnMovementInput>;
+export type ReturnMovementInput = zod.infer<typeof ReturnMovementInput>;
 
-export const SwapMovementInput = z.object({
-  returned_cylinder_id: z.number().int(),
+export const SwapMovementInput = zod.object({
+  returned_cylinder_id: zod.number().int(),
   return_date: IsoDate,
 });
-export type SwapMovementInput = z.infer<typeof SwapMovementInput>;
+export type SwapMovementInput = zod.infer<typeof SwapMovementInput>;
 
-export const VoidMovementInput = z.object({
-  reason: z.string().min(1),
+export const VoidMovementInput = zod.object({
+  reason: zod.string().min(1),
 });
-export type VoidMovementInput = z.infer<typeof VoidMovementInput>;
+export type VoidMovementInput = zod.infer<typeof VoidMovementInput>;
 
 export const MovementListQuery = PaginationQuery.extend({
   /** Partial match on cylinder serial number. */
-  q: z.string().optional(),
-  sort: z
+  q: zod.string().optional(),
+  sort: zod
     .enum(["delivery_date", "-delivery_date", "rental_days", "-rental_days"])
     .default("-delivery_date"),
-  open: z
+  open: zod
     .enum(["true", "false"])
     .optional()
     .transform((value) => value === "true"),
-  "filter[cylinder_id]": z.coerce.number().int().optional(),
-  "filter[holder_party_id]": z.coerce.number().int().optional(),
+  "filter[cylinder_id]": zod.coerce.number().int().optional(),
+  "filter[holder_party_id]": zod.coerce.number().int().optional(),
   /** Holder client's locality (ignored when filter[holder_party_id] is set). */
-  "filter[locality_id]": z.coerce.number().int().optional(),
+  "filter[locality_id]": zod.coerce.number().int().optional(),
   "filter[state]": MovementState.optional(),
   "filter[movement_kind]": MovementKind.optional(),
   "filter[gas_code]": GasCode.optional(),
 });
-export type MovementListQuery = z.infer<typeof MovementListQuery>;
+export type MovementListQuery = zod.infer<typeof MovementListQuery>;
 
 export const MovementListResponse = paginated(MovementEvent);
-export type MovementListResponse = z.infer<typeof MovementListResponse>;
+export type MovementListResponse = zod.infer<typeof MovementListResponse>;

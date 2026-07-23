@@ -41,12 +41,12 @@ const STATUS_COLOR: Record<
 
 export default function SyncPage() {
   const online = useOnline();
-  const items = useOutboxStore((s) => s.items);
-  const discard = useOutboxStore((s) => s.discard);
-  const requeue = useOutboxStore((s) => s.requeue);
+  const items = useOutboxStore((state) => state.items);
+  const discard = useOutboxStore((state) => state.discard);
+  const requeue = useOutboxStore((state) => state.requeue);
 
-  const active = items.filter((i) => i.status !== "synced");
-  const synced = items.filter((i) => i.status === "synced").slice(0, 20);
+  const active = items.filter((item) => item.status !== "synced");
+  const synced = items.filter((item) => item.status === "synced").slice(0, 20);
 
   return (
     <Box sx={{ p: 2 }}>
