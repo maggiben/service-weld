@@ -74,7 +74,7 @@ function OperationalSettings() {
       if (
         !Number.isFinite(longOutstanding) ||
         longOutstanding < 1 ||
-        longOutstanding > 3650
+        longOutstanding > 36500
       ) {
         throw new Error("invalid_long_outstanding");
       }
@@ -223,7 +223,7 @@ function OperationalSettings() {
             setSaved(false);
           }}
           helperText={t("settings.long_outstanding_days_help")}
-          slotProps={{ htmlInput: { min: 1, max: 3650 } }}
+          slotProps={{ htmlInput: { min: 1, max: 36500 } }}
           disabled={settingsQuery.isLoading}
         />
         <Button

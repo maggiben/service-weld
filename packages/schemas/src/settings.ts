@@ -11,8 +11,9 @@ export const SupplierLoanOverdueDays = z.number().int().min(1).max(3650);
 /**
  * Days after which an OPEN movement raises a LONG_OUTSTANDING alert.
  * Default 90 (product default); editable via Configuración.
+ * Upper bound is intentionally high for legacy / migrated open movements.
  */
-export const LongOutstandingDays = z.number().int().min(1).max(3650);
+export const LongOutstandingDays = z.number().int().min(1).max(36500);
 
 /** IANA timezone used for business "today" / aging (D-13). */
 export const BusinessTimezone = z

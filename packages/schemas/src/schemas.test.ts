@@ -17,6 +17,7 @@ import {
   SystemSettings,
   UpdateSystemSettingsInput,
   BusinessTimezone,
+  LongOutstandingDays,
 } from "./settings";
 import {
   MigrationDataStatus,
@@ -66,6 +67,8 @@ describe("settings", () => {
     assert.equal(parsed.primary_language, "es");
     assert.equal(parsed.rental_min_days, 0);
     assert.equal(parsed.long_outstanding_days, 90);
+    assert.equal(LongOutstandingDays.parse(5000), 5000);
+    assert.throws(() => LongOutstandingDays.parse(36501));
   });
 
   it("allows partial updates", () => {

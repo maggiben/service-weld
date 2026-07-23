@@ -800,7 +800,7 @@ All report endpoints: **Auth** Bearer; **Response** tabular JSON `{ "data": [...
 - **Permissions:** GET `supplier_loans:read`; PATCH `supplier_loans:write`. Web Configuración form gated to `admin:write`.
 - **Response / body fields** (`@weld/schemas` `SystemSettings`):
   - `supplier_loan_overdue_days` — int 1–3650 (default 120)
-  - `long_outstanding_days` — int 1–3650 (default 90; LONG_OUTSTANDING alert threshold)
+  - `long_outstanding_days` — int 1–36500 (default 90; LONG_OUTSTANDING alert threshold)
   - `business_timezone` — IANA timezone string (default `America/Argentina/Buenos_Aires`)
   - `rental_min_days` — int 0–365 (default 0 = exact calendar days)
   - `primary_language` — `es` | `en` (default `es`)
