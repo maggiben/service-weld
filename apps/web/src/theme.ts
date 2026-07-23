@@ -2,8 +2,8 @@ import { createTheme, type ThemeOptions } from "@mui/material/styles";
 
 /**
  * MUI theme foundation (006 §2.1). Domain color semantics (gas/state) are
- * declared as custom palette keys so DataGrid cells, Chips, and MUI X Charts
- * series stay consistent in light/dark. Full palette filled in Phase 1/2.
+ * declared as custom palette keys so DataGrid cells and Chips stay consistent
+ * in light/dark. Full palette filled in Phase 1/2.
  */
 declare module "@mui/material/styles" {
   interface Palette {

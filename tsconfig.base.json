@@ -15,10 +15,9 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "baseUrl": ".",
     "paths": {
-      "@weld/schemas": ["packages/schemas/src/index.ts"],
-      "@weld/domain": ["packages/domain/src/index.ts"]
+      "@weld/schemas": ["./packages/schemas/src/index.ts"],
+      "@weld/domain": ["./packages/domain/src/index.ts"]
     }
   }
 }

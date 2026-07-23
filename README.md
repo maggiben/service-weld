@@ -11,7 +11,7 @@
 
 [![CI](https://github.com/maggiben/service-weld/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/maggiben/service-weld/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/badge/coverage-%E2%89%A580%25-brightgreen?logo=jest&logoColor=white)](./scripts/check-coverage.mjs)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Node](https://img.shields.io/badge/node-24.18-339933?logo=nodedotjs&logoColor=white)](./.nvmrc)
 [![pnpm](https://img.shields.io/badge/pnpm-10.8-F69220?logo=pnpm&logoColor=white)](./package.json)
 [![NestJS](https://img.shields.io/badge/NestJS-API-E0234E?logo=nestjs&logoColor=white)](./apps/api)

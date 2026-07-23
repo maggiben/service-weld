@@ -8,7 +8,6 @@
     "moduleResolution": "Bundler",
     "declaration": true,
     "composite": true,
-    "baseUrl": ".",
     "paths": {
       "@weld/schemas": ["../schemas/dist/index.d.ts"]
     }
