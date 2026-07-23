@@ -62,3 +62,35 @@ export type RentalRateListQuery = zod.infer<typeof RentalRateListQuery>;
 
 export const RentalRateListResponse = paginated(RentalRate);
 export type RentalRateListResponse = zod.infer<typeof RentalRateListResponse>;
+
+/**
+ * Apply rates to open rentals: fill/raise client daily defaults where useful,
+ * then regenerate a history billing draft so charge lines pick up the new price.
+ */
+export const BackfillRentalRatesInput = zod.object({
+  /**
+   * When set, scope defaults + billing to this rate's client (if any) and use
+   * this row's daily amount for default fill (only when gas/size are wildcards).
+   */
+  rate_id: zod.number().int().positive().optional(),
+});
+export type BackfillRentalRatesInput = zod.infer<
+  typeof BackfillRentalRatesInput
+>;
+
+export const BackfillRentalRatesResult = zod.object({
+  /** Clients whose `daily_rate_default` was null and is now set. */
+  defaults_filled: zod.number().int().nonnegative(),
+  /** Clients that already had a default; amount was added on top. */
+  defaults_increased: zod.number().int().nonnegative(),
+  billing_run_id: zod.number().int(),
+  invoice_count: zod.number().int().nonnegative(),
+  /** Charge lines created (open rentals that resolved a price). */
+  line_count: zod.number().int().nonnegative(),
+  /** Open rentals still without a matching rate or client default. */
+  skipped_no_rate: zod.number().int().nonnegative(),
+  total: zod.number().nonnegative(),
+});
+export type BackfillRentalRatesResult = zod.infer<
+  typeof BackfillRentalRatesResult
+>;

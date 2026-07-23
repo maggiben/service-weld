@@ -17,6 +17,8 @@ import type {
   CreateCylinderInput,
   UpdateCylinderInput,
   CreateMovementInput,
+  BackfillRentalRatesInput,
+  BackfillRentalRatesResult,
   CreateRentalRateInput,
   UpdateRentalRateInput,
   Cylinder,
@@ -959,6 +961,18 @@ export class WeldApiClient {
     return this.request<RentalRate>("PATCH", `/rental-rates/${id}`, {
       body: input,
     });
+  }
+
+  backfillRentalRates(
+    input: BackfillRentalRatesInput = {},
+  ): Promise<BackfillRentalRatesResult> {
+    return this.request<BackfillRentalRatesResult>(
+      "POST",
+      "/rental-rates/backfill",
+      {
+        body: input,
+      },
+    );
   }
 
   createBillingRun(input: CreateBillingRunInput): Promise<BillingRunDetail> {

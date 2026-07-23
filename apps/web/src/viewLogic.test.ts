@@ -34,6 +34,7 @@ import {
   nextLoanStage,
 } from "./features/supplier-loans/loanLogic";
 import {
+  formatInvoiceDailyRate,
   formatInvoiceDaysBreakdown,
   invoiceDaysBreakdownParams,
   invoiceTotalDays,
@@ -380,6 +381,36 @@ describe("billingLogic", () => {
         translate,
       ),
       /mixed/,
+    );
+  });
+
+  it("formats invoice daily rates", () => {
+    const translate = (key: string, opts?: Record<string, unknown>) =>
+      `${key}:${JSON.stringify(opts ?? {})}`;
+    assert.equal(formatInvoiceDailyRate({ charge_lines: [] }, translate), "—");
+    assert.match(
+      formatInvoiceDailyRate(
+        {
+          charge_lines: [
+            { quantity: 2, unit_price: 85 },
+            { quantity: 3, unit_price: 85 },
+          ],
+        },
+        translate,
+      ),
+      /daily_rate_value/,
+    );
+    assert.match(
+      formatInvoiceDailyRate(
+        {
+          charge_lines: [
+            { quantity: 2, unit_price: 70 },
+            { quantity: 3, unit_price: 85 },
+          ],
+        },
+        translate,
+      ),
+      /daily_rate_mixed/,
     );
   });
 });

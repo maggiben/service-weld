@@ -72,6 +72,8 @@
       "kpi": {
         "outstanding": "Outstanding",
         "rentals": "Open rentals",
+        "rentals_detail": "{{days}} d · {{rate}} · {{owed}}",
+        "owed_value": "{{amount}} ARS",
         "refills": "Open refills",
         "closed_days": "Closed days (30d)",
         "accessories": "Accessories"
@@ -562,6 +564,7 @@
     "refresh_alerts": "Refresh alerts",
     "resolve": "Resolve",
     "new_rate": "New rate",
+    "backfill_rates": "Backfill",
     "run_billing": "Generate draft",
     "run_billing_history": "History",
     "approve_billing": "Approve",
@@ -822,6 +825,13 @@
       "effective_from_hint": "To bill long-open rentals, use a date on or before the period start (not only today).",
       "effective_to_hint": "Empty = no end date",
       "precedence_hint": "Most specific wins: client+gas+size → client+gas → client → gas → size → global (BR-19)."
+    },
+    "backfill": {
+      "title": "Apply rates to open rentals",
+      "body_all": "Fills client daily defaults when missing (and adds onto existing ones when a general rate applies), then regenerates a history billing draft so all open rentals are recalculated at current rates. Prior drafts in the same scope are replaced.",
+      "body_rate": "With this rate: if it is general (any gas/size), fills or adds the client daily default; then regenerates the history billing draft (scoped to the rate’s client, or all clients if global). Prior drafts in the same scope are replaced.",
+      "confirm": "Apply",
+      "done": "Backfill done: {{filled}} defaults set · {{increased}} defaults increased · {{invoices}} invoices · {{lines}} lines · skipped {{skipped}} · total {{total}} ARS"
     }
   },
   "billing": {
@@ -849,7 +859,7 @@
       "title": "Lines · {{client}} ({{count}} cylinders) · {{days}} cylinder-days · {{total}} ARS",
       "description": "Description",
       "days": "Days",
-      "unit_price": "Price/day (ARS)",
+      "unit_price": "Daily rate (ARS)",
       "calc": "Calculation",
       "calc_value": "{{days}} d × {{price}} ARS",
       "amount": "Amount (ARS)",
@@ -867,6 +877,9 @@
       "days_breakdown_uniform": "{{cylinders}} cyl. × {{days}} d = {{total}}",
       "days_breakdown_mixed": "{{cylinders}} cyl. · Σ {{total}} d (mixed days)",
       "total_days": "Cylinder-days",
+      "daily_rate": "Daily rate",
+      "daily_rate_value": "{{price}} ARS",
+      "daily_rate_mixed": "{{min}}–{{max}} ARS",
       "total": "Total (ARS)",
       "status": "Status"
     }

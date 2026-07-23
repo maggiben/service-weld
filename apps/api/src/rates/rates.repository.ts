@@ -291,6 +291,52 @@ export class RatesRepository {
     return this.getById(id);
   }
 
+  /**
+   * Apply a daily amount onto client.daily_rate_default:
+   * - null → set (filled)
+   * - existing → add the amount (increased)
+   */
+  async backfillDailyDefaults(params: {
+    clientPartyId: number | null;
+    dailyAmount: number;
+  }): Promise<{ filled: number; increased: number }> {
+    const db = resolveDb(this.db);
+    let qb = db
+      .selectFrom("client")
+      .select(["party_id", "daily_rate_default"])
+      .where("deleted_at", "is", null);
+    if (params.clientPartyId != null) {
+      qb = qb.where("party_id", "=", params.clientPartyId);
+    }
+    const clients = await qb.execute();
+    let filled = 0;
+    let increased = 0;
+    const amount = Math.round(params.dailyAmount * 100) / 100;
+
+    for (const client of clients) {
+      if (client.daily_rate_default == null) {
+        await db
+          .updateTable("client")
+          .set({ daily_rate_default: String(amount) })
+          .where("party_id", "=", client.party_id)
+          .execute();
+        filled += 1;
+        continue;
+      }
+      const current = Number(client.daily_rate_default);
+      if (!Number.isFinite(current)) continue;
+      const next = Math.round((current + amount) * 100) / 100;
+      await db
+        .updateTable("client")
+        .set({ daily_rate_default: String(next) })
+        .where("party_id", "=", client.party_id)
+        .execute();
+      increased += 1;
+    }
+
+    return { filled, increased };
+  }
+
   private async assertNoOverlap(params: {
     excludeId: number | null;
     clientId: number | null;

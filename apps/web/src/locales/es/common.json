@@ -72,6 +72,8 @@
       "kpi": {
         "outstanding": "En poder",
         "rentals": "Alquileres abiertos",
+        "rentals_detail": "{{days}} d · {{rate}} · {{owed}}",
+        "owed_value": "{{amount}} ARS",
         "refills": "Recargas abiertas",
         "closed_days": "Días cerrados (30d)",
         "accessories": "Accesorios"
@@ -562,6 +564,7 @@
     "refresh_alerts": "Actualizar alertas",
     "resolve": "Resolver",
     "new_rate": "Nueva tarifa",
+    "backfill_rates": "Backfill",
     "run_billing": "Generar borrador",
     "run_billing_history": "Histórico",
     "approve_billing": "Aprobar",
@@ -822,6 +825,13 @@
       "effective_from_hint": "Para facturar alquileres abiertos antiguos, usá una fecha anterior o igual al inicio del período (no solo hoy).",
       "effective_to_hint": "Vacío = sin fecha de fin",
       "precedence_hint": "Gana la más específica: cliente+gas+tamaño → cliente+gas → cliente → gas → tamaño → global (BR-19)."
+    },
+    "backfill": {
+      "title": "Aplicar tarifas a alquileres abiertos",
+      "body_all": "Se completa el default diario de clientes sin precio (y se suma al que ya tienen si la tarifa es general), y se regenera un borrador histórico de facturación para recalcular todos los alquileres abiertos con las tarifas vigentes. Los borradores previos del mismo alcance se reemplazan.",
+      "body_rate": "Con esta tarifa: si es general (cualquier gas/tamaño), completa o suma el default diario del cliente; luego regenera el borrador histórico de facturación (alcance del cliente de la tarifa, o todos si es global). Los borradores previos del mismo alcance se reemplazan.",
+      "confirm": "Aplicar",
+      "done": "Backfill listo: {{filled}} defaults nuevos · {{increased}} defaults sumados · {{invoices}} facturas · {{lines}} líneas · omitidos {{skipped}} · total {{total}} ARS"
     }
   },
   "billing": {
@@ -849,7 +859,7 @@
       "title": "Líneas · {{client}} ({{count}} cilindros) · {{days}} días-cilindro · {{total}} ARS",
       "description": "Descripción",
       "days": "Días",
-      "unit_price": "Precio/día (ARS)",
+      "unit_price": "Tarifa diaria (ARS)",
       "calc": "Cálculo",
       "calc_value": "{{days}} d × {{price}} ARS",
       "amount": "Importe (ARS)",
@@ -867,6 +877,9 @@
       "days_breakdown_uniform": "{{cylinders}} cil. × {{days}} d = {{total}}",
       "days_breakdown_mixed": "{{cylinders}} cil. · Σ {{total}} d (días distintos)",
       "total_days": "Días-cilindro",
+      "daily_rate": "Tarifa diaria",
+      "daily_rate_value": "{{price}} ARS",
+      "daily_rate_mixed": "{{min}}–{{max}} ARS",
       "total": "Total (ARS)",
       "status": "Estado"
     }

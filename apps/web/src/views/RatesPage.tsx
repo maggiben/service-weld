@@ -1,9 +1,15 @@
 "use client";
 
 import AddIcon from "@mui/icons-material/Add";
+import SyncIcon from "@mui/icons-material/Sync";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogContentText from "@mui/material/DialogContentText";
+import DialogTitle from "@mui/material/DialogTitle";
 import Drawer from "@mui/material/Drawer";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
@@ -38,6 +44,7 @@ import {
   cursorPageRowCount,
   paginationAfterChange,
 } from "../lib/cursorPagination";
+import { useNotificationStore } from "../store/notificationStore";
 import { useSessionStore } from "../store/sessionStore";
 
 const GASES: GasCode[] = ["O2", "O2_MED", "CO2", "N2", "AR", "ATAL", "ACET"];
@@ -47,7 +54,12 @@ export default function RatesPage() {
   const canWrite = useSessionStore((state) =>
     state.hasCapability("rates:write"),
   );
+  const canBillingWrite = useSessionStore((state) =>
+    state.hasCapability("billing:write"),
+  );
+  const canBackfill = canWrite && canBillingWrite;
   const queryClient = useQueryClient();
+  const pushToast = useNotificationStore((state) => state.pushToast);
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
     page: 0,
     pageSize: 50,
@@ -66,6 +78,8 @@ export default function RatesPage() {
   );
   const [effectiveTo, setEffectiveTo] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [backfillConfirmOpen, setBackfillConfirmOpen] = useState(false);
+  const [backfillRateId, setBackfillRateId] = useState<number | undefined>();
 
   const isEditing = editingRate != null;
 
@@ -151,6 +165,11 @@ export default function RatesPage() {
     setDrawerOpen(true);
   };
 
+  const openBackfillConfirm = (rateId?: number) => {
+    setBackfillRateId(rateId);
+    setBackfillConfirmOpen(true);
+  };
+
   const saveMutation = useMutation({
     mutationFn: () => {
       const payload = {
@@ -182,6 +201,38 @@ export default function RatesPage() {
         return;
       }
       setError(translate("errors.generic"));
+    },
+  });
+
+  const backfillMutation = useMutation({
+    mutationFn: () =>
+      api.backfillRentalRates(
+        backfillRateId != null ? { rate_id: backfillRateId } : {},
+      ),
+    onSuccess: (result) => {
+      setBackfillConfirmOpen(false);
+      pushToast(
+        translate("rates.backfill.done", {
+          filled: result.defaults_filled,
+          increased: result.defaults_increased,
+          invoices: result.invoice_count,
+          lines: result.line_count,
+          skipped: result.skipped_no_rate,
+          total: result.total,
+        }),
+      );
+    },
+    onError: (err) => {
+      setBackfillConfirmOpen(false);
+      if (err instanceof ApiClientError) {
+        if (err.code === "PERIOD_LOCKED") {
+          pushToast(translate("errors.period_locked"));
+          return;
+        }
+        pushToast(err.message);
+        return;
+      }
+      pushToast(translate("errors.generic"));
     },
   });
 
@@ -243,17 +294,30 @@ export default function RatesPage() {
         direction={{ xs: "column", md: "row" }}
         justifyContent="space-between"
         alignItems={{ md: "center" }}
+        spacing={1}
       >
         <Typography variant="h5">{translate("rates.title")}</Typography>
-        {canWrite && (
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={openCreate}
-          >
-            {translate("actions.new_rate")}
-          </Button>
-        )}
+        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+          {canBackfill && (
+            <Button
+              variant="outlined"
+              startIcon={<SyncIcon />}
+              onClick={() => openBackfillConfirm()}
+              disabled={backfillMutation.isPending}
+            >
+              {translate("actions.backfill_rates")}
+            </Button>
+          )}
+          {canWrite && (
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={openCreate}
+            >
+              {translate("actions.new_rate")}
+            </Button>
+          )}
+        </Stack>
       </Stack>
 
       {ratesQuery.isError && (
@@ -426,6 +490,16 @@ export default function RatesPage() {
           </Alert>
           <Stack direction="row" spacing={1} justifyContent="flex-end">
             <Button onClick={closeDrawer}>{translate("actions.cancel")}</Button>
+            {canBackfill && isEditing && editingRate && (
+              <Button
+                variant="outlined"
+                startIcon={<SyncIcon />}
+                disabled={backfillMutation.isPending}
+                onClick={() => openBackfillConfirm(editingRate.id)}
+              >
+                {translate("actions.backfill_rates")}
+              </Button>
+            )}
             <Button
               variant="contained"
               disabled={saveMutation.isPending || !amount}
@@ -436,6 +510,37 @@ export default function RatesPage() {
           </Stack>
         </Stack>
       </Drawer>
+
+      <Dialog
+        open={backfillConfirmOpen}
+        onClose={() =>
+          backfillMutation.isPending ? undefined : setBackfillConfirmOpen(false)
+        }
+      >
+        <DialogTitle>{translate("rates.backfill.title")}</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {backfillRateId != null
+              ? translate("rates.backfill.body_rate")
+              : translate("rates.backfill.body_all")}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setBackfillConfirmOpen(false)}
+            disabled={backfillMutation.isPending}
+          >
+            {translate("actions.cancel")}
+          </Button>
+          <Button
+            variant="contained"
+            disabled={backfillMutation.isPending}
+            onClick={() => backfillMutation.mutate()}
+          >
+            {translate("rates.backfill.confirm")}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Stack>
   );
 }

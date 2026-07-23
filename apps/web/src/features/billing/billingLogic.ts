@@ -1,4 +1,4 @@
-type ChargeLine = { quantity: number };
+type ChargeLine = { quantity: number; unit_price?: number };
 
 type InvoiceLike = {
   total_days?: number | null;
@@ -53,5 +53,39 @@ export function formatInvoiceDaysBreakdown(
   return translate("billing.columns.days_breakdown_mixed", {
     cylinders: params.cylinders,
     total: params.total,
+  });
+}
+
+function formatMoney(amount: number): string {
+  return Number(amount).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+/** Daily unit price shown on the invoice grid (uniform or min–max when mixed). */
+export function formatInvoiceDailyRate(
+  invoice: InvoiceLike,
+  translate: (key: string, opts?: Record<string, unknown>) => string,
+): string {
+  const lines = invoice.charge_lines ?? [];
+  const prices = lines
+    .map((line) => (line.unit_price == null ? null : Number(line.unit_price)))
+    .filter(
+      (price): price is number => price != null && Number.isFinite(price),
+    );
+  if (prices.length === 0) return "—";
+
+  const first = prices[0]!;
+  const allSame = prices.every((price) => price === first);
+  if (allSame) {
+    return translate("billing.columns.daily_rate_value", {
+      price: formatMoney(first),
+    });
+  }
+
+  return translate("billing.columns.daily_rate_mixed", {
+    min: formatMoney(Math.min(...prices)),
+    max: formatMoney(Math.max(...prices)),
   });
 }

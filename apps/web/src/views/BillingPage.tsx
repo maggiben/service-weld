@@ -35,6 +35,7 @@ import type {
 import { ApiClientError } from "@weld/api-client";
 import { api } from "../api/client";
 import {
+  formatInvoiceDailyRate,
   formatInvoiceDaysBreakdown,
   invoiceTotalDays,
 } from "../features/billing/billingLogic";
@@ -233,6 +234,13 @@ export default function BillingPage() {
         width: 130,
         type: "number",
         valueGetter: (_v, row) => invoiceTotalDays(row),
+      },
+      {
+        field: "daily_rate",
+        headerName: translate("billing.columns.daily_rate"),
+        width: 140,
+        sortable: false,
+        valueGetter: (_v, row) => formatInvoiceDailyRate(row, translate),
       },
       {
         field: "total",

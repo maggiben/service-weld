@@ -51,7 +51,12 @@ describe("thin orchestration services", () => {
       }),
       update: jest.fn().mockResolvedValue({ id: 1 }),
     };
-    const service = new RatesService(repository as never);
+    const service = new RatesService(
+      repository as never,
+      {
+        createDraft: jest.fn(),
+      } as never,
+    );
     expect(await service.list({} as never)).toEqual({ data: [] });
     await expect(
       service.create({
