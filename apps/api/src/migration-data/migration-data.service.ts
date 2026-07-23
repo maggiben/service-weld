@@ -57,7 +57,6 @@ const BUSINESS_TABLES = [
   "migration_exception",
   "alert",
   "audit_log",
-  "gas_alias",
 ] as const;
 
 const PRESERVED = [
@@ -68,6 +67,7 @@ const PRESERVED = [
   "refresh_token",
   "system_setting",
   "gas_type",
+  "gas_alias",
   "dispatch_territory",
   "locality",
   "party (SELF + linked to users)",

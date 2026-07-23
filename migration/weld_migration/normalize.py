@@ -15,6 +15,25 @@ MIGRATION_NS = uuid.UUID("a7c5e2f0-0110-4b3d-9e8a-0123456789ab")
 
 DATE_MIN = date(2000, 1, 1)
 
+CANONICAL_GAS_CODES = frozenset(
+    {
+        "O2",
+        "O2_MED",
+        "O2_LASER",
+        "CO2",
+        "N2",
+        "AR",
+        "AR_50",
+        "ATAL",
+        "MIX20",
+        "MIX22",
+        "MAPAX30",
+        "ACET",
+        "HELIUM",
+        "THERMOLENE",
+    }
+)
+
 
 def today_plus(days: int = 30) -> date:
     return date.today() + timedelta(days=days)
@@ -35,9 +54,40 @@ def norm_key(value: Any) -> str:
 
 
 # Extra aliases beyond schema.sql seed (extend during migration — 011 / M-11).
-EXTRA_GAS_ALIASES: dict[str, str] = {
-    "oxígeno": "O2",
+# Also re-assert the schema seed aliases here so post-purge / partial DBs still
+# resolve common tokens (o2, co2, atal, …) — see UNKNOWN_GAS flood after purge.
+SEED_GAS_ALIASES: dict[str, str] = {
+    "o": "O2",
+    "ox": "O2",
     "oxigeno": "O2",
+    "o2": "O2",
+    "at": "ATAL",
+    "atal": "ATAL",
+    "ata": "ATAL",
+    "ar": "AR",
+    "argon": "AR",
+    "argom": "AR",
+    "argo": "AR",
+    "ar 5,0": "AR_50",
+    "argon 5,0": "AR_50",
+    "argon 5.0": "AR_50",
+    "co2": "CO2",
+    "n2": "N2",
+    "nitrogeno": "N2",
+    "acet": "ACET",
+    "acet.": "ACET",
+    "acetileno": "ACET",
+    "elio": "HELIUM",
+    "helio": "HELIUM",
+    "mapax30": "MAPAX30",
+    "o2 med": "O2_MED",
+    "o2med": "O2_MED",
+    "o2 laser": "O2_LASER",
+}
+
+EXTRA_GAS_ALIASES: dict[str, str] = {
+    **SEED_GAS_ALIASES,
+    "oxígeno": "O2",
     "oxigen": "O2",
     "oxygen": "O2",
     "o²": "O2",
@@ -46,24 +96,14 @@ EXTRA_GAS_ALIASES: dict[str, str] = {
     "ph atal": "ATAL",
     "ph at": "ATAL",
     "ph": "O2",
-    "o2med": "O2_MED",
-    "o2 med": "O2_MED",
     "o2 medicinal": "O2_MED",
     "oxigeno medicinal": "O2_MED",
-    "o2 laser": "O2_LASER",
     "oxigeno laser": "O2_LASER",
-    "argon 5,0": "AR_50",
-    "argon 5.0": "AR_50",
-    "ar 5,0": "AR_50",
     "ar5": "AR_50",
     "argón": "AR",
     "nitrógeno": "N2",
     "nitrogen": "N2",
-    "helio": "HELIUM",
-    "elio": "HELIUM",
     "helium": "HELIUM",
-    "acetileno": "ACET",
-    "acet.": "ACET",
     "co²": "CO2",
     "dioxido": "CO2",
     "mix 20": "MIX20",
@@ -71,12 +111,15 @@ EXTRA_GAS_ALIASES: dict[str, str] = {
     "mix 22": "MIX22",
     "mix22": "MIX22",
     "mapax 30": "MAPAX30",
-    "mapax30": "MAPAX30",
     "thermolene": "THERMOLENE",
     "bat o2": "O2",
+    "bat. o2": "O2",
+    "bat atal": "ATAL",
+    "bat. atal": "ATAL",
     "o2 bat": "O2",
     "atal bat": "ATAL",
     "oxigeno bat": "O2",
+    "o2 - med": "O2_MED",
 }
 
 
@@ -91,10 +134,17 @@ def resolve_gas(raw: Any, alias_map: dict[str, str]) -> tuple[str | None, bool, 
         code = alias_map[token]
         provisional = token.startswith("ph")
         return code, provisional, ("PH_PREFIX_PROVISIONAL" if provisional else None)
+    # Identity: Excel often writes the canonical code itself (O2, CO2, ATAL…).
+    upper = token.upper().replace(" ", "_")
+    if upper in CANONICAL_GAS_CODES:
+        return upper, False, None
     # Try first token (e.g. "o2 6").
     first = token.split()[0] if token else ""
     if first in alias_map:
         return alias_map[first], False, None
+    first_upper = first.upper().replace(" ", "_")
+    if first_upper in CANONICAL_GAS_CODES:
+        return first_upper, False, None
     return None, False, f"UNKNOWN_GAS:{token}"
 
 

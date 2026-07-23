@@ -1025,7 +1025,7 @@
     "rollback_confirm_body": "Esto reemplaza el estado actual de la base con el snapshot elegido. Los cambios posteriores a ese snapshot se pierden.",
     "danger_zone": "Zona de peligro",
     "purge_warning": "Esta acción borra de forma irreversible los datos de negocio. No se puede deshacer salvo que tengas un snapshot previo.",
-    "purge_keeps": "Se conservan: usuarios, roles, permisos, sesiones, settings del sistema, catálogo de gases, ciudades y localidades.",
+    "purge_keeps": "Se conservan: usuarios, roles, permisos, sesiones, settings del sistema, catálogo de gases (tipos + aliases), ciudades y localidades.",
     "purge_deletes": "Se eliminan: clientes, cilindros, baterías, movimientos, préstamos, transferencias, accesorios, tarifas, facturación, alertas, excepciones de migración, auditoría y parties de negocio (se mantiene SELF y parties ligados a usuarios).",
     "purge_button": "Vaciar datos de negocio",
     "purge_confirm_title": "¿Vaciar toda la data de negocio?",
