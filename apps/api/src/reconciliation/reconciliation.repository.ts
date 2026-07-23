@@ -44,6 +44,7 @@ export class ReconciliationRepository {
         "movement_event.id as movement_id",
         "movement_event.cylinder_id",
         "cylinder.serial_number",
+        "cylinder.state as cylinder_state",
         "movement_event.holder_party_id as client_party_id",
         "party.display_name as client_name",
         "movement_event.gas_code",
@@ -82,6 +83,7 @@ export class ReconciliationRepository {
         delivery_date: delivery,
         accrued_days: calendarDaysBetween(delivery, asOf),
         to_verify: isToVerifyNote(row.note),
+        cylinder_state: row.cylinder_state as OutstandingRow["cylinder_state"],
       };
     });
 

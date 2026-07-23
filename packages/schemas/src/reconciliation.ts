@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { IsoDate, paginated, PaginationQuery } from "./common";
-import { GasCode } from "./enums";
+import { CylinderState, GasCode } from "./enums";
 
 /** Open movement float row (US-25 / GET /reports/outstanding). */
 export const OutstandingRow = z.object({
@@ -13,6 +13,7 @@ export const OutstandingRow = z.object({
   delivery_date: IsoDate,
   accrued_days: z.number().int(),
   to_verify: z.boolean(),
+  cylinder_state: CylinderState,
 });
 export type OutstandingRow = z.infer<typeof OutstandingRow>;
 

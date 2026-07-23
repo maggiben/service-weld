@@ -5,7 +5,9 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Checkbox from "@mui/material/Checkbox";
 import Chip from "@mui/material/Chip";
+import type { ChipProps } from "@mui/material/Chip";
 import FormControlLabel from "@mui/material/FormControlLabel";
+import Link from "@mui/material/Link";
 import Stack from "@mui/material/Stack";
 import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
@@ -18,6 +20,7 @@ import {
   gridClasses,
 } from "@mui/x-data-grid";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import NextLink from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { OutstandingRow, ReconciliationVarianceRow } from "@weld/schemas";
@@ -28,6 +31,47 @@ function todayIso() {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Argentina/Buenos_Aires",
   }).format(new Date());
+}
+
+function cylinderStateChipColor(
+  state: string | null | undefined,
+): ChipProps["color"] {
+  switch (state) {
+    case "SOLD":
+      return "secondary";
+    case "LOST":
+    case "BROKEN":
+      return "error";
+    case "AT_CLIENT":
+      return "warning";
+    case "AT_SUPPLIER":
+      return "info";
+    case "IN_STOCK_EMPTY":
+    case "IN_STOCK_FULL":
+      return "success";
+    default:
+      return "default";
+  }
+}
+
+function SerialLink({
+  cylinderId,
+  serial,
+}: {
+  cylinderId: number | null | undefined;
+  serial: string;
+}) {
+  if (cylinderId == null) return <>{serial}</>;
+  return (
+    <Link
+      component={NextLink}
+      href={`/cylinders/${cylinderId}`}
+      underline="hover"
+      onClick={(e) => e.stopPropagation()}
+    >
+      {serial}
+    </Link>
+  );
 }
 
 export default function ReconciliationPage() {
@@ -104,7 +148,22 @@ export default function ReconciliationPage() {
       {
         field: "serial_number",
         headerName: t("reconciliation.outstanding.columns.serial"),
-        width: 120,
+        width: 130,
+        renderCell: (p) => (
+          <SerialLink cylinderId={p.row.cylinder_id} serial={p.value} />
+        ),
+      },
+      {
+        field: "cylinder_state",
+        headerName: t("reconciliation.outstanding.columns.state"),
+        width: 150,
+        renderCell: (p) => (
+          <Chip
+            size="small"
+            color={cylinderStateChipColor(p.value)}
+            label={t(`enums.cylinder_state.${p.value}`)}
+          />
+        ),
       },
       {
         field: "client_name",
@@ -165,14 +224,27 @@ export default function ReconciliationPage() {
       {
         field: "serial_number",
         headerName: t("reconciliation.count.columns.serial"),
-        width: 120,
+        width: 130,
+        renderCell: (p) => (
+          <SerialLink cylinderId={p.row.cylinder_id} serial={p.value} />
+        ),
       },
       {
         field: "system_state",
         headerName: t("reconciliation.count.columns.state"),
         width: 150,
-        valueFormatter: (v: string | null) =>
-          v ? t(`enums.cylinder_state.${v}`, { defaultValue: v }) : "—",
+        renderCell: (p) =>
+          p.value ? (
+            <Chip
+              size="small"
+              color={cylinderStateChipColor(p.value)}
+              label={t(`enums.cylinder_state.${p.value}`, {
+                defaultValue: p.value,
+              })}
+            />
+          ) : (
+            "—"
+          ),
       },
       {
         field: "holder_name",

@@ -617,6 +617,7 @@
         "client": "Cliente",
         "held_by": "Custodia",
         "serial": "Serial",
+        "state": "Estado",
         "gas": "Gas",
         "delivery": "Entrega",
         "days": "Días",
