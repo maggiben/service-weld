@@ -359,4 +359,78 @@ export class BatteriesRepository {
     if (!battery) throw ApiErrors.notFound("Battery not found");
     return battery;
   }
+
+  /** Plant fill: IN_STOCK_EMPTY → IN_STOCK_FULL (battery + active members). */
+  async fill(
+    id: number,
+    actorUserId: number,
+    expectedVersion: number,
+  ): Promise<Battery> {
+    return this.setStockCondition(
+      id,
+      actorUserId,
+      expectedVersion,
+      "IN_STOCK_EMPTY",
+      "IN_STOCK_FULL",
+      "FULL",
+    );
+  }
+
+  /** Plant empty: IN_STOCK_FULL → IN_STOCK_EMPTY (battery + active members). */
+  async empty(
+    id: number,
+    actorUserId: number,
+    expectedVersion: number,
+  ): Promise<Battery> {
+    return this.setStockCondition(
+      id,
+      actorUserId,
+      expectedVersion,
+      "IN_STOCK_FULL",
+      "IN_STOCK_EMPTY",
+      "EMPTY",
+    );
+  }
+
+  private async setStockCondition(
+    id: number,
+    actorUserId: number,
+    expectedVersion: number,
+    fromState: "IN_STOCK_EMPTY" | "IN_STOCK_FULL",
+    toState: "IN_STOCK_EMPTY" | "IN_STOCK_FULL",
+    condition: "EMPTY" | "FULL",
+  ): Promise<Battery> {
+    const db = resolveDb(this.db);
+    const updated = await db
+      .updateTable("cylinder_battery")
+      .set({
+        state: toState,
+        updated_by: actorUserId,
+      })
+      .where("id", "=", id)
+      .where("version", "=", expectedVersion)
+      .where("deleted_at", "is", null)
+      .where("state", "=", fromState)
+      .executeTakeFirst();
+
+    if (Number(updated.numUpdatedRows ?? 0) === 0) {
+      throw ApiErrors.conflict("VERSION_CONFLICT", "Battery version conflict");
+    }
+
+    await db
+      .updateTable("cylinder")
+      .set({
+        state: toState,
+        condition,
+        updated_by: actorUserId,
+      })
+      .where("battery_id", "=", id)
+      .where("packaging", "=", "BATTERY_MEMBER")
+      .where("deleted_at", "is", null)
+      .execute();
+
+    const battery = await this.getById(id);
+    if (!battery) throw ApiErrors.notFound("Battery not found");
+    return battery;
+  }
 }

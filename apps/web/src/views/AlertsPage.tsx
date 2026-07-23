@@ -1,5 +1,7 @@
 "use client";
 
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
 import AlertMui from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -25,6 +27,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Alert, MovementKind } from "@weld/schemas";
 import { api } from "../api/client";
+import {
+  GridActionsCell,
+  gridActionsColumnWidth,
+  type GridActionItem,
+} from "../components/GridActionsCell";
 import { AlertContactDialog } from "../features/alerts/AlertContactDialog";
 import { alertEntityHref } from "../features/alerts/alertDisplay";
 import { alertSeverityColor } from "../lib/chipColors";
@@ -261,29 +268,31 @@ export default function AlertsPage() {
       {
         field: "actions",
         headerName: "",
-        width: 200,
+        width: gridActionsColumnWidth(2),
         sortable: false,
-        renderCell: (params) => (
-          <Stack
-            direction="row"
-            spacing={0.5}
-            onClick={(event) => event.stopPropagation()}
-          >
-            {canWrite && (
-              <Button size="small" onClick={() => setContactAlert(params.row)}>
-                {translate("alerts.actions.contact")}
-              </Button>
-            )}
-            {canWrite && !params.row.resolved_at ? (
-              <Button
-                size="small"
-                onClick={() => resolveMutation.mutate(params.row.id)}
-              >
-                {translate("actions.resolve")}
-              </Button>
-            ) : null}
-          </Stack>
-        ),
+        filterable: false,
+        align: "right",
+        headerAlign: "right",
+        renderCell: (params) => {
+          const actions: GridActionItem[] = [];
+          if (canWrite) {
+            actions.push({
+              key: "contact",
+              label: translate("alerts.actions.contact"),
+              icon: <PhoneOutlinedIcon fontSize="small" />,
+              onClick: () => setContactAlert(params.row),
+            });
+          }
+          if (canWrite && !params.row.resolved_at) {
+            actions.push({
+              key: "resolve",
+              label: translate("actions.resolve"),
+              icon: <CheckCircleOutlineIcon fontSize="small" />,
+              onClick: () => resolveMutation.mutate(params.row.id),
+            });
+          }
+          return <GridActionsCell actions={actions} />;
+        },
       },
     ],
     [translate, canWrite, resolveMutation],

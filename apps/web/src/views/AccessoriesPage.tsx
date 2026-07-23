@@ -1,6 +1,7 @@
 "use client";
 
 import AddIcon from "@mui/icons-material/Add";
+import AssignmentReturnIcon from "@mui/icons-material/AssignmentReturn";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -28,6 +29,10 @@ import type {
 } from "@weld/schemas";
 import { ApiClientError } from "@weld/api-client";
 import { api } from "../api/client";
+import {
+  GridActionsCell,
+  gridActionsColumnWidth,
+} from "../components/GridActionsCell";
 import {
   stashNextCursor,
   cursorPageRowCount,
@@ -249,16 +254,23 @@ export default function AccessoriesPage() {
       {
         field: "actions",
         headerName: "",
-        width: 120,
+        width: gridActionsColumnWidth(1),
         sortable: false,
+        filterable: false,
+        align: "right",
+        headerAlign: "right",
         renderCell: (params) =>
           canWrite && params.row.state === "ON_LOAN" ? (
-            <Button
-              size="small"
-              onClick={() => returnMutation.mutate(params.row)}
-            >
-              {translate("actions.return")}
-            </Button>
+            <GridActionsCell
+              actions={[
+                {
+                  key: "return",
+                  label: translate("actions.return"),
+                  icon: <AssignmentReturnIcon fontSize="small" />,
+                  onClick: () => returnMutation.mutate(params.row),
+                },
+              ]}
+            />
           ) : null,
       },
     ],

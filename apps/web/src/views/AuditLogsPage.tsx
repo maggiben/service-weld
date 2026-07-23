@@ -1,5 +1,6 @@
 "use client";
 
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -25,6 +26,10 @@ import { useTranslation } from "react-i18next";
 import type { AuditAction, AuditLogEntry } from "@weld/schemas";
 import { api } from "../api/client";
 import { RequireCapability } from "../auth/RequireAuth";
+import {
+  GridActionsCell,
+  gridActionsColumnWidth,
+} from "../components/GridActionsCell";
 import {
   stashNextCursor,
   cursorPageRowCount,
@@ -150,12 +155,22 @@ function AuditLogsPageInner() {
       {
         field: "actions",
         headerName: "",
-        width: 100,
+        width: gridActionsColumnWidth(1),
         sortable: false,
+        filterable: false,
+        align: "right",
+        headerAlign: "right",
         renderCell: (params) => (
-          <Button size="small" onClick={() => setSelected(params.row)}>
-            {translate("audit.view_diff")}
-          </Button>
+          <GridActionsCell
+            actions={[
+              {
+                key: "view",
+                label: translate("audit.view_diff"),
+                icon: <VisibilityOutlinedIcon fontSize="small" />,
+                onClick: () => setSelected(params.row),
+              },
+            ]}
+          />
         ),
       },
     ],

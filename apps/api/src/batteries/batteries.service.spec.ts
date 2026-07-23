@@ -20,6 +20,8 @@ describe("BatteriesService", () => {
     create: jest.fn(),
     addMember: jest.fn(),
     removeMember: jest.fn(),
+    fill: jest.fn(),
+    empty: jest.fn(),
   };
   const service = new BatteriesService(repository as never);
   const user = principal();
@@ -97,5 +99,64 @@ describe("BatteriesService", () => {
     await expect(service.removeMember(user, 1, 3)).resolves.toMatchObject({
       id: 1,
     });
+  });
+
+  it("fills and empties stock batteries", async () => {
+    repository.getById.mockResolvedValue(null);
+    await expect(service.fill(user, 1)).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
+
+    repository.getById.mockResolvedValue({
+      id: 1,
+      state: "IN_STOCK_FULL",
+      version: 2,
+    });
+    await expect(service.fill(user, 1)).rejects.toBeInstanceOf(ApiError);
+
+    repository.getById.mockResolvedValue({
+      id: 1,
+      state: "IN_STOCK_EMPTY",
+      version: 2,
+    });
+    await expect(service.fill(user, 1, 1)).rejects.toMatchObject({
+      code: "VERSION_CONFLICT",
+    });
+
+    repository.fill.mockResolvedValue({
+      id: 1,
+      state: "IN_STOCK_FULL",
+      version: 3,
+    });
+    await expect(service.fill(user, 1, 2)).resolves.toMatchObject({
+      state: "IN_STOCK_FULL",
+    });
+    expect(repository.fill).toHaveBeenCalledWith(1, user.id, 2);
+
+    repository.getById.mockResolvedValue({
+      id: 1,
+      state: "IN_STOCK_EMPTY",
+      version: 2,
+    });
+    await expect(service.empty(user, 1)).rejects.toBeInstanceOf(ApiError);
+
+    repository.getById.mockResolvedValue({
+      id: 1,
+      state: "IN_STOCK_FULL",
+      version: 2,
+    });
+    await expect(service.empty(user, 1, 1)).rejects.toMatchObject({
+      code: "VERSION_CONFLICT",
+    });
+
+    repository.empty.mockResolvedValue({
+      id: 1,
+      state: "IN_STOCK_EMPTY",
+      version: 3,
+    });
+    await expect(service.empty(user, 1, 2)).resolves.toMatchObject({
+      state: "IN_STOCK_EMPTY",
+    });
+    expect(repository.empty).toHaveBeenCalledWith(1, user.id, 2);
   });
 });

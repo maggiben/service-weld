@@ -277,7 +277,11 @@
       "members_hint": "Elegí cilindros (chips). También podés pegar IDs separados por coma. Mínimo 2 (BR-13).",
       "members_owner_first": "Primero elegí el propietario",
       "member_not_found": "No se encontró el cilindro #{{id}}",
-      "member_not_packable": "El cilindro #{{id}} no puede sumarse a la batería"
+      "member_not_packable": "El cilindro #{{id}} no puede sumarse a la batería",
+      "mark_full": "Marcar como lleno",
+      "mark_full_hint": "Registrar carga en planta: stock vacío → stock lleno (batería y miembros).",
+      "mark_empty": "Marcar como vacío",
+      "mark_empty_hint": "Registrar vaciado: stock lleno → stock vacío (batería y miembros)."
     }
   },
   "movements": {

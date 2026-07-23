@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
   Param,
   ParseIntPipe,
   Post,
@@ -54,6 +55,40 @@ export class BatteriesController {
   @ApiOkResponse({ description: "Battery detail with members" })
   getById(@Param("id", ParseIntPipe) id: number): Promise<Battery> {
     return this.batteriesService.getById(id);
+  }
+
+  @Post(":id/fill")
+  @RequireCapabilities("batteries:write")
+  @ApiOkResponse({
+    description: "Empty stock battery marked full / ready to dispatch",
+  })
+  fill(
+    @CurrentUser() user: AuthPrincipal,
+    @Param("id", ParseIntPipe) id: number,
+    @Headers("if-match") ifMatch?: string,
+  ): Promise<Battery> {
+    const version = ifMatch ? Number(ifMatch.replaceAll('"', "")) : undefined;
+    return this.batteriesService.fill(
+      user,
+      id,
+      Number.isFinite(version) ? version : undefined,
+    );
+  }
+
+  @Post(":id/empty")
+  @RequireCapabilities("batteries:write")
+  @ApiOkResponse({ description: "Full stock battery marked empty" })
+  empty(
+    @CurrentUser() user: AuthPrincipal,
+    @Param("id", ParseIntPipe) id: number,
+    @Headers("if-match") ifMatch?: string,
+  ): Promise<Battery> {
+    const version = ifMatch ? Number(ifMatch.replaceAll('"', "")) : undefined;
+    return this.batteriesService.empty(
+      user,
+      id,
+      Number.isFinite(version) ? version : undefined,
+    );
   }
 
   @Post(":id/members")

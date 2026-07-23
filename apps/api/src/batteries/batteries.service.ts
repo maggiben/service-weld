@@ -1,7 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import {
   assertBatteryMemberCount,
+  assertCanEmpty,
+  assertCanFill,
   assertPackableAsBatteryMember,
+  stateAfterEmpty,
+  stateAfterFill,
 } from "@weld/domain";
 import type {
   AddBatteryMemberInput,
@@ -122,6 +126,52 @@ export class BatteriesService {
       mapDomainError(error);
     }
     return this.repository.removeMember(batteryId, cylinderId, principal.id);
+  }
+
+  async fill(
+    principal: AuthPrincipal,
+    id: number,
+    ifMatchVersion?: number,
+  ): Promise<Battery> {
+    const battery = await this.getById(id);
+
+    try {
+      assertCanFill(battery.state);
+    } catch (error) {
+      mapDomainError(error);
+    }
+
+    const expectedVersion = ifMatchVersion ?? battery.version;
+    if (expectedVersion !== battery.version) {
+      throw ApiErrors.conflict("VERSION_CONFLICT", "Battery version conflict");
+    }
+
+    void stateAfterFill();
+
+    return this.repository.fill(id, principal.id, expectedVersion);
+  }
+
+  async empty(
+    principal: AuthPrincipal,
+    id: number,
+    ifMatchVersion?: number,
+  ): Promise<Battery> {
+    const battery = await this.getById(id);
+
+    try {
+      assertCanEmpty(battery.state);
+    } catch (error) {
+      mapDomainError(error);
+    }
+
+    const expectedVersion = ifMatchVersion ?? battery.version;
+    if (expectedVersion !== battery.version) {
+      throw ApiErrors.conflict("VERSION_CONFLICT", "Battery version conflict");
+    }
+
+    void stateAfterEmpty();
+
+    return this.repository.empty(id, principal.id, expectedVersion);
   }
 }
 

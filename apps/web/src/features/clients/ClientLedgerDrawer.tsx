@@ -31,6 +31,7 @@ import {
   buildHistoryColumns,
   buildOutstandingColumns,
 } from "./clientLedgerColumns";
+import { formatOpenRentalsKpiDetail } from "./clientLedgerLogic";
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 
@@ -197,7 +198,7 @@ export function ClientLedgerDrawer({
             />
             <Chip
               size="small"
-              label={`${translate("clients.detail.kpi.rentals")}: ${summary.open_rental_count}`}
+              label={`${translate("clients.detail.kpi.rentals")}: ${summary.open_rental_count} · ${formatOpenRentalsKpiDetail(summary, translate)}`}
             />
             <Chip
               size="small"

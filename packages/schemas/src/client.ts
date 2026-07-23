@@ -157,6 +157,13 @@ export const ClientAccountSummary = zod.object({
   open_rental_count: zod.number().int(),
   open_refill_count: zod.number().int(),
   closed_days_last_period: zod.number().int(),
+  /** Sum of accrued calendar days across open rentals (as of business today). */
+  open_rental_days: zod.number().int(),
+  /** Min/max resolved daily unit price for open rentals; null when none priced. */
+  open_rental_daily_rate_min: zod.number().nullable(),
+  open_rental_daily_rate_max: zod.number().nullable(),
+  /** Sum of days × daily rate for open rentals that resolve a price. */
+  open_rental_owed: zod.number().nullable(),
   by_gas: zod.array(ClientAccountGasCount),
 });
 export type ClientAccountSummary = zod.infer<typeof ClientAccountSummary>;

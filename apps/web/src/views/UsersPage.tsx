@@ -2,6 +2,7 @@
 
 import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import Alert from "@mui/material/Alert";
 import Autocomplete, { createFilterOptions } from "@mui/material/Autocomplete";
 import Box from "@mui/material/Box";
@@ -39,6 +40,10 @@ import { normalizeTerritoryName, territoryMatchKey } from "@weld/schemas";
 import { ApiClientError } from "@weld/api-client";
 import { api } from "../api/client";
 import { RequireCapability } from "../auth/RequireAuth";
+import {
+  GridActionsCell,
+  gridActionsColumnWidth,
+} from "../components/GridActionsCell";
 import {
   stashNextCursor,
   cursorPageRowCount,
@@ -388,23 +393,30 @@ function UsersPageInner() {
       {
         field: "actions",
         headerName: "",
-        width: 160,
+        width: gridActionsColumnWidth(2),
         sortable: false,
+        filterable: false,
+        align: "right",
+        headerAlign: "right",
         renderCell: (params) => (
-          <Stack direction="row" spacing={1}>
-            <Button size="small" onClick={() => openEdit(params.row)}>
-              {translate("actions.edit")}
-            </Button>
-            <Button
-              size="small"
-              color="error"
-              disabled={params.row.id === currentUserId}
-              onClick={() => setRemoveTarget(params.row)}
-              startIcon={<DeleteOutlineIcon />}
-            >
-              {translate("actions.remove")}
-            </Button>
-          </Stack>
+          <GridActionsCell
+            actions={[
+              {
+                key: "edit",
+                label: translate("actions.edit"),
+                icon: <EditOutlinedIcon fontSize="small" />,
+                onClick: () => openEdit(params.row),
+              },
+              {
+                key: "remove",
+                label: translate("actions.remove"),
+                icon: <DeleteOutlineIcon fontSize="small" />,
+                color: "error",
+                disabled: params.row.id === currentUserId,
+                onClick: () => setRemoveTarget(params.row),
+              },
+            ]}
+          />
         ),
       },
     ],

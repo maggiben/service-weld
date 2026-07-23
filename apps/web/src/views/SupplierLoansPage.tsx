@@ -1,6 +1,7 @@
 "use client";
 
 import AddIcon from "@mui/icons-material/Add";
+import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
@@ -39,6 +40,10 @@ import type {
 import { businessTodayIso, calendarDaysBetween } from "@weld/domain";
 import { ApiClientError } from "@weld/api-client";
 import { api } from "../api/client";
+import {
+  GridActionsCell,
+  gridActionsColumnWidth,
+} from "../components/GridActionsCell";
 import {
   stashNextCursor,
   cursorPageRowCount,
@@ -342,27 +347,34 @@ export default function SupplierLoansPage() {
       {
         field: "actions",
         headerName: "",
-        width: 120,
+        width: gridActionsColumnWidth(1),
         sortable: false,
+        filterable: false,
+        align: "right",
+        headerAlign: "right",
         renderCell: (params) => {
           const next = LOAN_STAGE_NEXT[params.row.stage];
           if (!canWrite || !next) return null;
           return (
-            <Button
-              size="small"
-              onClick={() => {
-                setAdvanceLoan(params.row);
-                setAdvanceDate(todayIso());
-                setClientId(
-                  params.row.client_party_id != null
-                    ? String(params.row.client_party_id)
-                    : "",
-                );
-                setError(null);
-              }}
-            >
-              {translate("actions.advance")}
-            </Button>
+            <GridActionsCell
+              actions={[
+                {
+                  key: "advance",
+                  label: translate("actions.advance"),
+                  icon: <ArrowForwardIcon fontSize="small" />,
+                  onClick: () => {
+                    setAdvanceLoan(params.row);
+                    setAdvanceDate(todayIso());
+                    setClientId(
+                      params.row.client_party_id != null
+                        ? String(params.row.client_party_id)
+                        : "",
+                    );
+                    setError(null);
+                  },
+                },
+              ]}
+            />
           );
         },
       },

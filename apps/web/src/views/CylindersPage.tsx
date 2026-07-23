@@ -1,6 +1,8 @@
 "use client";
 
 import AddIcon from "@mui/icons-material/Add";
+import FindReplaceIcon from "@mui/icons-material/FindReplace";
+import ReportProblemOutlinedIcon from "@mui/icons-material/ReportProblemOutlined";
 import Alert from "@mui/material/Alert";
 import Autocomplete from "@mui/material/Autocomplete";
 import Box from "@mui/material/Box";
@@ -34,6 +36,11 @@ import NextLink from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
+import {
+  GridActionsCell,
+  gridActionsColumnWidth,
+  type GridActionItem,
+} from "../components/GridActionsCell";
 import { RegisterCylinderDrawer } from "../features/cylinders/RegisterCylinderDrawer";
 import { ReplaceCylinderDialog } from "../features/cylinders/ReplaceCylinderDialog";
 import { ReportLossDialog } from "../features/cylinders/ReportLossDialog";
@@ -284,8 +291,11 @@ export default function CylindersPage() {
       {
         field: "actions",
         headerName: "",
-        width: 200,
+        width: gridActionsColumnWidth(2),
         sortable: false,
+        filterable: false,
+        align: "right",
+        headerAlign: "right",
         renderCell: (params) => {
           if (!canWrite) return null;
           const terminal = [
@@ -299,33 +309,25 @@ export default function CylindersPage() {
             params.row.state === "AT_CLIENT" ||
             params.row.state === "LOST" ||
             params.row.state === "BROKEN";
-          return (
-            <Stack direction="row" spacing={0.5}>
-              {!terminal && (
-                <Button
-                  size="small"
-                  color="error"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setLossTarget(params.row);
-                  }}
-                >
-                  {translate("actions.report_loss")}
-                </Button>
-              )}
-              {canReplace && (
-                <Button
-                  size="small"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setReplaceTarget(params.row);
-                  }}
-                >
-                  {translate("actions.replace")}
-                </Button>
-              )}
-            </Stack>
-          );
+          const actions: GridActionItem[] = [];
+          if (!terminal) {
+            actions.push({
+              key: "loss",
+              label: translate("actions.report_loss"),
+              icon: <ReportProblemOutlinedIcon fontSize="small" />,
+              color: "error",
+              onClick: () => setLossTarget(params.row),
+            });
+          }
+          if (canReplace) {
+            actions.push({
+              key: "replace",
+              label: translate("actions.replace"),
+              icon: <FindReplaceIcon fontSize="small" />,
+              onClick: () => setReplaceTarget(params.row),
+            });
+          }
+          return <GridActionsCell actions={actions} />;
         },
       },
     ],

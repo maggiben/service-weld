@@ -45,7 +45,10 @@ import {
   migrationErrorMessage,
 } from "./features/migration/migrationLogic";
 import { toClientFormValues } from "./features/clients/clientFormLogic";
-import { clientCustodyLabel } from "./features/clients/clientLedgerLogic";
+import {
+  clientCustodyLabel,
+  formatOpenRentalsKpiDetail,
+} from "./features/clients/clientLedgerLogic";
 import { homePathForCapabilities } from "./auth/homePath";
 import {
   allTerritoriesSelected,
@@ -490,6 +493,48 @@ describe("clientFormLogic / clientLedgerLogic", () => {
         translate,
       ),
       "enums.movement_state.SOLD",
+    );
+  });
+
+  it("formats open rentals KPI detail", () => {
+    const translate = (key: string, opts?: Record<string, unknown>) =>
+      `${key}:${JSON.stringify(opts ?? {})}`;
+
+    assert.match(
+      formatOpenRentalsKpiDetail(
+        {
+          open_rental_days: 12,
+          open_rental_daily_rate_min: 85,
+          open_rental_daily_rate_max: 85,
+          open_rental_owed: 1020,
+        },
+        translate as never,
+      ),
+      /rentals_detail/,
+    );
+    assert.match(
+      formatOpenRentalsKpiDetail(
+        {
+          open_rental_days: 12,
+          open_rental_daily_rate_min: 70,
+          open_rental_daily_rate_max: 85,
+          open_rental_owed: 900,
+        },
+        translate as never,
+      ),
+      /daily_rate_mixed/,
+    );
+    assert.match(
+      formatOpenRentalsKpiDetail(
+        {
+          open_rental_days: 5,
+          open_rental_daily_rate_min: null,
+          open_rental_daily_rate_max: null,
+          open_rental_owed: null,
+        },
+        translate as never,
+      ),
+      /"rate":"—"/,
     );
   });
 });

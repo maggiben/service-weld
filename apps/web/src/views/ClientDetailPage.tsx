@@ -30,6 +30,7 @@ import {
   buildHistoryColumns,
   buildOutstandingColumns,
 } from "../features/clients/clientLedgerColumns";
+import { formatOpenRentalsKpiDetail } from "../features/clients/clientLedgerLogic";
 import { ClientLocationMapPanel } from "../features/clients/ClientLocationMapPanel";
 import { buildClientLocationQuery } from "../features/clients/clientLocationMap";
 import { CreateClientDrawer } from "../features/clients/CreateClientDrawer";
@@ -305,6 +306,11 @@ export default function ClientDetailPage() {
               <Kpi
                 label={translate("clients.detail.kpi.rentals")}
                 value={summary?.open_rental_count ?? 0}
+                detail={
+                  summary
+                    ? formatOpenRentalsKpiDetail(summary, translate)
+                    : undefined
+                }
               />
               <Kpi
                 label={translate("clients.detail.kpi.refills")}
@@ -478,13 +484,31 @@ export default function ClientDetailPage() {
   );
 }
 
-function Kpi({ label, value }: { label: string; value: number }) {
+function Kpi({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value: number;
+  detail?: string;
+}) {
   return (
     <Paper variant="outlined" sx={{ px: 2, py: 1.5, minWidth: 110 }}>
       <Typography variant="caption" color="text.secondary">
         {label}
       </Typography>
       <Typography variant="h6">{value}</Typography>
+      {detail ? (
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          display="block"
+          sx={{ mt: 0.25 }}
+        >
+          {detail}
+        </Typography>
+      ) : null}
     </Paper>
   );
 }

@@ -1,6 +1,8 @@
 "use client";
 
 import AddIcon from "@mui/icons-material/Add";
+import AssignmentReturnIcon from "@mui/icons-material/AssignmentReturn";
+import CancelOutlinedIcon from "@mui/icons-material/CancelOutlined";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import Alert from "@mui/material/Alert";
 import Autocomplete from "@mui/material/Autocomplete";
@@ -36,6 +38,11 @@ import NextLink from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
+import {
+  GridActionsCell,
+  gridActionsColumnWidth,
+  type GridActionItem,
+} from "../components/GridActionsCell";
 import { DeliverDrawer } from "../features/movements/DeliverDrawer";
 import { displayRentalDays } from "../features/movements/displayRentalDays";
 import {
@@ -271,8 +278,9 @@ export default function MovementsPage() {
       {
         field: "actions",
         headerName: translate("movements.columns.actions"),
-        width: 260,
+        width: gridActionsColumnWidth(3),
         sortable: false,
+        filterable: false,
         align: "right",
         headerAlign: "right",
         renderCell: (params) => {
@@ -280,37 +288,33 @@ export default function MovementsPage() {
           const canReturn =
             params.row.property_basis !== "CUSTOMER" &&
             params.row.movement_kind !== "REFILL";
-          return (
-            <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-              {canWrite && params.row.state === "OPEN" ? (
-                <>
-                  {canReturn ? (
-                    <Button
-                      size="small"
-                      onClick={() => setReturnTarget(params.row)}
-                    >
-                      {translate("actions.return")}
-                    </Button>
-                  ) : null}
-                  <Button
-                    size="small"
-                    onClick={() => setSwapTarget(params.row)}
-                  >
-                    {translate("actions.swap")}
-                  </Button>
-                </>
-              ) : null}
-              {canVoid && params.row.state !== "VOID" ? (
-                <Button
-                  size="small"
-                  color="warning"
-                  onClick={() => setVoidTarget(params.row)}
-                >
-                  {translate("actions.void")}
-                </Button>
-              ) : null}
-            </Stack>
-          );
+          const actions: GridActionItem[] = [];
+          if (canWrite && params.row.state === "OPEN") {
+            if (canReturn) {
+              actions.push({
+                key: "return",
+                label: translate("actions.return"),
+                icon: <AssignmentReturnIcon fontSize="small" />,
+                onClick: () => setReturnTarget(params.row),
+              });
+            }
+            actions.push({
+              key: "swap",
+              label: translate("actions.swap"),
+              icon: <SwapHorizIcon fontSize="small" />,
+              onClick: () => setSwapTarget(params.row),
+            });
+          }
+          if (canVoid && params.row.state !== "VOID") {
+            actions.push({
+              key: "void",
+              label: translate("actions.void"),
+              icon: <CancelOutlinedIcon fontSize="small" />,
+              color: "warning",
+              onClick: () => setVoidTarget(params.row),
+            });
+          }
+          return <GridActionsCell actions={actions} />;
         },
       },
     );

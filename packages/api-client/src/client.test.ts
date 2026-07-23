@@ -160,6 +160,8 @@ describe("WeldApiClient", () => {
     });
     await api.addBatteryMember(1, { cylinder_id: 3 });
     await api.removeBatteryMember(1, 3);
+    await api.fillBattery(1, { ifMatch: 1 });
+    await api.emptyBattery(1, { ifMatch: 1 });
     await api.listSupplierLoans({});
     await api.getSupplierLoan(1);
     await api.createSupplierLoan({

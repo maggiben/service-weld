@@ -1,13 +1,19 @@
 "use client";
 
+import LocalGasStationIcon from "@mui/icons-material/LocalGasStation";
+import WaterDropOutlinedIcon from "@mui/icons-material/WaterDropOutlined";
 import Alert from "@mui/material/Alert";
 import Autocomplete from "@mui/material/Autocomplete";
+import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import CircularProgress from "@mui/material/CircularProgress";
+import Divider from "@mui/material/Divider";
 import Drawer from "@mui/material/Drawer";
+import FormControlLabel from "@mui/material/FormControlLabel";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
+import Switch from "@mui/material/Switch";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -18,6 +24,8 @@ import { api } from "../../api/client";
 import {
   batteryFormErrorMessage,
   buildOwnerOptions,
+  canMarkBatteryEmpty,
+  canMarkBatteryFull,
   canSaveBatteryForm,
   chipLabel,
   fromBatteryMembers,
@@ -49,6 +57,8 @@ export function BatteryFormDrawer({ open, mode, batteryId, onClose }: Props) {
   const [memberQuery, setMemberQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [initialMemberIds, setInitialMemberIds] = useState<number[]>([]);
+  const [markFull, setMarkFull] = useState(false);
+  const [markEmpty, setMarkEmpty] = useState(false);
 
   const isEdit = mode === "edit";
 
@@ -90,6 +100,8 @@ export function BatteryFormDrawer({ open, mode, batteryId, onClose }: Props) {
     if (!open) return;
     setError(null);
     setMemberQuery("");
+    setMarkFull(false);
+    setMarkEmpty(false);
     if (!isEdit) {
       setCode("");
       setOwnerId("");
@@ -108,6 +120,8 @@ export function BatteryFormDrawer({ open, mode, batteryId, onClose }: Props) {
     const nextMembers = fromBatteryMembers(battery);
     setMembers(nextMembers);
     setInitialMemberIds(nextMembers.map((member) => member.id));
+    setMarkFull(false);
+    setMarkEmpty(false);
   }, [open, isEdit, batteryQuery.data]);
 
   const ownerOptions = useMemo(
@@ -163,16 +177,25 @@ export function BatteryFormDrawer({ open, mode, batteryId, onClose }: Props) {
       if (members.length < 2) {
         throw Object.assign(new Error("too few"), { code: "TOO_FEW_MEMBERS" });
       }
+      let current = batteryQuery.data;
+      if (!current) throw new Error("battery");
+
       const { toAdd, toRemove } = memberIdDiff(
         initialMemberIds,
         members.map((member) => member.id),
       );
 
       for (const id of toAdd) {
-        await api.addBatteryMember(batteryId, { cylinder_id: id });
+        current = await api.addBatteryMember(batteryId, { cylinder_id: id });
       }
       for (const id of toRemove) {
-        await api.removeBatteryMember(batteryId, id);
+        current = await api.removeBatteryMember(batteryId, id);
+      }
+
+      if (markFull && current.state === "IN_STOCK_EMPTY") {
+        await api.fillBattery(current.id, { ifMatch: current.version });
+      } else if (markEmpty && current.state === "IN_STOCK_FULL") {
+        await api.emptyBattery(current.id, { ifMatch: current.version });
       }
     },
     onSuccess: async () => {
@@ -188,6 +211,18 @@ export function BatteryFormDrawer({ open, mode, batteryId, onClose }: Props) {
 
   const saving = createMutation.isPending || updateMutation.isPending;
   const loadingBattery = isEdit && batteryQuery.isLoading;
+  const batteryState = batteryQuery.data?.state;
+  const showMarkFull = isEdit && canMarkBatteryFull(batteryState);
+  const showMarkEmpty = isEdit && canMarkBatteryEmpty(batteryState);
+  const conditionDirty = markFull || markEmpty;
+  const membersChanged = (() => {
+    if (!isEdit) return false;
+    const { toAdd, toRemove } = memberIdDiff(
+      initialMemberIds,
+      members.map((member) => member.id),
+    );
+    return toAdd.length > 0 || toRemove.length > 0;
+  })();
 
   const canSave = canSaveBatteryForm({
     saving,
@@ -195,6 +230,8 @@ export function BatteryFormDrawer({ open, mode, batteryId, onClose }: Props) {
     code,
     ownerId,
     memberCount: members.length,
+    isEdit,
+    hasChanges: membersChanged || conditionDirty,
   });
 
   return (
@@ -221,6 +258,85 @@ export function BatteryFormDrawer({ open, mode, batteryId, onClose }: Props) {
           </Stack>
         ) : (
           <>
+            {(showMarkFull || showMarkEmpty) && (
+              <>
+                <Box
+                  sx={{
+                    border: 1,
+                    borderColor: "divider",
+                    borderRadius: 1,
+                    px: 1.5,
+                    py: 1,
+                  }}
+                >
+                  {showMarkFull && (
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={markFull}
+                          onChange={(event) =>
+                            setMarkFull(event.target.checked)
+                          }
+                          color="success"
+                        />
+                      }
+                      label={
+                        <Stack spacing={0.25}>
+                          <Stack
+                            direction="row"
+                            spacing={0.75}
+                            alignItems="center"
+                          >
+                            <LocalGasStationIcon
+                              fontSize="small"
+                              color="success"
+                            />
+                            <Typography variant="body2" fontWeight={600}>
+                              {translate("batteries.form.mark_full")}
+                            </Typography>
+                          </Stack>
+                          <Typography variant="caption" color="text.secondary">
+                            {translate("batteries.form.mark_full_hint")}
+                          </Typography>
+                        </Stack>
+                      }
+                      sx={{ alignItems: "flex-start", m: 0 }}
+                    />
+                  )}
+                  {showMarkEmpty && (
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={markEmpty}
+                          onChange={(event) =>
+                            setMarkEmpty(event.target.checked)
+                          }
+                        />
+                      }
+                      label={
+                        <Stack spacing={0.25}>
+                          <Stack
+                            direction="row"
+                            spacing={0.75}
+                            alignItems="center"
+                          >
+                            <WaterDropOutlinedIcon fontSize="small" />
+                            <Typography variant="body2" fontWeight={600}>
+                              {translate("batteries.form.mark_empty")}
+                            </Typography>
+                          </Stack>
+                          <Typography variant="caption" color="text.secondary">
+                            {translate("batteries.form.mark_empty_hint")}
+                          </Typography>
+                        </Stack>
+                      }
+                      sx={{ alignItems: "flex-start", m: 0 }}
+                    />
+                  )}
+                </Box>
+                <Divider />
+              </>
+            )}
             <TextField
               label={translate("batteries.form.code")}
               value={code}

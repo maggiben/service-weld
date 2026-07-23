@@ -5,6 +5,8 @@ import { ApiClientError } from "@weld/api-client";
 import {
   batteryFormErrorMessage,
   buildOwnerOptions,
+  canMarkBatteryEmpty,
+  canMarkBatteryFull,
   canSaveBatteryForm,
   chipLabel,
   fromBatteryMembers,
@@ -239,6 +241,47 @@ describe("canSaveBatteryForm", () => {
       }),
       false,
     );
+  });
+
+  it("requires changes in edit mode", () => {
+    assert.equal(
+      canSaveBatteryForm({
+        saving: false,
+        loadingBattery: false,
+        code: "BAT",
+        ownerId: 1,
+        memberCount: 2,
+        isEdit: true,
+        hasChanges: false,
+      }),
+      false,
+    );
+    assert.equal(
+      canSaveBatteryForm({
+        saving: false,
+        loadingBattery: false,
+        code: "BAT",
+        ownerId: 1,
+        memberCount: 2,
+        isEdit: true,
+        hasChanges: true,
+      }),
+      true,
+    );
+  });
+});
+
+describe("canMarkBatteryFull / canMarkBatteryEmpty", () => {
+  it("only allows plant stock transitions", () => {
+    assert.equal(canMarkBatteryFull("IN_STOCK_EMPTY"), true);
+    assert.equal(canMarkBatteryFull("IN_STOCK_FULL"), false);
+    assert.equal(canMarkBatteryFull("AT_CLIENT"), false);
+    assert.equal(canMarkBatteryFull(undefined), false);
+
+    assert.equal(canMarkBatteryEmpty("IN_STOCK_FULL"), true);
+    assert.equal(canMarkBatteryEmpty("IN_STOCK_EMPTY"), false);
+    assert.equal(canMarkBatteryEmpty("AT_CLIENT"), false);
+    assert.equal(canMarkBatteryEmpty(undefined), false);
   });
 });
 

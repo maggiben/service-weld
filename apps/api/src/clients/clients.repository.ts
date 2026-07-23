@@ -1,5 +1,10 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { businessTodayIso, calendarDaysBetween } from "@weld/domain";
+import {
+  businessTodayIso,
+  calendarDaysBetween,
+  resolveBillingUnitPrice,
+  rentalChargeAmount,
+} from "@weld/domain";
 import type {
   Client,
   ClientAccountQuery,
@@ -371,6 +376,8 @@ export class ClientsRepository {
         "movement_event.id",
         "movement_event.cylinder_id",
         "cylinder.serial_number",
+        "cylinder.capacity_m3",
+        "cylinder.capacity_unit",
         "movement_event.gas_code",
         "movement_event.movement_kind",
         "movement_event.delivery_date",
@@ -382,7 +389,7 @@ export class ClientsRepository {
       .orderBy("movement_event.id", "asc")
       .execute();
 
-    const outstanding = openRows.map((row) => {
+    const outstandingRows = openRows.map((row) => {
       const delivery = toIsoDate(row.delivery_date)!;
       return {
         movement_id: Number(row.id),
@@ -392,17 +399,73 @@ export class ClientsRepository {
         movement_kind: row.movement_kind,
         delivery_date: delivery,
         accrued_days: calendarDaysBetween(delivery, asOf),
+        capacity_m3: row.capacity_m3 == null ? null : Number(row.capacity_m3),
+        capacity_unit: (row.capacity_unit ?? "M3") as "M3" | "KG",
       };
     });
+
+    const outstanding = outstandingRows.map((row) => ({
+      movement_id: row.movement_id,
+      cylinder_id: row.cylinder_id,
+      serial: row.serial,
+      gas_code: row.gas_code,
+      movement_kind: row.movement_kind,
+      delivery_date: row.delivery_date,
+      accrued_days: row.accrued_days,
+    }));
 
     const byGasMap = new Map<string, number>();
     let openRental = 0;
     let openRefill = 0;
-    for (const row of outstanding) {
-      if (row.movement_kind === "RENTAL") openRental += 1;
-      else openRefill += 1;
+    let openRentalDays = 0;
+    for (const row of outstandingRows) {
+      if (row.movement_kind === "RENTAL") {
+        openRental += 1;
+        openRentalDays += row.accrued_days;
+      } else openRefill += 1;
       const key = row.gas_code ?? "";
       byGasMap.set(key, (byGasMap.get(key) ?? 0) + 1);
+    }
+
+    const rateRows = await db.selectFrom("rental_rate").selectAll().execute();
+    const rateCandidates = rateRows.map((rate) => ({
+      id: Number(rate.id),
+      client_party_id:
+        rate.client_party_id == null ? null : Number(rate.client_party_id),
+      gas_code: rate.gas_code,
+      capacity_m3: rate.capacity_m3 == null ? null : Number(rate.capacity_m3),
+      capacity_unit: (rate.capacity_unit ?? "M3") as "M3" | "KG",
+      period: rate.period as "DAILY" | "MONTHLY",
+      amount: Number(rate.amount),
+      effective_from: toIsoDate(rate.effective_from as string | Date)!,
+      effective_to: toIsoDate(rate.effective_to as string | Date | null),
+    }));
+
+    const dailyPrices: number[] = [];
+    let openRentalOwed = 0;
+    let pricedRentals = 0;
+    for (const row of outstandingRows) {
+      if (row.movement_kind !== "RENTAL") continue;
+      const unit = resolveBillingUnitPrice({
+        rates: rateCandidates,
+        clientPartyId: input.id,
+        gasCode: row.gas_code,
+        capacityM3: row.capacity_m3,
+        capacityUnit: row.capacity_unit,
+        mode: "history",
+        deliveryDate: row.delivery_date,
+        periodStart: row.delivery_date,
+        periodEnd: asOf,
+        dailyRateDefault: client.daily_rate_default,
+      });
+      if (!unit) continue;
+      dailyPrices.push(unit.amount);
+      openRentalOwed =
+        Math.round(
+          (openRentalOwed + rentalChargeAmount(row.accrued_days, unit).amount) *
+            100,
+        ) / 100;
+      pricedRentals += 1;
     }
 
     const periodStart = new Date(`${asOf}T00:00:00Z`);
@@ -423,6 +486,12 @@ export class ClientsRepository {
       open_rental_count: openRental,
       open_refill_count: openRefill,
       closed_days_last_period: Number(closedDaysRow?.total_days ?? 0),
+      open_rental_days: openRentalDays,
+      open_rental_daily_rate_min:
+        pricedRentals > 0 ? Math.min(...dailyPrices) : null,
+      open_rental_daily_rate_max:
+        pricedRentals > 0 ? Math.max(...dailyPrices) : null,
+      open_rental_owed: pricedRentals > 0 ? openRentalOwed : null,
       by_gas: [...byGasMap.entries()].map(([gas, count]) => ({
         gas_code: (gas || null) as MovementEvent["gas_code"],
         count,

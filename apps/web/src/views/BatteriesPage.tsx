@@ -1,6 +1,7 @@
 "use client";
 
 import AddIcon from "@mui/icons-material/Add";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -17,6 +18,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Battery } from "@weld/schemas";
 import { api } from "../api/client";
+import {
+  GridActionsCell,
+  gridActionsColumnWidth,
+} from "../components/GridActionsCell";
 import { BatteryFormDrawer } from "../features/batteries/BatteryFormDrawer";
 import {
   stashNextCursor,
@@ -121,13 +126,22 @@ export default function BatteriesPage() {
             {
               field: "actions",
               headerName: "",
-              width: 100,
+              width: gridActionsColumnWidth(1),
               sortable: false,
               filterable: false,
+              align: "right",
+              headerAlign: "right",
               renderCell: (params) => (
-                <Button size="small" onClick={() => openEdit(params.row)}>
-                  {translate("actions.edit")}
-                </Button>
+                <GridActionsCell
+                  actions={[
+                    {
+                      key: "edit",
+                      label: translate("actions.edit"),
+                      icon: <EditOutlinedIcon fontSize="small" />,
+                      onClick: () => openEdit(params.row),
+                    },
+                  ]}
+                />
               ),
             } satisfies GridColDef<Battery>,
           ]

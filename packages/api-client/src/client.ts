@@ -501,6 +501,24 @@ export class WeldApiClient {
     );
   }
 
+  fillBattery(id: number, options?: { ifMatch?: number }): Promise<Battery> {
+    return this.request<Battery>("POST", `/batteries/${id}/fill`, {
+      headers:
+        options?.ifMatch != null
+          ? { "If-Match": String(options.ifMatch) }
+          : undefined,
+    });
+  }
+
+  emptyBattery(id: number, options?: { ifMatch?: number }): Promise<Battery> {
+    return this.request<Battery>("POST", `/batteries/${id}/empty`, {
+      headers:
+        options?.ifMatch != null
+          ? { "If-Match": String(options.ifMatch) }
+          : undefined,
+    });
+  }
+
   listSupplierLoans(
     query: Partial<SupplierLoanListQuery> & Record<string, QueryValue> = {},
   ): Promise<SupplierLoanListResponse> {

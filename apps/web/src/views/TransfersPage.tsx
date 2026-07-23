@@ -1,6 +1,7 @@
 "use client";
 
 import AddIcon from "@mui/icons-material/Add";
+import AssignmentReturnedIcon from "@mui/icons-material/AssignmentReturned";
 import Alert from "@mui/material/Alert";
 import Autocomplete from "@mui/material/Autocomplete";
 import Box from "@mui/material/Box";
@@ -30,6 +31,10 @@ import type {
 } from "@weld/schemas";
 import { ApiClientError } from "@weld/api-client";
 import { api } from "../api/client";
+import {
+  GridActionsCell,
+  gridActionsColumnWidth,
+} from "../components/GridActionsCell";
 import { SEED_TRANSFER_PARTIES } from "../constants/masters";
 import {
   stashNextCursor,
@@ -325,21 +330,27 @@ export default function TransfersPage() {
             {
               field: "actions",
               headerName: "",
-              width: 140,
+              width: gridActionsColumnWidth(1),
               sortable: false,
               filterable: false,
+              align: "right",
+              headerAlign: "right",
               renderCell: (params: { row: StockTransfer }) =>
                 params.row.return_date ? null : (
-                  <Button
-                    size="small"
-                    onClick={() => {
-                      setCloseError(null);
-                      setCloseDate(todayIso());
-                      setCloseTarget(params.row);
-                    }}
-                  >
-                    {translate("transfers.actions.mark_entry")}
-                  </Button>
+                  <GridActionsCell
+                    actions={[
+                      {
+                        key: "mark_entry",
+                        label: translate("transfers.actions.mark_entry"),
+                        icon: <AssignmentReturnedIcon fontSize="small" />,
+                        onClick: () => {
+                          setCloseError(null);
+                          setCloseDate(todayIso());
+                          setCloseTarget(params.row);
+                        },
+                      },
+                    ]}
+                  />
                 ),
             } satisfies GridColDef<StockTransfer>,
           ]

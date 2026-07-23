@@ -98,14 +98,31 @@ export function canSaveBatteryForm(params: {
   code: string;
   ownerId: number | "";
   memberCount: number;
+  /** Edit mode: require member/condition changes before enabling save. */
+  isEdit?: boolean;
+  hasChanges?: boolean;
 }): boolean {
-  return (
+  const baseOk =
     !params.saving &&
     !params.loadingBattery &&
     params.code.trim().length > 0 &&
     params.ownerId !== "" &&
-    params.memberCount >= 2
-  );
+    params.memberCount >= 2;
+  if (!baseOk) return false;
+  if (params.isEdit) return Boolean(params.hasChanges);
+  return true;
+}
+
+export function canMarkBatteryFull(
+  state: Battery["state"] | undefined,
+): boolean {
+  return state === "IN_STOCK_EMPTY";
+}
+
+export function canMarkBatteryEmpty(
+  state: Battery["state"] | undefined,
+): boolean {
+  return state === "IN_STOCK_FULL";
 }
 
 export function buildOwnerOptions(
