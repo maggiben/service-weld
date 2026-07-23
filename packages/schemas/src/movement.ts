@@ -55,6 +55,8 @@ export const VoidMovementInput = z.object({
 export type VoidMovementInput = z.infer<typeof VoidMovementInput>;
 
 export const MovementListQuery = PaginationQuery.extend({
+  /** Partial match on cylinder serial number. */
+  q: z.string().optional(),
   sort: z
     .enum(["delivery_date", "-delivery_date", "rental_days", "-rental_days"])
     .default("-delivery_date"),

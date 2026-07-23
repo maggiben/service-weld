@@ -31,22 +31,30 @@ function movementLabel(m: MovementEvent): string {
 export function SwapPickDialog({ open, onClose, onSelect }: Props) {
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [selected, setSelected] = useState<MovementEvent | null>(null);
 
   useEffect(() => {
     if (open) {
       setQuery("");
+      setDebouncedQuery("");
       setSelected(null);
     }
   }, [open]);
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedQuery(query), 300);
+    return () => window.clearTimeout(timer);
+  }, [query]);
+
   const openMovements = useQuery({
-    queryKey: ["movements", "swap-picker", query],
+    queryKey: ["movements", "swap-picker", debouncedQuery],
     queryFn: () =>
       api.listMovements({
         open: true,
         limit: 40,
         sort: "-delivery_date",
+        q: debouncedQuery.trim() || undefined,
       }),
     enabled: open,
   });
@@ -55,6 +63,7 @@ export function SwapPickDialog({ open, onClose, onSelect }: Props) {
     const rows = openMovements.data?.data ?? [];
     const q = query.trim().toLowerCase();
     if (!q) return rows;
+    // Client-side refine for holder name / id while typing (serial is server-side via q).
     return rows.filter((m) => {
       const hay =
         `${m.cylinder_serial ?? ""} ${m.holder_name ?? ""} ${m.id}`.toLowerCase();

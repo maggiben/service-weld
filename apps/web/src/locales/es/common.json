@@ -257,6 +257,7 @@
       "actions": "Acciones"
     },
     "filters": {
+      "serial": "Buscar serie",
       "open_only": "Solo abiertos",
       "kind": "Tipo",
       "state": "Estado",

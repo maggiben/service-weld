@@ -32,6 +32,7 @@ import {
   MigrationUploadedFile,
   MigrationWorkbookSlot,
 } from "./migration-data";
+import { MovementListQuery } from "./movement";
 
 /** Known-valid CUITs covering check-digit branches (mod 11→0, mod 10→9, normal). */
 const VALID = ["20-12345678-6", "00-00000000-0", "00-00000001-9"] as const;
@@ -272,5 +273,17 @@ describe("migration-data schemas", () => {
     assert.throws(() =>
       MigrationPurgeBusinessRequest.parse({ confirmation: "DELETE" }),
     );
+  });
+});
+
+describe("movement schemas", () => {
+  it("accepts serial search on MovementListQuery", () => {
+    const query = MovementListQuery.parse({
+      limit: 50,
+      q: "3232",
+      open: "true",
+    });
+    assert.equal(query.q, "3232");
+    assert.equal(query.open, true);
   });
 });

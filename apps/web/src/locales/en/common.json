@@ -257,6 +257,7 @@
       "actions": "Actions"
     },
     "filters": {
+      "serial": "Search serial",
       "open_only": "Open only",
       "kind": "Kind",
       "state": "State",

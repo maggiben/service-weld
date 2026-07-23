@@ -68,6 +68,8 @@ export default function MovementsPage() {
   const [kindFilter, setKindFilter] = useState<MovementKind | "">("");
   const [stateFilter, setStateFilter] = useState<MovementState | "">("");
   const [cityFilter, setCityFilter] = useState<number | "">("");
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [client, setClient] = useState<Client | null>(null);
   const [clientQuery, setClientQuery] = useState("");
   const [sortModel, setSortModel] = useState<GridSortModel>([
@@ -86,6 +88,16 @@ export default function MovementsPage() {
 
   const cursor = cursors[paginationModel.page];
 
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    window.clearTimeout((handleSearchChange as { timer?: number }).timer);
+    (handleSearchChange as { timer?: number }).timer = window.setTimeout(() => {
+      setDebouncedSearch(value);
+      setPaginationModel((prev) => ({ ...prev, page: 0 }));
+      setCursors([undefined]);
+    }, 300);
+  };
+
   const clientsSearch = useQuery({
     queryKey: ["clients", "picker", "movements", clientQuery, cityFilter],
     queryFn: () =>
@@ -100,6 +112,7 @@ export default function MovementsPage() {
     () => ({
       limit: paginationModel.pageSize,
       cursor,
+      q: debouncedSearch || undefined,
       sort: movementSortParam(sortModel),
       // "Open only" = outstanding rentals of our/supplier stock, not customer refills.
       ...(openOnly
@@ -117,6 +130,7 @@ export default function MovementsPage() {
     [
       paginationModel.pageSize,
       cursor,
+      debouncedSearch,
       sortModel,
       openOnly,
       kindFilter,
@@ -340,6 +354,13 @@ export default function MovementsPage() {
         spacing={2}
         alignItems={{ md: "center" }}
       >
+        <TextField
+          size="small"
+          label={t("movements.filters.serial")}
+          value={search}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          sx={{ minWidth: 200 }}
+        />
         <FormControlLabel
           control={
             <Switch
