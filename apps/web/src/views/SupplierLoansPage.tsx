@@ -36,27 +36,17 @@ import type {
 import { businessTodayIso, calendarDaysBetween } from "@weld/domain";
 import { ApiClientError } from "@weld/api-client";
 import { api } from "../api/client";
+import {
+  stashNextCursor,
+  cursorPageRowCount,
+  paginationAfterChange,
+} from "../lib/cursorPagination";
+import { todayIso } from "../lib/dateFormat";
+import {
+  LOAN_STAGE_NEXT,
+  formatLoanDate,
+} from "../features/supplier-loans/loanLogic";
 import { useSessionStore } from "../store/sessionStore";
-
-const NEXT: Record<LoanStage, AdvanceSupplierLoanInput["stage"] | null> = {
-  RECEIVED: "OUT_TO_CLIENT",
-  OUT_TO_CLIENT: "BACK_FROM_CLIENT",
-  BACK_FROM_CLIENT: "RETURNED_TO_SUPPLIER",
-  RETURNED_TO_SUPPLIER: null,
-};
-
-function todayIso() {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Argentina/Buenos_Aires",
-  }).format(new Date());
-}
-
-function formatLoanDate(value: string | null | undefined): string {
-  if (!value) return "—";
-  const [y, m, d] = value.split("-");
-  if (!y || !m || !d) return value;
-  return `${d}/${m}/${y}`;
-}
 
 export default function SupplierLoansPage() {
   const { t } = useTranslation();
@@ -120,20 +110,16 @@ export default function SupplierLoansPage() {
   useEffect(() => {
     const next = loansQuery.data?.page.next_cursor;
     if (!next) return;
-    setCursors((prev) => {
-      const copy = [...prev];
-      copy[paginationModel.page + 1] = next;
-      return copy;
-    });
+    setCursors((prev) => stashNextCursor(prev, paginationModel.page, next));
   }, [loansQuery.data?.page.next_cursor, paginationModel.page]);
 
   const handlePaginationModelChange = (model: GridPaginationModel) => {
-    if (model.pageSize !== paginationModel.pageSize) {
-      setCursors([undefined]);
-      setPaginationModel({ page: 0, pageSize: model.pageSize });
-      return;
-    }
-    setPaginationModel(model);
+    const { pagination, resetCursors } = paginationAfterChange(
+      paginationModel,
+      model,
+    );
+    if (resetCursors) setCursors([undefined]);
+    setPaginationModel(pagination);
   };
 
   const createMutation = useMutation({
@@ -160,7 +146,7 @@ export default function SupplierLoansPage() {
   const advanceMutation = useMutation({
     mutationFn: () => {
       if (!advanceLoan) throw new Error("no loan");
-      const stage = NEXT[advanceLoan.stage];
+      const stage = LOAN_STAGE_NEXT[advanceLoan.stage];
       if (!stage) throw new Error("terminal");
       const body: AdvanceSupplierLoanInput = {
         stage,
@@ -336,7 +322,7 @@ export default function SupplierLoansPage() {
         width: 120,
         sortable: false,
         renderCell: (params) => {
-          const next = NEXT[params.row.stage];
+          const next = LOAN_STAGE_NEXT[params.row.stage];
           if (!canWrite || !next) return null;
           return (
             <Button
@@ -446,11 +432,12 @@ export default function SupplierLoansPage() {
           paginationModel={paginationModel}
           onPaginationModelChange={handlePaginationModelChange}
           pageSizeOptions={[25, 50, 100]}
-          rowCount={
-            paginationModel.page * paginationModel.pageSize +
-            rows.length +
-            (pageMeta?.has_more ? 1 : 0)
-          }
+          rowCount={cursorPageRowCount(
+            paginationModel.page,
+            paginationModel.pageSize,
+            rows.length,
+            pageMeta?.has_more ?? false,
+          )}
           disableRowSelectionOnClick
           sx={{ [`& .${gridClasses.cell}`]: { outline: "none" } }}
         />
@@ -519,7 +506,9 @@ export default function SupplierLoansPage() {
               <Typography variant="body2">
                 {t("loans.advance.summary", {
                   serial: advanceLoan.cylinder_serial,
-                  stage: t(`enums.loan_stage.${NEXT[advanceLoan.stage]!}`),
+                  stage: t(
+                    `enums.loan_stage.${LOAN_STAGE_NEXT[advanceLoan.stage]!}`,
+                  ),
                 })}
               </Typography>
             )}

@@ -27,6 +27,12 @@ import type { Alert, MovementKind } from "@weld/schemas";
 import { api } from "../api/client";
 import { AlertContactDialog } from "../features/alerts/AlertContactDialog";
 import { alertEntityHref } from "../features/alerts/alertDisplay";
+import { alertSeverityColor } from "../lib/chipColors";
+import {
+  stashNextCursor,
+  cursorPageRowCount,
+  paginationAfterChange,
+} from "../lib/cursorPagination";
 import { useSessionStore } from "../store/sessionStore";
 import { useNotificationStore } from "../store/notificationStore";
 
@@ -35,14 +41,6 @@ const ALERT_TYPES = [
   "SUPPLIER_LOAN_OVERDUE",
   "SUPPLIER_LIABILITY",
 ] as const;
-
-function severityColor(
-  severity: number,
-): "default" | "info" | "warning" | "error" {
-  if (severity >= 3) return "error";
-  if (severity === 2) return "warning";
-  return "info";
-}
 
 export default function AlertsPage() {
   const { t } = useTranslation();
@@ -90,20 +88,16 @@ export default function AlertsPage() {
   useEffect(() => {
     const next = alertsQuery.data?.page.next_cursor;
     if (!next) return;
-    setCursors((prev) => {
-      const copy = [...prev];
-      copy[paginationModel.page + 1] = next;
-      return copy;
-    });
+    setCursors((prev) => stashNextCursor(prev, paginationModel.page, next));
   }, [alertsQuery.data?.page.next_cursor, paginationModel.page]);
 
   const handlePaginationModelChange = (model: GridPaginationModel) => {
-    if (model.pageSize !== paginationModel.pageSize) {
-      setCursors([undefined]);
-      setPaginationModel({ page: 0, pageSize: model.pageSize });
-      return;
-    }
-    setPaginationModel(model);
+    const { pagination, resetCursors } = paginationAfterChange(
+      paginationModel,
+      model,
+    );
+    if (resetCursors) setCursors([undefined]);
+    setPaginationModel(pagination);
   };
 
   useEffect(() => {
@@ -253,7 +247,7 @@ export default function AlertsPage() {
         renderCell: (params) => (
           <Chip
             size="small"
-            color={severityColor(params.value)}
+            color={alertSeverityColor(params.value)}
             label={t(`alerts.severity.${params.value}`, {
               defaultValue: String(params.value),
             })}
@@ -393,11 +387,12 @@ export default function AlertsPage() {
           paginationModel={paginationModel}
           onPaginationModelChange={handlePaginationModelChange}
           pageSizeOptions={[25, 50]}
-          rowCount={
-            paginationModel.page * paginationModel.pageSize +
-            rows.length +
-            (pageMeta?.has_more ? 1 : 0)
-          }
+          rowCount={cursorPageRowCount(
+            paginationModel.page,
+            paginationModel.pageSize,
+            rows.length,
+            pageMeta?.has_more ?? false,
+          )}
           disableRowSelectionOnClick
           onRowClick={(params) => {
             const href = alertEntityHref(params.row);

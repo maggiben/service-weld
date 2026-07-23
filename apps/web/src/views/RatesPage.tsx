@@ -33,6 +33,11 @@ import {
 import { ApiClientError } from "@weld/api-client";
 import { api } from "../api/client";
 import { formatCapacity } from "../lib/format";
+import {
+  stashNextCursor,
+  cursorPageRowCount,
+  paginationAfterChange,
+} from "../lib/cursorPagination";
 import { useSessionStore } from "../store/sessionStore";
 
 const GASES: GasCode[] = ["O2", "O2_MED", "CO2", "N2", "AR", "ATAL", "ACET"];
@@ -90,20 +95,16 @@ export default function RatesPage() {
   useEffect(() => {
     const next = ratesQuery.data?.page.next_cursor;
     if (!next) return;
-    setCursors((prev) => {
-      const copy = [...prev];
-      copy[paginationModel.page + 1] = next;
-      return copy;
-    });
+    setCursors((prev) => stashNextCursor(prev, paginationModel.page, next));
   }, [ratesQuery.data?.page.next_cursor, paginationModel.page]);
 
   const handlePaginationModelChange = (model: GridPaginationModel) => {
-    if (model.pageSize !== paginationModel.pageSize) {
-      setCursors([undefined]);
-      setPaginationModel({ page: 0, pageSize: model.pageSize });
-      return;
-    }
-    setPaginationModel(model);
+    const { pagination, resetCursors } = paginationAfterChange(
+      paginationModel,
+      model,
+    );
+    if (resetCursors) setCursors([undefined]);
+    setPaginationModel(pagination);
   };
 
   const resetForm = (rate?: RentalRate) => {
@@ -266,11 +267,12 @@ export default function RatesPage() {
           paginationModel={paginationModel}
           onPaginationModelChange={handlePaginationModelChange}
           pageSizeOptions={[25, 50]}
-          rowCount={
-            paginationModel.page * paginationModel.pageSize +
-            rows.length +
-            (pageMeta?.has_more ? 1 : 0)
-          }
+          rowCount={cursorPageRowCount(
+            paginationModel.page,
+            paginationModel.pageSize,
+            rows.length,
+            pageMeta?.has_more ?? false,
+          )}
           disableRowSelectionOnClick
           onRowClick={(params) => openEdit(params.row as RentalRate)}
           sx={{

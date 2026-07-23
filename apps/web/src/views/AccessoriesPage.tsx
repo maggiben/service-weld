@@ -28,15 +28,15 @@ import type {
 } from "@weld/schemas";
 import { ApiClientError } from "@weld/api-client";
 import { api } from "../api/client";
+import {
+  stashNextCursor,
+  cursorPageRowCount,
+  paginationAfterChange,
+} from "../lib/cursorPagination";
+import { todayIso } from "../lib/dateFormat";
 import { useSessionStore } from "../store/sessionStore";
 
 const TYPES: AccessoryType[] = ["REGULATOR", "ADAPTER", "PORTABLE_O2_BACKPACK"];
-
-function todayIso() {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Argentina/Buenos_Aires",
-  }).format(new Date());
-}
 
 export default function AccessoriesPage() {
   const { t } = useTranslation();
@@ -99,11 +99,7 @@ export default function AccessoriesPage() {
         ? accessoriesQuery.data?.page.next_cursor
         : rentalsQuery.data?.page.next_cursor;
     if (!next) return;
-    setCursors((prev) => {
-      const copy = [...prev];
-      copy[paginationModel.page + 1] = next;
-      return copy;
-    });
+    setCursors((prev) => stashNextCursor(prev, paginationModel.page, next));
   }, [
     tab,
     accessoriesQuery.data?.page.next_cursor,
@@ -112,12 +108,12 @@ export default function AccessoriesPage() {
   ]);
 
   const handlePaginationModelChange = (model: GridPaginationModel) => {
-    if (model.pageSize !== paginationModel.pageSize) {
-      setCursors([undefined]);
-      setPaginationModel({ page: 0, pageSize: model.pageSize });
-      return;
-    }
-    setPaginationModel(model);
+    const { pagination, resetCursors } = paginationAfterChange(
+      paginationModel,
+      model,
+    );
+    if (resetCursors) setCursors([undefined]);
+    setPaginationModel(pagination);
   };
 
   const createMutation = useMutation({
@@ -321,11 +317,12 @@ export default function AccessoriesPage() {
             paginationModel={paginationModel}
             onPaginationModelChange={handlePaginationModelChange}
             pageSizeOptions={[25, 50]}
-            rowCount={
-              paginationModel.page * paginationModel.pageSize +
-              accessoryRows.length +
-              (accessoryPageMeta?.has_more ? 1 : 0)
-            }
+            rowCount={cursorPageRowCount(
+              paginationModel.page,
+              paginationModel.pageSize,
+              accessoryRows.length,
+              accessoryPageMeta?.has_more ?? false,
+            )}
             disableRowSelectionOnClick
             sx={{ [`& .${gridClasses.cell}`]: { outline: "none" } }}
           />
@@ -339,11 +336,12 @@ export default function AccessoriesPage() {
             paginationModel={paginationModel}
             onPaginationModelChange={handlePaginationModelChange}
             pageSizeOptions={[25, 50]}
-            rowCount={
-              paginationModel.page * paginationModel.pageSize +
-              rentalRows.length +
-              (rentalPageMeta?.has_more ? 1 : 0)
-            }
+            rowCount={cursorPageRowCount(
+              paginationModel.page,
+              paginationModel.pageSize,
+              rentalRows.length,
+              rentalPageMeta?.has_more ?? false,
+            )}
             disableRowSelectionOnClick
             sx={{ [`& .${gridClasses.cell}`]: { outline: "none" } }}
           />

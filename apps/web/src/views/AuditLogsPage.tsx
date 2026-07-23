@@ -25,26 +25,14 @@ import { useTranslation } from "react-i18next";
 import type { AuditAction, AuditLogEntry } from "@weld/schemas";
 import { api } from "../api/client";
 import { RequireCapability } from "../auth/RequireAuth";
+import {
+  stashNextCursor,
+  cursorPageRowCount,
+  paginationAfterChange,
+} from "../lib/cursorPagination";
+import { formatActorLabel } from "../features/audit/auditLogic";
 
 const ACTIONS: AuditAction[] = ["INSERT", "UPDATE", "DELETE", "VOID"];
-
-function formatActorLabel(
-  entry: Pick<AuditLogEntry, "actor_username" | "actor_user_id" | "source">,
-  t: (key: string) => string,
-): string {
-  if (entry.actor_username) return entry.actor_username;
-  if (entry.actor_user_id != null) {
-    return `${t("audit.unknown_user")} #${entry.actor_user_id}`;
-  }
-  if (
-    !entry.source ||
-    entry.source === "migration" ||
-    entry.source === "data_cleanup"
-  ) {
-    return t("audit.system_user");
-  }
-  return "—";
-}
 
 function AuditLogsPageInner() {
   const { t } = useTranslation();
@@ -95,20 +83,16 @@ function AuditLogsPageInner() {
   useEffect(() => {
     const next = logsQuery.data?.page.next_cursor;
     if (!next) return;
-    setCursors((prev) => {
-      const copy = [...prev];
-      copy[paginationModel.page + 1] = next;
-      return copy;
-    });
+    setCursors((prev) => stashNextCursor(prev, paginationModel.page, next));
   }, [logsQuery.data?.page.next_cursor, paginationModel.page]);
 
   const handlePaginationModelChange = (model: GridPaginationModel) => {
-    if (model.pageSize !== paginationModel.pageSize) {
-      setCursors([undefined]);
-      setPaginationModel({ page: 0, pageSize: model.pageSize });
-      return;
-    }
-    setPaginationModel(model);
+    const { pagination, resetCursors } = paginationAfterChange(
+      paginationModel,
+      model,
+    );
+    if (resetCursors) setCursors([undefined]);
+    setPaginationModel(pagination);
   };
 
   const resetPaging = () => {
@@ -265,11 +249,12 @@ function AuditLogsPageInner() {
           loading={logsQuery.isLoading}
           paginationMode="server"
           sortingMode="server"
-          rowCount={
-            paginationModel.page * paginationModel.pageSize +
-            rows.length +
-            (pageMeta?.has_more ? 1 : 0)
-          }
+          rowCount={cursorPageRowCount(
+            paginationModel.page,
+            paginationModel.pageSize,
+            rows.length,
+            pageMeta?.has_more ?? false,
+          )}
           paginationModel={paginationModel}
           onPaginationModelChange={handlePaginationModelChange}
           pageSizeOptions={[25, 50, 100]}

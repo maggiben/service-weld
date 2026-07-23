@@ -31,6 +31,11 @@ import {
 } from "../features/clients/clientLedgerColumns";
 import { CreateClientDrawer } from "../features/clients/CreateClientDrawer";
 import { useLocations } from "../hooks/useLocations";
+import {
+  stashNextCursor,
+  cursorPageRowCount,
+  paginationAfterChange,
+} from "../lib/cursorPagination";
 import { useSessionStore } from "../store/sessionStore";
 import { useUiStore } from "../store/uiStore";
 
@@ -99,20 +104,18 @@ export default function ClientDetailPage() {
   useEffect(() => {
     const nextCursor = accountQuery.data?.page.next_cursor;
     if (!nextCursor) return;
-    setCursors((prev) => {
-      const next = [...prev];
-      next[paginationModel.page + 1] = nextCursor;
-      return next;
-    });
+    setCursors((prev) =>
+      stashNextCursor(prev, paginationModel.page, nextCursor),
+    );
   }, [accountQuery.data?.page.next_cursor, paginationModel.page]);
 
   const handlePaginationModelChange = (model: GridPaginationModel) => {
-    if (model.pageSize !== paginationModel.pageSize) {
-      setCursors([undefined]);
-      setPaginationModel({ page: 0, pageSize: model.pageSize });
-      return;
-    }
-    setPaginationModel(model);
+    const { pagination, resetCursors } = paginationAfterChange(
+      paginationModel,
+      model,
+    );
+    if (resetCursors) setCursors([undefined]);
+    setPaginationModel(pagination);
   };
 
   const summary = accountQuery.data?.rental_summary;
@@ -360,11 +363,12 @@ export default function ClientDetailPage() {
             paginationModel={paginationModel}
             onPaginationModelChange={handlePaginationModelChange}
             pageSizeOptions={PAGE_SIZE_OPTIONS}
-            rowCount={
-              paginationModel.page * paginationModel.pageSize +
-              (accountQuery.data?.data?.length ?? 0) +
-              (pageMeta?.has_more ? 1 : 0)
-            }
+            rowCount={cursorPageRowCount(
+              paginationModel.page,
+              paginationModel.pageSize,
+              accountQuery.data?.data?.length ?? 0,
+              pageMeta?.has_more ?? false,
+            )}
             disableRowSelectionOnClick
             localeText={
               locale === "es"

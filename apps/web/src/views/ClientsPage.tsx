@@ -19,7 +19,6 @@ import {
   gridClasses,
 } from "@mui/x-data-grid";
 import { enUS, esES } from "@mui/x-data-grid/locales";
-import type { ClientListQuery } from "@weld/schemas";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -27,21 +26,17 @@ import { useRouter } from "next/navigation";
 import { api } from "../api/client";
 import type { ClientCoverage, ClientStatus } from "@weld/schemas";
 import { CreateClientDrawer } from "../features/clients/CreateClientDrawer";
+import {
+  stashNextCursor,
+  cursorPageRowCount,
+  paginationAfterChange,
+} from "../lib/cursorPagination";
+import { clientSortParam } from "../lib/sortParam";
 import { useLocations } from "../hooks/useLocations";
 import { useSessionStore } from "../store/sessionStore";
 import { useUiStore } from "../store/uiStore";
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
-
-function sortToApiParam(sortModel: GridSortModel): ClientListQuery["sort"] {
-  if (sortModel.length === 0) return "name";
-  const { field, sort } = sortModel[0]!;
-  const prefix = sort === "desc" ? "-" : "";
-  if (field === "name" || field === "territory_id" || field === "created_at") {
-    return `${prefix}${field}` as ClientListQuery["sort"];
-  }
-  return "name";
-}
 
 function ClientsEmptyOverlay({
   canCreate,
@@ -112,7 +107,7 @@ export default function ClientsPage() {
       limit: paginationModel.pageSize,
       cursor,
       q: debouncedSearch || undefined,
-      sort: sortToApiParam(sortModel),
+      sort: clientSortParam(sortModel),
       ...(cityFilter !== "" ? { "filter[locality_id]": cityFilter } : {}),
       ...(coverageFilter ? { "filter[coverage]": coverageFilter } : {}),
       ...(statusFilter ? { "filter[status]": statusFilter } : {}),
@@ -140,20 +135,18 @@ export default function ClientsPage() {
   useEffect(() => {
     const nextCursor = clientsQuery.data?.page.next_cursor;
     if (!nextCursor) return;
-    setCursors((prev) => {
-      const next = [...prev];
-      next[paginationModel.page + 1] = nextCursor;
-      return next;
-    });
+    setCursors((prev) =>
+      stashNextCursor(prev, paginationModel.page, nextCursor),
+    );
   }, [clientsQuery.data?.page.next_cursor, paginationModel.page]);
 
   const handlePaginationModelChange = (model: GridPaginationModel) => {
-    if (model.pageSize !== paginationModel.pageSize) {
-      setCursors([undefined]);
-      setPaginationModel({ page: 0, pageSize: model.pageSize });
-      return;
-    }
-    setPaginationModel(model);
+    const { pagination, resetCursors } = paginationAfterChange(
+      paginationModel,
+      model,
+    );
+    if (resetCursors) setCursors([undefined]);
+    setPaginationModel(pagination);
   };
 
   const columns: GridColDef[] = useMemo(
@@ -306,11 +299,12 @@ export default function ClientsPage() {
           paginationModel={paginationModel}
           onPaginationModelChange={handlePaginationModelChange}
           pageSizeOptions={PAGE_SIZE_OPTIONS}
-          rowCount={
-            paginationModel.page * paginationModel.pageSize +
-            rows.length +
-            (pageMeta?.has_more ? 1 : 0)
-          }
+          rowCount={cursorPageRowCount(
+            paginationModel.page,
+            paginationModel.pageSize,
+            rows.length,
+            pageMeta?.has_more ?? false,
+          )}
           disableRowSelectionOnClick
           onRowClick={(params) => router.push(`/clients/${params.id}`)}
           localeText={

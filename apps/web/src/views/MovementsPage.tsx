@@ -28,7 +28,6 @@ import type {
   Client,
   MovementEvent,
   MovementKind,
-  MovementListQuery,
   MovementState,
 } from "@weld/schemas";
 import { useQuery } from "@tanstack/react-query";
@@ -42,20 +41,16 @@ import { SwapDialog } from "../features/movements/SwapDialog";
 import { SwapPickDialog } from "../features/movements/SwapPickDialog";
 import { VoidDialog } from "../features/movements/VoidDialog";
 import { useLocations } from "../hooks/useLocations";
+import {
+  stashNextCursor,
+  cursorPageRowCount,
+  paginationAfterChange,
+} from "../lib/cursorPagination";
+import { movementSortParam } from "../lib/sortParam";
 import { useSessionStore } from "../store/sessionStore";
 import { useUiStore } from "../store/uiStore";
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
-
-function sortToApiParam(sortModel: GridSortModel): MovementListQuery["sort"] {
-  if (sortModel.length === 0) return "-delivery_date";
-  const { field, sort } = sortModel[0]!;
-  const prefix = sort === "desc" ? "-" : "";
-  if (field === "delivery_date" || field === "rental_days") {
-    return `${prefix}${field}` as MovementListQuery["sort"];
-  }
-  return "-delivery_date";
-}
 
 export default function MovementsPage() {
   const { t } = useTranslation();
@@ -105,7 +100,7 @@ export default function MovementsPage() {
     () => ({
       limit: paginationModel.pageSize,
       cursor,
-      sort: sortToApiParam(sortModel),
+      sort: movementSortParam(sortModel),
       // "Open only" = outstanding rentals of our/supplier stock, not customer refills.
       ...(openOnly
         ? { open: true, "filter[movement_kind]": "RENTAL" as const }
@@ -143,20 +138,18 @@ export default function MovementsPage() {
   useEffect(() => {
     const nextCursor = movementsQuery.data?.page.next_cursor;
     if (!nextCursor) return;
-    setCursors((prev) => {
-      const next = [...prev];
-      next[paginationModel.page + 1] = nextCursor;
-      return next;
-    });
+    setCursors((prev) =>
+      stashNextCursor(prev, paginationModel.page, nextCursor),
+    );
   }, [movementsQuery.data?.page.next_cursor, paginationModel.page]);
 
   const handlePaginationModelChange = (model: GridPaginationModel) => {
-    if (model.pageSize !== paginationModel.pageSize) {
-      setCursors([undefined]);
-      setPaginationModel({ page: 0, pageSize: model.pageSize });
-      return;
-    }
-    setPaginationModel(model);
+    const { pagination, resetCursors } = paginationAfterChange(
+      paginationModel,
+      model,
+    );
+    if (resetCursors) setCursors([undefined]);
+    setPaginationModel(pagination);
   };
 
   const columns: GridColDef<MovementEvent>[] = useMemo(
@@ -484,11 +477,12 @@ export default function MovementsPage() {
           paginationModel={paginationModel}
           onPaginationModelChange={handlePaginationModelChange}
           pageSizeOptions={PAGE_SIZE_OPTIONS}
-          rowCount={
-            paginationModel.page * paginationModel.pageSize +
-            rows.length +
-            (pageMeta?.has_more ? 1 : 0)
-          }
+          rowCount={cursorPageRowCount(
+            paginationModel.page,
+            paginationModel.pageSize,
+            rows.length,
+            pageMeta?.has_more ?? false,
+          )}
           disableRowSelectionOnClick
           localeText={
             locale === "es"

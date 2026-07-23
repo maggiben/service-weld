@@ -25,7 +25,6 @@ import { enUS, esES } from "@mui/x-data-grid/locales";
 import type {
   Client,
   Cylinder,
-  CylinderListQuery,
   CylinderState,
   OwnershipBasis,
 } from "@weld/schemas";
@@ -39,6 +38,12 @@ import { ReplaceCylinderDialog } from "../features/cylinders/ReplaceCylinderDial
 import { ReportLossDialog } from "../features/cylinders/ReportLossDialog";
 import { useLocations } from "../hooks/useLocations";
 import { formatCapacity } from "../lib/format";
+import {
+  stashNextCursor,
+  cursorPageRowCount,
+  paginationAfterChange,
+} from "../lib/cursorPagination";
+import { cylinderSortParam } from "../lib/sortParam";
 import { useSessionStore } from "../store/sessionStore";
 import { useUiStore } from "../store/uiStore";
 
@@ -55,20 +60,6 @@ const STATES: CylinderState[] = [
   "RETIRED",
 ];
 const BASES: OwnershipBasis[] = ["OURS", "SUPPLIER", "CUSTOMER"];
-
-function sortToApiParam(sortModel: GridSortModel): CylinderListQuery["sort"] {
-  if (sortModel.length === 0) return "serial_number";
-  const { field, sort } = sortModel[0]!;
-  const prefix = sort === "desc" ? "-" : "";
-  if (
-    field === "serial_number" ||
-    field === "updated_at" ||
-    field === "state"
-  ) {
-    return `${prefix}${field}` as CylinderListQuery["sort"];
-  }
-  return "serial_number";
-}
 
 export default function CylindersPage() {
   const { t } = useTranslation();
@@ -135,7 +126,7 @@ export default function CylindersPage() {
       limit: paginationModel.pageSize,
       cursor,
       q: debouncedSearch || undefined,
-      sort: sortToApiParam(sortModel),
+      sort: cylinderSortParam(sortModel),
       ...(stateFilter ? { "filter[state]": stateFilter } : {}),
       ...(basisFilter ? { "filter[ownership_basis]": basisFilter } : {}),
       ...(locationDecoded?.kind === "territory"
@@ -170,20 +161,18 @@ export default function CylindersPage() {
   useEffect(() => {
     const nextCursor = cylindersQuery.data?.page.next_cursor;
     if (!nextCursor) return;
-    setCursors((prev) => {
-      const next = [...prev];
-      next[paginationModel.page + 1] = nextCursor;
-      return next;
-    });
+    setCursors((prev) =>
+      stashNextCursor(prev, paginationModel.page, nextCursor),
+    );
   }, [cylindersQuery.data?.page.next_cursor, paginationModel.page]);
 
   const handlePaginationModelChange = (model: GridPaginationModel) => {
-    if (model.pageSize !== paginationModel.pageSize) {
-      setCursors([undefined]);
-      setPaginationModel({ page: 0, pageSize: model.pageSize });
-      return;
-    }
-    setPaginationModel(model);
+    const { pagination, resetCursors } = paginationAfterChange(
+      paginationModel,
+      model,
+    );
+    if (resetCursors) setCursors([undefined]);
+    setPaginationModel(pagination);
   };
 
   const columns: GridColDef<Cylinder>[] = useMemo(
@@ -474,11 +463,12 @@ export default function CylindersPage() {
           paginationModel={paginationModel}
           onPaginationModelChange={handlePaginationModelChange}
           pageSizeOptions={PAGE_SIZE_OPTIONS}
-          rowCount={
-            paginationModel.page * paginationModel.pageSize +
-            rows.length +
-            (pageMeta?.has_more ? 1 : 0)
-          }
+          rowCount={cursorPageRowCount(
+            paginationModel.page,
+            paginationModel.pageSize,
+            rows.length,
+            pageMeta?.has_more ?? false,
+          )}
           disableRowSelectionOnClick
           onRowClick={(params) => router.push(`/cylinders/${params.id}`)}
           localeText={

@@ -39,28 +39,15 @@ import type {
 } from "@weld/schemas";
 import { api } from "../api/client";
 import { ClientLedgerDrawer } from "../features/clients/ClientLedgerDrawer";
+import {
+  stashNextCursor,
+  cursorPageRowCount,
+  paginationAfterChange,
+} from "../lib/cursorPagination";
+import { todayIso, monthStartIso } from "../lib/dateFormat";
+import { loanStageChipColor } from "../lib/chipColors";
 import { useTerritories } from "../hooks/useTerritories";
 import { useSessionStore } from "../store/sessionStore";
-
-function loanStageChipColor(
-  stage: string,
-): "default" | "info" | "warning" | "success" {
-  if (stage === "OUT_TO_CLIENT") return "warning";
-  if (stage === "BACK_FROM_CLIENT") return "info";
-  if (stage === "RETURNED_TO_SUPPLIER") return "success";
-  return "default";
-}
-
-function todayIso() {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Argentina/Buenos_Aires",
-  }).format(new Date());
-}
-
-function monthStartIso() {
-  const today = todayIso();
-  return `${today.slice(0, 8)}01`;
-}
 
 type ReportTab =
   "fleet" | "float" | "rental" | "loss" | "supplier" | "quality" | "medical";
@@ -250,11 +237,7 @@ export default function ReportsPage() {
             ? qualityQuery.data?.page.next_cursor
             : undefined;
     if (!next) return;
-    setCursors((prev) => {
-      const copy = [...prev];
-      copy[paginationModel.page + 1] = next;
-      return copy;
-    });
+    setCursors((prev) => stashNextCursor(prev, paginationModel.page, next));
   }, [
     tab,
     floatQuery.data?.page.next_cursor,
@@ -264,12 +247,12 @@ export default function ReportsPage() {
   ]);
 
   const handlePaginationModelChange = (model: GridPaginationModel) => {
-    if (model.pageSize !== paginationModel.pageSize) {
-      setCursors([undefined]);
-      setPaginationModel({ page: 0, pageSize: model.pageSize });
-      return;
-    }
-    setPaginationModel(model);
+    const { pagination, resetCursors } = paginationAfterChange(
+      paginationModel,
+      model,
+    );
+    if (resetCursors) setCursors([undefined]);
+    setPaginationModel(pagination);
   };
 
   const fleetColumns = useMemo<GridColDef<FleetRow>[]>(
@@ -847,9 +830,12 @@ export default function ReportsPage() {
           paginationMode={paginated ? "server" : "client"}
           rowCount={
             paginated
-              ? paginationModel.page * paginationModel.pageSize +
-                rows.length +
-                (pageMeta?.has_more ? 1 : 0)
+              ? cursorPageRowCount(
+                  paginationModel.page,
+                  paginationModel.pageSize,
+                  rows.length,
+                  pageMeta?.has_more ?? false,
+                )
               : undefined
           }
           paginationModel={paginationModel}

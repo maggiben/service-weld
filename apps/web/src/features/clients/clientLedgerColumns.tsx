@@ -1,78 +1,19 @@
 "use client";
 
 import Chip from "@mui/material/Chip";
-import type { ChipProps } from "@mui/material/Chip";
 import Link from "@mui/material/Link";
 import type { GridColDef } from "@mui/x-data-grid";
-import type {
-  ClientAccountOutstandingRow,
-  MovementEvent,
-  MovementState,
-} from "@weld/schemas";
+import type { ClientAccountOutstandingRow, MovementEvent } from "@weld/schemas";
 import type { TFunction } from "i18next";
 import NextLink from "next/link";
 import { displayRentalDays } from "../movements/displayRentalDays";
+import {
+  formatLedgerDate,
+  clientCustodyLabel,
+  movementStateChipColor,
+} from "./clientLedgerLogic";
 
-export function formatLedgerDate(value: string | null | undefined): string {
-  if (!value) return "—";
-  const [y, m, d] = value.split("-");
-  if (!y || !m || !d) return value;
-  return `${d}/${m}/${y}`;
-}
-
-function movementStateColor(
-  state: MovementState,
-  returned: boolean,
-): ChipProps["color"] {
-  if (returned) {
-    switch (state) {
-      case "SWAPPED":
-        return "info";
-      case "LOST":
-        return "error";
-      case "CLOSED":
-        return "success";
-      default:
-        return "default";
-    }
-  }
-  return state === "OPEN" ? "warning" : "default";
-}
-
-/**
- * Client-facing custody label.
- * Rentals: on-loan / returned. Refills (customer-owned): in progress / closed —
- * never "loan" wording, since the cylinder is already theirs.
- */
-export function clientCustodyLabel(
-  row: Pick<MovementEvent, "state" | "return_date" | "movement_kind">,
-  t: TFunction,
-): string {
-  const isRefill = row.movement_kind === "REFILL";
-  const returned =
-    row.return_date != null ||
-    row.state === "CLOSED" ||
-    row.state === "SWAPPED" ||
-    row.state === "LOST" ||
-    row.state === "SOLD";
-
-  if (returned) {
-    if (row.state === "SWAPPED") return t("enums.movement_state.SWAPPED");
-    if (row.state === "LOST") return t("enums.movement_state.LOST");
-    if (row.state === "SOLD") return t("enums.movement_state.SOLD");
-    if (row.state === "VOID") return t("enums.movement_state.VOID");
-    return isRefill
-      ? t("clients.detail.custody.refill_closed")
-      : t("clients.detail.custody.returned");
-  }
-
-  if (row.state === "OPEN") {
-    return isRefill
-      ? t("clients.detail.custody.refill_open")
-      : t("clients.detail.custody.on_loan");
-  }
-  return t(`enums.movement_state.${row.state}`);
-}
+export { formatLedgerDate, clientCustodyLabel };
 
 type ColumnOpts = {
   compact?: boolean;
@@ -246,7 +187,7 @@ export function buildHistoryColumns(
         <Chip
           size="small"
           label={clientCustodyLabel(params.row, t)}
-          color={movementStateColor(params.row.state, returned)}
+          color={movementStateChipColor(params.row.state, returned)}
         />
       );
     },

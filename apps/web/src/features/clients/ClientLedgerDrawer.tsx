@@ -23,6 +23,11 @@ import { useTranslation } from "react-i18next";
 import type { MovementKind } from "@weld/schemas";
 import { api } from "../../api/client";
 import {
+  stashNextCursor,
+  cursorPageRowCount,
+  paginationAfterChange,
+} from "../../lib/cursorPagination";
+import {
   buildHistoryColumns,
   buildOutstandingColumns,
 } from "./clientLedgerColumns";
@@ -108,20 +113,18 @@ export function ClientLedgerDrawer({
   useEffect(() => {
     const nextCursor = accountQuery.data?.page.next_cursor;
     if (!nextCursor) return;
-    setCursors((prev) => {
-      const next = [...prev];
-      next[paginationModel.page + 1] = nextCursor;
-      return next;
-    });
+    setCursors((prev) =>
+      stashNextCursor(prev, paginationModel.page, nextCursor),
+    );
   }, [accountQuery.data?.page.next_cursor, paginationModel.page]);
 
   const handlePaginationModelChange = (model: GridPaginationModel) => {
-    if (model.pageSize !== paginationModel.pageSize) {
-      setCursors([undefined]);
-      setPaginationModel({ page: 0, pageSize: model.pageSize });
-      return;
-    }
-    setPaginationModel(model);
+    const { pagination, resetCursors } = paginationAfterChange(
+      paginationModel,
+      model,
+    );
+    if (resetCursors) setCursors([undefined]);
+    setPaginationModel(pagination);
   };
 
   const outstanding = accountQuery.data?.outstanding ?? [];
@@ -267,11 +270,12 @@ export function ClientLedgerDrawer({
               paginationModel={paginationModel}
               onPaginationModelChange={handlePaginationModelChange}
               pageSizeOptions={PAGE_SIZE_OPTIONS}
-              rowCount={
-                paginationModel.page * paginationModel.pageSize +
-                (accountQuery.data?.data?.length ?? 0) +
-                (pageMeta?.has_more ? 1 : 0)
-              }
+              rowCount={cursorPageRowCount(
+                paginationModel.page,
+                paginationModel.pageSize,
+                accountQuery.data?.data?.length ?? 0,
+                pageMeta?.has_more ?? false,
+              )}
               disableRowSelectionOnClick
               slots={{
                 noRowsOverlay: () => (

@@ -34,6 +34,10 @@ import type {
 } from "@weld/schemas";
 import { ApiClientError } from "@weld/api-client";
 import { api } from "../api/client";
+import {
+  formatInvoiceDaysBreakdown,
+  invoiceTotalDays,
+} from "../features/billing/billingLogic";
 import { ClientLedgerDrawer } from "../features/clients/ClientLedgerDrawer";
 import { useLocations } from "../hooks/useLocations";
 import { useSessionStore } from "../store/sessionStore";
@@ -217,37 +221,14 @@ export default function BillingPage() {
         flex: 1,
         minWidth: 200,
         sortable: false,
-        valueGetter: (_v, row) => {
-          const lines = row.charge_lines ?? [];
-          const cylinders = lines.length;
-          const totalDays =
-            row.total_days ??
-            lines.reduce((sum, line) => sum + line.quantity, 0);
-          if (cylinders === 0) return "—";
-          const quantities = lines.map((line) => line.quantity);
-          const allSame = quantities.every((q) => q === quantities[0]);
-          if (allSame) {
-            return t("billing.columns.days_breakdown_uniform", {
-              cylinders,
-              days: quantities[0],
-              total: totalDays,
-            });
-          }
-          return t("billing.columns.days_breakdown_mixed", {
-            cylinders,
-            total: totalDays,
-          });
-        },
+        valueGetter: (_v, row) => formatInvoiceDaysBreakdown(row, t),
       },
       {
         field: "total_days",
         headerName: t("billing.columns.total_days"),
         width: 130,
         type: "number",
-        valueGetter: (_v, row) =>
-          row.total_days ??
-          row.charge_lines?.reduce((sum, line) => sum + line.quantity, 0) ??
-          0,
+        valueGetter: (_v, row) => invoiceTotalDays(row),
       },
       {
         field: "total",

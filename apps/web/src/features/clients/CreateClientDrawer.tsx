@@ -40,6 +40,7 @@ import { api } from "../../api/client";
 import { useLocations } from "../../hooks/useLocations";
 import { applyServerErrors } from "../../hooks/useServerErrors";
 import { useSessionStore } from "../../store/sessionStore";
+import { toClientFormValues } from "./clientFormLogic";
 
 type ConfirmAction = "deactivate" | "reactivate" | "remove" | null;
 
@@ -54,48 +55,6 @@ interface CreateClientDrawerProps {
   client?: Client | null;
   /** Called after a successful soft-delete (e.g. navigate away from detail). */
   onDeleted?: () => void;
-}
-
-function toFormValues(
-  client: Client | null | undefined,
-  defaultTerritoryId: number,
-): CreateClientInputType {
-  if (!client) {
-    return {
-      name: "",
-      cuit: null,
-      address_street: null,
-      locality_id: null,
-      territory_id: defaultTerritoryId,
-      coverage: "PRIVATE",
-      segment: null,
-      delivery_instructions: null,
-      contacts: [{ name: "", phone: "", is_primary: true }],
-    };
-  }
-
-  const contacts =
-    client.contacts?.map((contact) => ({
-      name: contact.name ?? "",
-      phone: contact.phone ?? "",
-      role: contact.role ?? null,
-      is_primary: contact.is_primary,
-    })) ?? [];
-
-  return {
-    name: client.name,
-    cuit: client.cuit,
-    address_street: client.address_street,
-    locality_id: client.locality_id,
-    territory_id: client.territory_id,
-    coverage: client.coverage,
-    segment: client.segment,
-    delivery_instructions: client.delivery_instructions,
-    contacts:
-      contacts.length > 0
-        ? contacts
-        : [{ name: "", phone: "", is_primary: true }],
-  };
 }
 
 export function CreateClientDrawer({
@@ -133,7 +92,7 @@ export function CreateClientDrawer({
     formState: { errors, isDirty, isSubmitting },
   } = useForm<CreateClientInputType>({
     resolver: zodResolver(CreateClientInput),
-    defaultValues: toFormValues(null, defaultTerritoryId),
+    defaultValues: toClientFormValues(null, defaultTerritoryId),
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -158,7 +117,7 @@ export function CreateClientDrawer({
 
   useEffect(() => {
     if (open) {
-      reset(toFormValues(client, defaultTerritoryId));
+      reset(toClientFormValues(client, defaultTerritoryId));
       setConflictError(null);
       setCreateCityOpen(false);
       setCreateCityError(null);

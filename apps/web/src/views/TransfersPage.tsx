@@ -31,6 +31,16 @@ import type {
 import { ApiClientError } from "@weld/api-client";
 import { api } from "../api/client";
 import { SEED_TRANSFER_PARTIES } from "../constants/masters";
+import {
+  stashNextCursor,
+  cursorPageRowCount,
+  paginationAfterChange,
+} from "../lib/cursorPagination";
+import { todayIso } from "../lib/dateFormat";
+import {
+  partyTypeLabel,
+  transferCustodyChipColor,
+} from "../features/transfers/transferLogic";
 import { useSessionStore } from "../store/sessionStore";
 
 type PartyOption = {
@@ -38,26 +48,6 @@ type PartyOption = {
   name: string;
   party_type: string;
 };
-
-function todayIso() {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Argentina/Buenos_Aires",
-  }).format(new Date());
-}
-
-function partyTypeLabel(t: (key: string) => string, partyType: string): string {
-  const key = `transfers.party_types.${partyType}`;
-  const label = t(key);
-  return label === key ? partyType : label;
-}
-
-function custodyChipColor(
-  status: TransferCustodyStatus,
-): "warning" | "info" | "success" {
-  if (status === "LOANED") return "warning";
-  if (status === "REFILL") return "info";
-  return "success";
-}
 
 export default function TransfersPage() {
   const { t } = useTranslation();
@@ -171,20 +161,16 @@ export default function TransfersPage() {
   useEffect(() => {
     const next = transfersQuery.data?.page.next_cursor;
     if (!next) return;
-    setCursors((prev) => {
-      const copy = [...prev];
-      copy[paginationModel.page + 1] = next;
-      return copy;
-    });
+    setCursors((prev) => stashNextCursor(prev, paginationModel.page, next));
   }, [transfersQuery.data?.page.next_cursor, paginationModel.page]);
 
   const handlePaginationModelChange = (model: GridPaginationModel) => {
-    if (model.pageSize !== paginationModel.pageSize) {
-      setCursors([undefined]);
-      setPaginationModel({ page: 0, pageSize: model.pageSize });
-      return;
-    }
-    setPaginationModel(model);
+    const { pagination, resetCursors } = paginationAfterChange(
+      paginationModel,
+      model,
+    );
+    if (resetCursors) setCursors([undefined]);
+    setPaginationModel(pagination);
   };
 
   const resetForm = () => {
@@ -270,7 +256,9 @@ export default function TransfersPage() {
           <Chip
             size="small"
             label={t(`transfers.custody_status.${params.value}`)}
-            color={custodyChipColor(params.value as TransferCustodyStatus)}
+            color={transferCustodyChipColor(
+              params.value as TransferCustodyStatus,
+            )}
             variant={params.row.return_date ? "outlined" : "filled"}
           />
         ),
@@ -403,11 +391,12 @@ export default function TransfersPage() {
           paginationModel={paginationModel}
           onPaginationModelChange={handlePaginationModelChange}
           pageSizeOptions={[25, 50, 100]}
-          rowCount={
-            paginationModel.page * paginationModel.pageSize +
-            rows.length +
-            (pageMeta?.has_more ? 1 : 0)
-          }
+          rowCount={cursorPageRowCount(
+            paginationModel.page,
+            paginationModel.pageSize,
+            rows.length,
+            pageMeta?.has_more ?? false,
+          )}
           disableRowSelectionOnClick
           getRowHeight={() => "auto"}
           sx={{

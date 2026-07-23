@@ -33,44 +33,17 @@ import { ApiClientError } from "@weld/api-client";
 import { api } from "../../api/client";
 import { GAS_CODES } from "../../constants/masters";
 import { applyServerErrors } from "../../hooks/useServerErrors";
+import {
+  isRentalPickable,
+  isRefillPickable,
+  cylinderPickerLabel,
+} from "./movementLogic";
 
 interface Props {
   open: boolean;
   onClose: () => void;
   prefillCylinderId?: number;
   prefillHolderId?: number;
-}
-
-const TERMINAL_STATES = new Set([
-  "SOLD",
-  "LOST",
-  "BROKEN",
-  "RETURNED_TO_SUPPLIER",
-  "RETIRED",
-]);
-
-function isRentalPickable(c: Cylinder): boolean {
-  return (
-    (c.state === "IN_STOCK_EMPTY" || c.state === "IN_STOCK_FULL") &&
-    c.ownership_basis !== "CUSTOMER" &&
-    c.packaging !== "BATTERY_MEMBER" &&
-    c.current_movement_id == null &&
-    c.current_holder_party_id == null
-  );
-}
-
-function isRefillPickable(c: Cylinder): boolean {
-  return (
-    c.ownership_basis === "CUSTOMER" &&
-    !TERMINAL_STATES.has(c.state) &&
-    c.packaging !== "BATTERY_MEMBER"
-  );
-}
-
-function cylinderLabel(option: Cylinder): string {
-  const owner = option.owner_name ? ` · ${option.owner_name}` : "";
-  const gas = option.gas_code ? ` · ${option.gas_code}` : "";
-  return `${option.serial_number}${owner}${gas}`;
 }
 
 export function DeliverDrawer({
@@ -330,7 +303,9 @@ export function DeliverDrawer({
               <Autocomplete
                 options={cylinderOptions}
                 getOptionLabel={(option) =>
-                  typeof option === "string" ? option : cylinderLabel(option)
+                  typeof option === "string"
+                    ? option
+                    : cylinderPickerLabel(option)
                 }
                 isOptionEqualToValue={(a, b) => a.id === b.id}
                 getOptionDisabled={(option) =>

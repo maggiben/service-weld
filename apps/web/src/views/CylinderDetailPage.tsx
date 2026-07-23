@@ -27,17 +27,16 @@ import { api } from "../api/client";
 import { EditCylinderDrawer } from "../features/cylinders/EditCylinderDrawer";
 import { displayRentalDays } from "../features/movements/displayRentalDays";
 import { formatCapacity, formatLedgerNote } from "../lib/format";
+import {
+  stashNextCursor,
+  cursorPageRowCount,
+  paginationAfterChange,
+} from "../lib/cursorPagination";
+import { formatDateDMY } from "../lib/dateFormat";
 import { useSessionStore } from "../store/sessionStore";
 import { useUiStore } from "../store/uiStore";
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
-
-function formatDate(value: string | null | undefined): string {
-  if (!value) return "—";
-  const [y, m, d] = value.split("-");
-  if (!y || !m || !d) return value;
-  return `${d}/${m}/${y}`;
-}
 
 export default function CylinderDetailPage() {
   const { t } = useTranslation();
@@ -85,20 +84,18 @@ export default function CylinderDetailPage() {
   useEffect(() => {
     const nextCursor = historyQuery.data?.page.next_cursor;
     if (!nextCursor) return;
-    setCursors((prev) => {
-      const next = [...prev];
-      next[paginationModel.page + 1] = nextCursor;
-      return next;
-    });
+    setCursors((prev) =>
+      stashNextCursor(prev, paginationModel.page, nextCursor),
+    );
   }, [historyQuery.data?.page.next_cursor, paginationModel.page]);
 
   const handlePaginationModelChange = (model: GridPaginationModel) => {
-    if (model.pageSize !== paginationModel.pageSize) {
-      setCursors([undefined]);
-      setPaginationModel({ page: 0, pageSize: model.pageSize });
-      return;
-    }
-    setPaginationModel(model);
+    const { pagination, resetCursors } = paginationAfterChange(
+      paginationModel,
+      model,
+    );
+    if (resetCursors) setCursors([undefined]);
+    setPaginationModel(pagination);
   };
 
   const columns: GridColDef<CylinderHistoryRow>[] = useMemo(
@@ -107,7 +104,7 @@ export default function CylinderDetailPage() {
         field: "delivery_date",
         headerName: t("cylinders.detail.columns.delivery"),
         width: 130,
-        valueFormatter: (value: string) => formatDate(value),
+        valueFormatter: (value: string) => formatDateDMY(value),
       },
       {
         field: "holder_name",
@@ -133,7 +130,7 @@ export default function CylinderDetailPage() {
         field: "return_date",
         headerName: t("cylinders.detail.columns.return"),
         width: 130,
-        valueFormatter: (value: string | null) => formatDate(value),
+        valueFormatter: (value: string | null) => formatDateDMY(value),
       },
       {
         field: "gas_code",
@@ -319,11 +316,12 @@ export default function CylinderDetailPage() {
           paginationModel={paginationModel}
           onPaginationModelChange={handlePaginationModelChange}
           pageSizeOptions={PAGE_SIZE_OPTIONS}
-          rowCount={
-            paginationModel.page * paginationModel.pageSize +
-            rows.length +
-            (pageMeta?.has_more ? 1 : 0)
-          }
+          rowCount={cursorPageRowCount(
+            paginationModel.page,
+            paginationModel.pageSize,
+            rows.length,
+            pageMeta?.has_more ?? false,
+          )}
           disableRowSelectionOnClick
           localeText={
             locale === "es"

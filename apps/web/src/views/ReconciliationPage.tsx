@@ -5,7 +5,6 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Checkbox from "@mui/material/Checkbox";
 import Chip from "@mui/material/Chip";
-import type { ChipProps } from "@mui/material/Chip";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Link from "@mui/material/Link";
 import Stack from "@mui/material/Stack";
@@ -25,34 +24,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { OutstandingRow, ReconciliationVarianceRow } from "@weld/schemas";
 import { api } from "../api/client";
+import { cylinderStateChipColor } from "../lib/chipColors";
+import {
+  stashNextCursor,
+  cursorPageRowCount,
+  paginationAfterChange,
+} from "../lib/cursorPagination";
+import { todayIso } from "../lib/dateFormat";
 import { useSessionStore } from "../store/sessionStore";
-
-function todayIso() {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Argentina/Buenos_Aires",
-  }).format(new Date());
-}
-
-function cylinderStateChipColor(
-  state: string | null | undefined,
-): ChipProps["color"] {
-  switch (state) {
-    case "SOLD":
-      return "secondary";
-    case "LOST":
-    case "BROKEN":
-      return "error";
-    case "AT_CLIENT":
-      return "warning";
-    case "AT_SUPPLIER":
-      return "info";
-    case "IN_STOCK_EMPTY":
-    case "IN_STOCK_FULL":
-      return "success";
-    default:
-      return "default";
-  }
-}
 
 function SerialLink({
   cylinderId,
@@ -114,20 +93,16 @@ export default function ReconciliationPage() {
   useEffect(() => {
     const next = outstandingQuery.data?.page.next_cursor;
     if (!next) return;
-    setCursors((prev) => {
-      const copy = [...prev];
-      copy[paginationModel.page + 1] = next;
-      return copy;
-    });
+    setCursors((prev) => stashNextCursor(prev, paginationModel.page, next));
   }, [outstandingQuery.data?.page.next_cursor, paginationModel.page]);
 
   const handlePaginationModelChange = (model: GridPaginationModel) => {
-    if (model.pageSize !== paginationModel.pageSize) {
-      setCursors([undefined]);
-      setPaginationModel({ page: 0, pageSize: model.pageSize });
-      return;
-    }
-    setPaginationModel(model);
+    const { pagination, resetCursors } = paginationAfterChange(
+      paginationModel,
+      model,
+    );
+    if (resetCursors) setCursors([undefined]);
+    setPaginationModel(pagination);
   };
 
   const countMutation = useMutation({
@@ -340,11 +315,12 @@ export default function ReconciliationPage() {
               paginationModel={paginationModel}
               onPaginationModelChange={handlePaginationModelChange}
               pageSizeOptions={[25, 50, 100]}
-              rowCount={
-                paginationModel.page * paginationModel.pageSize +
-                rows.length +
-                (pageMeta?.has_more ? 1 : 0)
-              }
+              rowCount={cursorPageRowCount(
+                paginationModel.page,
+                paginationModel.pageSize,
+                rows.length,
+                pageMeta?.has_more ?? false,
+              )}
               disableRowSelectionOnClick
               sx={{ [`& .${gridClasses.cell}`]: { outline: "none" } }}
             />

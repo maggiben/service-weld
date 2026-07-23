@@ -41,19 +41,11 @@ import {
 import { ApiClientError } from "@weld/api-client";
 import { api } from "../api/client";
 import { RequireCapability } from "../auth/RequireAuth";
+import {
+  formatBytes,
+  migrationErrorMessage,
+} from "../features/migration/migrationLogic";
 import { useNotificationStore } from "../store/notificationStore";
-
-function formatBytes(n: number): string {
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function errorMessage(err: unknown): string {
-  if (err instanceof ApiClientError) return err.message;
-  if (err instanceof Error) return err.message;
-  return String(err);
-}
 
 function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
@@ -161,7 +153,7 @@ function DataMigrationPageInner() {
       pushToast(t("migration_data.upload_ok"));
       void invalidate();
     },
-    onError: (err) => pushToast(errorMessage(err)),
+    onError: (err) => pushToast(migrationErrorMessage(err)),
     onSettled: (_d, _e, vars) => {
       setUploadingSlot(null);
       if (vars?.slot) {
@@ -188,7 +180,7 @@ function DataMigrationPageInner() {
       setTerminalOpen(true);
       void invalidate();
     },
-    onError: (err) => pushToast(errorMessage(err)),
+    onError: (err) => pushToast(migrationErrorMessage(err)),
   });
 
   const rollbackMut = useMutation({
@@ -198,7 +190,7 @@ function DataMigrationPageInner() {
       setRollbackId(null);
       void invalidate();
     },
-    onError: (err) => pushToast(errorMessage(err)),
+    onError: (err) => pushToast(migrationErrorMessage(err)),
   });
 
   const markGoodMut = useMutation({
@@ -210,7 +202,7 @@ function DataMigrationPageInner() {
       good: boolean;
     }) => api.markMigrationSnapshotGood({ snapshot_id, good }),
     onSuccess: () => void invalidate(),
-    onError: (err) => pushToast(errorMessage(err)),
+    onError: (err) => pushToast(migrationErrorMessage(err)),
   });
 
   const exportMut = useMutation({
@@ -219,7 +211,7 @@ function DataMigrationPageInner() {
       downloadBlob(blob, filename);
     },
     onSuccess: () => pushToast(t("migration_data.export_ok")),
-    onError: (err) => pushToast(errorMessage(err)),
+    onError: (err) => pushToast(migrationErrorMessage(err)),
   });
 
   const purgeMut = useMutation({
@@ -231,7 +223,7 @@ function DataMigrationPageInner() {
       setPurgeConfirm("");
       void invalidate();
     },
-    onError: (err) => pushToast(errorMessage(err)),
+    onError: (err) => pushToast(migrationErrorMessage(err)),
   });
 
   const status = statusQuery.data;
@@ -270,7 +262,9 @@ function DataMigrationPageInner() {
       </Box>
 
       {statusQuery.isError && (
-        <Alert severity="error">{errorMessage(statusQuery.error)}</Alert>
+        <Alert severity="error">
+          {migrationErrorMessage(statusQuery.error)}
+        </Alert>
       )}
       {busy && !jobDialogOpen && <LinearProgress />}
 

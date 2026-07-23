@@ -39,6 +39,16 @@ import { normalizeTerritoryName, territoryMatchKey } from "@weld/schemas";
 import { ApiClientError } from "@weld/api-client";
 import { api } from "../api/client";
 import { RequireCapability } from "../auth/RequireAuth";
+import {
+  stashNextCursor,
+  cursorPageRowCount,
+  paginationAfterChange,
+} from "../lib/cursorPagination";
+import {
+  emptyUserDraft,
+  findExistingTerritory,
+  type UserDraft,
+} from "../features/users/userFormLogic";
 import { useSessionStore } from "../store/sessionStore";
 import { useLocations } from "../hooks/useLocations";
 
@@ -67,26 +77,6 @@ const CREATE_PROMPT_ID = -2;
 
 const filterTerritoryOptions = createFilterOptions<TerritoryOption>();
 
-type Draft = {
-  username: string;
-  email: string;
-  password: string;
-  roles: RoleCode[];
-  territory_ids: number[];
-  mfa_enabled: boolean;
-  is_active: boolean;
-};
-
-const emptyDraft = (): Draft => ({
-  username: "",
-  email: "",
-  password: "",
-  roles: ["CLERK"],
-  territory_ids: [],
-  mfa_enabled: false,
-  is_active: true,
-});
-
 function UsersPageInner() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -103,7 +93,7 @@ function UsersPageInner() {
   );
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<AdminUser | null>(null);
-  const [draft, setDraft] = useState<Draft>(emptyDraft);
+  const [draft, setDraft] = useState<UserDraft>(emptyUserDraft);
   const [error, setError] = useState<string | null>(null);
   const [removeTarget, setRemoveTarget] = useState<AdminUser | null>(null);
   /** Extra labels for assigned territories not yet in the active list. */
@@ -141,20 +131,16 @@ function UsersPageInner() {
   useEffect(() => {
     const next = usersQuery.data?.page.next_cursor;
     if (!next) return;
-    setCursors((prev) => {
-      const copy = [...prev];
-      copy[paginationModel.page + 1] = next;
-      return copy;
-    });
+    setCursors((prev) => stashNextCursor(prev, paginationModel.page, next));
   }, [usersQuery.data?.page.next_cursor, paginationModel.page]);
 
   const handlePaginationModelChange = (model: GridPaginationModel) => {
-    if (model.pageSize !== paginationModel.pageSize) {
-      setCursors([undefined]);
-      setPaginationModel({ page: 0, pageSize: model.pageSize });
-      return;
-    }
-    setPaginationModel(model);
+    const { pagination, resetCursors } = paginationAfterChange(
+      paginationModel,
+      model,
+    );
+    if (resetCursors) setCursors([undefined]);
+    setPaginationModel(pagination);
   };
 
   const territoryOptions = useMemo(() => {
@@ -181,7 +167,7 @@ function UsersPageInner() {
 
   const openCreate = () => {
     setEditing(null);
-    setDraft(emptyDraft());
+    setDraft(emptyUserDraft());
     setKnownTerritories([]);
     setError(null);
     setDrawerOpen(true);
@@ -215,12 +201,6 @@ function UsersPageInner() {
     });
   };
 
-  const findExistingTerritory = (rawName: string) => {
-    const key = territoryMatchKey(rawName);
-    if (!key) return undefined;
-    return territoryOptions.find((tr) => territoryMatchKey(tr.name) === key);
-  };
-
   const openCreateTerritoryDialog = (seed = "") => {
     setCreateTerritoryName(seed);
     setCreateTerritoryError(null);
@@ -231,7 +211,7 @@ function UsersPageInner() {
     mutationFn: async (rawName: string) => {
       const name = normalizeTerritoryName(rawName);
       if (!name) throw new Error("empty");
-      const existing = findExistingTerritory(name);
+      const existing = findExistingTerritory(name, territoryOptions);
       if (existing) return existing;
       try {
         return await api.createTerritory({ name });
@@ -492,11 +472,12 @@ function UsersPageInner() {
           loading={usersQuery.isLoading}
           paginationMode="server"
           sortingMode="server"
-          rowCount={
-            paginationModel.page * paginationModel.pageSize +
-            rows.length +
-            (pageMeta?.has_more ? 1 : 0)
-          }
+          rowCount={cursorPageRowCount(
+            paginationModel.page,
+            paginationModel.pageSize,
+            rows.length,
+            pageMeta?.has_more ?? false,
+          )}
           paginationModel={paginationModel}
           onPaginationModelChange={handlePaginationModelChange}
           pageSizeOptions={[25, 50, 100]}
@@ -636,6 +617,7 @@ function UsersPageInner() {
               if (pendingCreate?.inputValue) {
                 const existing = findExistingTerritory(
                   pendingCreate.inputValue,
+                  territoryOptions,
                 );
                 if (existing) {
                   rememberTerritory(existing);
