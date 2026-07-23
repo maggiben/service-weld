@@ -26,6 +26,8 @@ describe("CylindersService", () => {
     update: jest.fn(),
     reportLoss: jest.fn(),
     updateState: jest.fn(),
+    fill: jest.fn(),
+    empty: jest.fn(),
   };
   const movementsRepository = {
     hasOpenMovement: jest.fn(),
@@ -88,6 +90,13 @@ describe("CylindersService", () => {
       service.update(user, 1, { gas_code: "O2" } as never),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
 
+    repository.getById.mockResolvedValue(
+      cyl({ state: "AT_CLIENT", version: 2 }),
+    );
+    await expect(
+      service.update(user, 5, { gas_code: "O2" } as never, 2),
+    ).rejects.toMatchObject({ code: "CYLINDER_HELD_BY_CLIENT" });
+
     repository.getById.mockResolvedValue(cyl({ version: 2 }));
     repository.gasExists.mockResolvedValue(false);
     await expect(
@@ -103,6 +112,68 @@ describe("CylindersService", () => {
     await expect(
       service.update(user, 5, { note: "x" } as never, 2),
     ).resolves.toMatchObject({ version: 3 });
+  });
+
+  it("fills empty stock cylinders", async () => {
+    repository.getById.mockResolvedValue(null);
+    await expect(service.fill(user, 1)).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
+
+    repository.getById.mockResolvedValue(cyl({ state: "IN_STOCK_FULL" }));
+    await expect(service.fill(user, 5)).rejects.toMatchObject({
+      code: "ILLEGAL_STATE_TRANSITION",
+    });
+
+    repository.getById.mockResolvedValue(
+      cyl({ state: "IN_STOCK_EMPTY", version: 2 }),
+    );
+    await expect(service.fill(user, 5, 1)).rejects.toMatchObject({
+      code: "VERSION_CONFLICT",
+    });
+
+    repository.getById.mockResolvedValue(
+      cyl({ state: "IN_STOCK_EMPTY", version: 2 }),
+    );
+    repository.fill.mockResolvedValue(
+      cyl({ state: "IN_STOCK_FULL", condition: "FULL", version: 3 }),
+    );
+    await expect(service.fill(user, 5, 2)).resolves.toMatchObject({
+      state: "IN_STOCK_FULL",
+      condition: "FULL",
+    });
+    expect(repository.fill).toHaveBeenCalledWith(5, user.id, 2);
+  });
+
+  it("empties full stock cylinders", async () => {
+    repository.getById.mockResolvedValue(null);
+    await expect(service.empty(user, 1)).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
+
+    repository.getById.mockResolvedValue(cyl({ state: "IN_STOCK_EMPTY" }));
+    await expect(service.empty(user, 5)).rejects.toMatchObject({
+      code: "ILLEGAL_STATE_TRANSITION",
+    });
+
+    repository.getById.mockResolvedValue(
+      cyl({ state: "IN_STOCK_FULL", version: 2 }),
+    );
+    await expect(service.empty(user, 5, 1)).rejects.toMatchObject({
+      code: "VERSION_CONFLICT",
+    });
+
+    repository.getById.mockResolvedValue(
+      cyl({ state: "IN_STOCK_FULL", version: 2 }),
+    );
+    repository.empty.mockResolvedValue(
+      cyl({ state: "IN_STOCK_EMPTY", condition: "EMPTY", version: 3 }),
+    );
+    await expect(service.empty(user, 5, 2)).resolves.toMatchObject({
+      state: "IN_STOCK_EMPTY",
+      condition: "EMPTY",
+    });
+    expect(repository.empty).toHaveBeenCalledWith(5, user.id, 2);
   });
 
   it("reports loss and raises supplier alert when needed", async () => {

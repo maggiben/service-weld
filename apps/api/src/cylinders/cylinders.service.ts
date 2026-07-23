@@ -1,11 +1,16 @@
 import { Injectable } from "@nestjs/common";
 import {
+  assertCanEditCylinderData,
+  assertCanEmpty,
+  assertCanFill,
   assertCanReportLoss,
   assertNotPackedMember,
   assertOwnerBasisConsistency,
   assertPlausibleBusinessDate,
   assertReplaceable,
   Capacity,
+  stateAfterEmpty,
+  stateAfterFill,
   stateAfterLoss,
   type PartyType,
 } from "@weld/domain";
@@ -97,6 +102,7 @@ export class CylindersService {
     if (!cylinder) throw ApiErrors.notFound("Cylinder not found");
 
     try {
+      assertCanEditCylinderData(cylinder.state);
       if (input.capacity_m3 != null) {
         Capacity.of(input.capacity_m3);
       }
@@ -119,6 +125,54 @@ export class CylindersService {
     }
 
     return this.repository.update(id, input, principal.id, expectedVersion);
+  }
+
+  async fill(
+    principal: AuthPrincipal,
+    id: number,
+    ifMatchVersion?: number,
+  ): Promise<Cylinder> {
+    const cylinder = await this.repository.getById(id);
+    if (!cylinder) throw ApiErrors.notFound("Cylinder not found");
+
+    try {
+      assertCanFill(cylinder.state);
+    } catch (error) {
+      mapDomainError(error);
+    }
+
+    const expectedVersion = ifMatchVersion ?? cylinder.version;
+    if (expectedVersion !== cylinder.version) {
+      throw ApiErrors.conflict("VERSION_CONFLICT", "Cylinder version conflict");
+    }
+
+    void stateAfterFill();
+
+    return this.repository.fill(id, principal.id, expectedVersion);
+  }
+
+  async empty(
+    principal: AuthPrincipal,
+    id: number,
+    ifMatchVersion?: number,
+  ): Promise<Cylinder> {
+    const cylinder = await this.repository.getById(id);
+    if (!cylinder) throw ApiErrors.notFound("Cylinder not found");
+
+    try {
+      assertCanEmpty(cylinder.state);
+    } catch (error) {
+      mapDomainError(error);
+    }
+
+    const expectedVersion = ifMatchVersion ?? cylinder.version;
+    if (expectedVersion !== cylinder.version) {
+      throw ApiErrors.conflict("VERSION_CONFLICT", "Cylinder version conflict");
+    }
+
+    void stateAfterEmpty();
+
+    return this.repository.empty(id, principal.id, expectedVersion);
   }
 
   async reportLoss(

@@ -19,6 +19,12 @@ export {
   stateAfterReturn,
   stateAfterDelivery,
   stateAfterLoss,
+  stateAfterFill,
+  stateAfterEmpty,
+  isCylinderDataEditable,
+  assertCanEditCylinderData,
+  assertCanFill,
+  assertCanEmpty,
   assertCanReportLoss,
 } from "./cylinder-state";
 export {

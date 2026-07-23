@@ -10,6 +10,7 @@ import Chip from "@mui/material/Chip";
 import FormControl from "@mui/material/FormControl";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import InputLabel from "@mui/material/InputLabel";
+import Link from "@mui/material/Link";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import Stack from "@mui/material/Stack";
@@ -31,15 +32,21 @@ import type {
   MovementState,
 } from "@weld/schemas";
 import { useQuery } from "@tanstack/react-query";
+import NextLink from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
 import { DeliverDrawer } from "../features/movements/DeliverDrawer";
 import { displayRentalDays } from "../features/movements/displayRentalDays";
+import {
+  clientCustodyLabel,
+  isMovementReturned,
+} from "../features/clients/clientLedgerLogic";
 import { ReturnDialog } from "../features/movements/ReturnDialog";
 import { SwapDialog } from "../features/movements/SwapDialog";
 import { SwapPickDialog } from "../features/movements/SwapPickDialog";
 import { VoidDialog } from "../features/movements/VoidDialog";
+import { movementStateChipColor } from "../lib/chipColors";
 import { useLocations } from "../hooks/useLocations";
 import {
   stashNextCursor,
@@ -170,8 +177,10 @@ export default function MovementsPage() {
     setPaginationModel(pagination);
   };
 
-  const columns: GridColDef<MovementEvent>[] = useMemo(
-    () => [
+  const showRentalDays = kindFilter !== "REFILL";
+
+  const columns: GridColDef<MovementEvent>[] = useMemo(() => {
+    const cols: GridColDef<MovementEvent>[] = [
       {
         field: "delivery_date",
         headerName: translate("movements.columns.delivery"),
@@ -189,6 +198,15 @@ export default function MovementsPage() {
         headerName: translate("movements.columns.serial"),
         width: 120,
         sortable: false,
+        renderCell: (params) => (
+          <Link
+            component={NextLink}
+            href={`/cylinders/${params.row.cylinder_id}`}
+            underline="hover"
+          >
+            {params.value ?? "—"}
+          </Link>
+        ),
       },
       {
         field: "holder_name",
@@ -196,6 +214,15 @@ export default function MovementsPage() {
         flex: 1,
         minWidth: 160,
         sortable: false,
+        renderCell: (params) => (
+          <Link
+            component={NextLink}
+            href={`/clients/${params.row.holder_party_id}`}
+            underline="hover"
+          >
+            {params.value ?? "—"}
+          </Link>
+        ),
       },
       {
         field: "property_basis",
@@ -218,43 +245,32 @@ export default function MovementsPage() {
         width: 100,
         sortable: false,
       },
-      {
+    ];
+
+    // Refill-only view: customer-owned cycles — rental days do not apply.
+    if (showRentalDays) {
+      cols.push({
         field: "rental_days",
         headerName: translate("movements.columns.rental_days"),
         width: 110,
         type: "number",
         valueGetter: (_v, row) => displayRentalDays(row),
-      },
+      });
+    }
+
+    cols.push(
       {
         field: "state",
         headerName: translate("movements.columns.state"),
         width: 120,
         sortable: false,
         renderCell: (params) => {
-          const isRefill =
-            params.row.movement_kind === "REFILL" ||
-            params.row.property_basis === "CUSTOMER";
-          // Successful refill (open or closed) — not an "open rental".
-          if (isRefill && params.value !== "VOID") {
-            return (
-              <Chip
-                size="small"
-                label={translate("enums.movement_state.REFILLED")}
-                color="success"
-              />
-            );
-          }
+          const returned = isMovementReturned(params.row);
           return (
             <Chip
               size="small"
-              label={translate(`enums.movement_state.${params.value}`)}
-              color={
-                params.value === "OPEN"
-                  ? "warning"
-                  : params.value === "CLOSED"
-                    ? "success"
-                    : "default"
-              }
+              label={clientCustodyLabel(params.row, translate)}
+              color={movementStateChipColor(params.row.state, returned)}
             />
           );
         },
@@ -304,9 +320,10 @@ export default function MovementsPage() {
           );
         },
       },
-    ],
-    [translate, canWrite, canVoid],
-  );
+    );
+
+    return cols;
+  }, [translate, canWrite, canVoid, showRentalDays]);
 
   const resetPaging = () => {
     setPaginationModel((prev) => ({ ...prev, page: 0 }));

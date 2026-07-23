@@ -102,6 +102,10 @@ describe("sortParam", () => {
     assert.equal(clientSortParam([]), "name");
     assert.equal(clientSortParam([{ field: "name", sort: "desc" }]), "-name");
     assert.equal(clientSortParam([{ field: "nope", sort: "asc" }]), "name");
+    assert.equal(
+      clientSortParam([{ field: "outstanding_count", sort: "desc" }]),
+      "-outstanding_count",
+    );
     assert.equal(cylinderSortParam([]), "serial_number");
     assert.equal(cylinderSortParam([{ field: "state", sort: "asc" }]), "state");
     assert.equal(movementSortParam([]), "-delivery_date");

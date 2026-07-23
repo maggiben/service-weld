@@ -102,6 +102,52 @@ export function stateAfterLoss(outcome: "LOST" | "BROKEN"): CylinderState {
   return outcome;
 }
 
+/** Plant fill: empty stock → full stock, ready to dispatch (sdd fill edge). */
+export function stateAfterFill(): CylinderState {
+  return "IN_STOCK_FULL";
+}
+
+/** Plant empty: full stock → empty stock (correction / post-fill reverse). */
+export function stateAfterEmpty(): CylinderState {
+  return "IN_STOCK_EMPTY";
+}
+
+/**
+ * Master data (gas, capacity, depot, acquisition) may only be edited while
+ * the cylinder is not in client custody.
+ */
+export function isCylinderDataEditable(state: CylinderState): boolean {
+  return state !== "AT_CLIENT";
+}
+
+export function assertCanEditCylinderData(state: CylinderState): void {
+  if (!isCylinderDataEditable(state)) {
+    throw DomainErrors.cylinderHeldByClient();
+  }
+}
+
+/** Workshop may mark an empty in-stock cylinder as filled. */
+export function assertCanFill(state: CylinderState): void {
+  if (isTerminalCylinderState(state)) {
+    throw DomainErrors.alreadyTerminal(state);
+  }
+  if (state !== "IN_STOCK_EMPTY") {
+    throw DomainErrors.illegalStateTransition(state, "IN_STOCK_FULL");
+  }
+  assertCylinderTransition(state, "IN_STOCK_FULL");
+}
+
+/** Workshop may mark a full in-stock cylinder as empty. */
+export function assertCanEmpty(state: CylinderState): void {
+  if (isTerminalCylinderState(state)) {
+    throw DomainErrors.alreadyTerminal(state);
+  }
+  if (state !== "IN_STOCK_FULL") {
+    throw DomainErrors.illegalStateTransition(state, "IN_STOCK_EMPTY");
+  }
+  assertCylinderTransition(state, "IN_STOCK_EMPTY");
+}
+
 /** Loss/broken may be reported from stock or while at a client (W12). */
 export function assertCanReportLoss(
   state: CylinderState,

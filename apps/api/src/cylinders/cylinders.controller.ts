@@ -94,6 +94,42 @@ export class CylindersController {
     );
   }
 
+  @Post(":id/fill")
+  @RequireCapabilities("cylinders:write")
+  @ApiOkResponse({
+    description: "Empty stock cylinder marked full / ready to dispatch",
+  })
+  fill(
+    @CurrentUser() user: AuthPrincipal,
+    @Param("id", ParseIntPipe) id: number,
+    @Headers("if-match") ifMatch?: string,
+  ): Promise<Cylinder> {
+    const version = ifMatch ? Number(ifMatch.replaceAll('"', "")) : undefined;
+    return this.cylindersService.fill(
+      user,
+      id,
+      Number.isFinite(version) ? version : undefined,
+    );
+  }
+
+  @Post(":id/empty")
+  @RequireCapabilities("cylinders:write")
+  @ApiOkResponse({
+    description: "Full stock cylinder marked empty",
+  })
+  empty(
+    @CurrentUser() user: AuthPrincipal,
+    @Param("id", ParseIntPipe) id: number,
+    @Headers("if-match") ifMatch?: string,
+  ): Promise<Cylinder> {
+    const version = ifMatch ? Number(ifMatch.replaceAll('"', "")) : undefined;
+    return this.cylindersService.empty(
+      user,
+      id,
+      Number.isFinite(version) ? version : undefined,
+    );
+  }
+
   @Post(":id/loss")
   @RequireCapabilities("cylinders:write")
   @ApiOkResponse({ description: "Cylinder marked LOST/BROKEN (W12)" })

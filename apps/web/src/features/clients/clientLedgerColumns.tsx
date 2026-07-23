@@ -10,10 +10,11 @@ import { displayRentalDays } from "../movements/displayRentalDays";
 import {
   formatLedgerDate,
   clientCustodyLabel,
+  isMovementReturned,
   movementStateChipColor,
 } from "./clientLedgerLogic";
 
-export { formatLedgerDate, clientCustodyLabel };
+export { formatLedgerDate, clientCustodyLabel, isMovementReturned };
 
 type ColumnOpts = {
   compact?: boolean;
@@ -67,19 +68,25 @@ export function buildOutstandingColumns(
       headerName: translate("clients.detail.columns.accrued_days"),
       width: wrap.days,
       type: "number",
-      renderCell: (params) => (
-        <Chip
-          size="small"
-          label={params.value}
-          color={
-            params.value >= 90
-              ? "error"
-              : params.value >= 30
-                ? "warning"
-                : "default"
-          }
-        />
-      ),
+      // Refills are customer-owned — no rental accrual (BR-08).
+      valueGetter: (_v, row) =>
+        row.movement_kind === "REFILL" ? null : row.accrued_days,
+      renderCell: (params) => {
+        if (params.value == null) return "—";
+        return (
+          <Chip
+            size="small"
+            label={params.value}
+            color={
+              params.value >= 90
+                ? "error"
+                : params.value >= 30
+                  ? "warning"
+                  : "default"
+            }
+          />
+        );
+      },
     },
     {
       field: "custody",
@@ -90,11 +97,14 @@ export function buildOutstandingColumns(
       renderCell: (params) => (
         <Chip
           size="small"
-          label={
-            params.row.movement_kind === "REFILL"
-              ? translate("clients.detail.custody.refill_open")
-              : translate("clients.detail.custody.on_loan")
-          }
+          label={clientCustodyLabel(
+            {
+              movement_kind: params.row.movement_kind,
+              state: "OPEN",
+              return_date: null,
+            },
+            translate,
+          )}
           color="warning"
         />
       ),
@@ -184,7 +194,7 @@ export function buildHistoryColumns(
     headerName: translate("clients.detail.columns.state"),
     width: wrap.state,
     renderCell: (params) => {
-      const returned = params.row.return_date != null;
+      const returned = isMovementReturned(params.row);
       return (
         <Chip
           size="small"

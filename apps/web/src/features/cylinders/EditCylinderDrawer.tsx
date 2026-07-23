@@ -1,19 +1,25 @@
 "use client";
 
+import LocalGasStationIcon from "@mui/icons-material/LocalGasStation";
+import WaterDropOutlinedIcon from "@mui/icons-material/WaterDropOutlined";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Divider from "@mui/material/Divider";
 import Drawer from "@mui/material/Drawer";
 import FormControl from "@mui/material/FormControl";
+import FormControlLabel from "@mui/material/FormControlLabel";
 import FormHelperText from "@mui/material/FormHelperText";
 import InputLabel from "@mui/material/InputLabel";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import Stack from "@mui/material/Stack";
+import Switch from "@mui/material/Switch";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { isCylinderDataEditable } from "@weld/domain";
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -40,6 +46,14 @@ export function EditCylinderDrawer({ open, cylinder, onClose }: Props) {
   const queryClient = useQueryClient();
   const { territories } = useLocations();
   const [conflictError, setConflictError] = useState<string | null>(null);
+  const [markFull, setMarkFull] = useState(false);
+  const [markEmpty, setMarkEmpty] = useState(false);
+
+  const canMarkFull = cylinder?.state === "IN_STOCK_EMPTY";
+  const canMarkEmpty = cylinder?.state === "IN_STOCK_FULL";
+  const conditionDirty = markFull || markEmpty;
+  const dataEditable =
+    cylinder != null && isCylinderDataEditable(cylinder.state);
 
   const {
     control,
@@ -67,16 +81,31 @@ export function EditCylinderDrawer({ open, cylinder, onClose }: Props) {
         home_territory_id: cylinder.home_territory_id,
         acquisition_date: cylinder.acquisition_date,
       });
+      setMarkFull(false);
+      setMarkEmpty(false);
       setConflictError(null);
     }
   }, [open, cylinder, reset]);
 
-  const update = useMutation({
-    mutationFn: (patch: FormValues) => {
+  const save = useMutation({
+    mutationFn: async (patch: FormValues) => {
       if (!cylinder) throw new Error("Missing cylinder for update");
-      return api.updateCylinder(cylinder.id, patch, {
-        ifMatch: cylinder.version,
-      });
+      let current = cylinder;
+      if (Object.keys(patch).length > 0) {
+        current = await api.updateCylinder(cylinder.id, patch, {
+          ifMatch: current.version,
+        });
+      }
+      if (markFull && current.state === "IN_STOCK_EMPTY") {
+        current = await api.fillCylinder(current.id, {
+          ifMatch: current.version,
+        });
+      } else if (markEmpty && current.state === "IN_STOCK_FULL") {
+        current = await api.emptyCylinder(current.id, {
+          ifMatch: current.version,
+        });
+      }
+      return current;
     },
     onSuccess: async (updated) => {
       await queryClient.invalidateQueries({ queryKey: ["cylinders"] });
@@ -93,6 +122,13 @@ export function EditCylinderDrawer({ open, cylinder, onClose }: Props) {
         setConflictError(translate("errors.version_conflict"));
         return;
       }
+      if (
+        error instanceof ApiClientError &&
+        error.code === "CYLINDER_HELD_BY_CLIENT"
+      ) {
+        setConflictError(translate("errors.cylinder_held_by_client"));
+        return;
+      }
       if (!applyServerErrors(error, setError, "gas_code")) {
         setConflictError(
           error instanceof ApiClientError
@@ -104,12 +140,17 @@ export function EditCylinderDrawer({ open, cylinder, onClose }: Props) {
   });
 
   const handleClose = () => {
-    if (isDirty && !window.confirm(translate("cylinders.form.unsaved_confirm")))
+    if (
+      (isDirty || conditionDirty) &&
+      !window.confirm(translate("cylinders.form.unsaved_confirm"))
+    ) {
       return;
+    }
     onClose();
   };
 
   const onSubmit = (values: FormValues) => {
+    if (!dataEditable) return;
     const patch: FormValues = {};
     if (dirtyFields.gas_code) patch.gas_code = values.gas_code ?? null;
     if (dirtyFields.capacity_m3) patch.capacity_m3 = values.capacity_m3 ?? null;
@@ -122,8 +163,11 @@ export function EditCylinderDrawer({ open, cylinder, onClose }: Props) {
     if (dirtyFields.acquisition_date) {
       patch.acquisition_date = values.acquisition_date ?? null;
     }
-    update.mutate(patch);
+    if (Object.keys(patch).length === 0 && !conditionDirty) return;
+    save.mutate(patch);
   };
+
+  const canSubmit = dataEditable && (isDirty || conditionDirty);
 
   return (
     <Drawer
@@ -160,11 +204,93 @@ export function EditCylinderDrawer({ open, cylinder, onClose }: Props) {
           </Alert>
         )}
 
-        <Alert severity="info" sx={{ mb: 2 }}>
-          {translate("cylinders.form.edit_hint")}
-        </Alert>
+        {!dataEditable ? (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            {translate("cylinders.form.edit_locked_at_client")}
+          </Alert>
+        ) : (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            {translate("cylinders.form.edit_hint")}
+          </Alert>
+        )}
 
         <Stack spacing={2} sx={{ flex: 1, overflow: "auto" }}>
+          {dataEditable && (canMarkFull || canMarkEmpty) && (
+            <>
+              <Box
+                sx={{
+                  border: 1,
+                  borderColor: "divider",
+                  borderRadius: 1,
+                  px: 1.5,
+                  py: 1,
+                }}
+              >
+                {canMarkFull && (
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={markFull}
+                        onChange={(event) => setMarkFull(event.target.checked)}
+                        color="success"
+                      />
+                    }
+                    label={
+                      <Stack spacing={0.25}>
+                        <Stack
+                          direction="row"
+                          spacing={0.75}
+                          alignItems="center"
+                        >
+                          <LocalGasStationIcon
+                            fontSize="small"
+                            color="success"
+                          />
+                          <Typography variant="body2" fontWeight={600}>
+                            {translate("cylinders.form.mark_full")}
+                          </Typography>
+                        </Stack>
+                        <Typography variant="caption" color="text.secondary">
+                          {translate("cylinders.form.mark_full_hint")}
+                        </Typography>
+                      </Stack>
+                    }
+                    sx={{ alignItems: "flex-start", m: 0 }}
+                  />
+                )}
+                {canMarkEmpty && (
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={markEmpty}
+                        onChange={(event) => setMarkEmpty(event.target.checked)}
+                      />
+                    }
+                    label={
+                      <Stack spacing={0.25}>
+                        <Stack
+                          direction="row"
+                          spacing={0.75}
+                          alignItems="center"
+                        >
+                          <WaterDropOutlinedIcon fontSize="small" />
+                          <Typography variant="body2" fontWeight={600}>
+                            {translate("cylinders.form.mark_empty")}
+                          </Typography>
+                        </Stack>
+                        <Typography variant="caption" color="text.secondary">
+                          {translate("cylinders.form.mark_empty_hint")}
+                        </Typography>
+                      </Stack>
+                    }
+                    sx={{ alignItems: "flex-start", m: 0 }}
+                  />
+                )}
+              </Box>
+              <Divider />
+            </>
+          )}
+
           <Controller
             name="gas_code"
             control={control}
@@ -174,6 +300,7 @@ export function EditCylinderDrawer({ open, cylinder, onClose }: Props) {
                 <Select
                   label={translate("cylinders.form.gas")}
                   value={field.value ?? ""}
+                  disabled={!dataEditable}
                   onChange={(event) =>
                     field.onChange(event.target.value || null)
                   }
@@ -205,6 +332,7 @@ export function EditCylinderDrawer({ open, cylinder, onClose }: Props) {
                 <Select
                   label={translate("cylinders.form.capacity_unit")}
                   value={field.value ?? "M3"}
+                  disabled={!dataEditable}
                   onChange={(event) =>
                     field.onChange(
                       event.target.value as FormValues["capacity_unit"],
@@ -241,6 +369,7 @@ export function EditCylinderDrawer({ open, cylinder, onClose }: Props) {
                 type="number"
                 label={translate("cylinders.form.capacity")}
                 fullWidth
+                disabled={!dataEditable}
                 error={Boolean(errors.capacity_m3)}
                 helperText={errors.capacity_m3?.message}
               />
@@ -256,6 +385,7 @@ export function EditCylinderDrawer({ open, cylinder, onClose }: Props) {
                 <Select
                   label={translate("cylinders.form.territory")}
                   value={field.value ?? ""}
+                  disabled={!dataEditable}
                   onChange={(event) => {
                     const value = event.target.value;
                     field.onChange(value === "" ? null : Number(value));
@@ -292,6 +422,7 @@ export function EditCylinderDrawer({ open, cylinder, onClose }: Props) {
                 type="date"
                 label={translate("cylinders.form.acquisition_date")}
                 fullWidth
+                disabled={!dataEditable}
                 InputLabelProps={{ shrink: true }}
                 error={Boolean(errors.acquisition_date)}
                 helperText={errors.acquisition_date?.message}
@@ -305,7 +436,7 @@ export function EditCylinderDrawer({ open, cylinder, onClose }: Props) {
           <Button
             type="submit"
             variant="contained"
-            disabled={isSubmitting || update.isPending || !isDirty}
+            disabled={isSubmitting || save.isPending || !canSubmit}
           >
             {translate("actions.save")}
           </Button>

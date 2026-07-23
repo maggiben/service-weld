@@ -6,22 +6,37 @@ import { movementStateChipColor } from "../../lib/chipColors";
 export const formatLedgerDate = formatDateDMY;
 export { movementStateChipColor };
 
-/**
- * Client-facing custody label.
- * Rentals: on-loan / returned. Refills (customer-owned): in progress / closed —
- * never "loan" wording, since the cylinder is already theirs.
- */
-export function clientCustodyLabel(
-  row: Pick<MovementEvent, "state" | "return_date" | "movement_kind">,
-  translate: TFunction,
-): string {
-  const isRefill = row.movement_kind === "REFILL";
-  const returned =
+type CustodyLabelRow = {
+  state: MovementState;
+  return_date: string | null;
+  movement_kind: "RENTAL" | "REFILL" | "SUPPLIER_LOAN";
+};
+
+/** True when the custody cycle has ended (return, swap, loss, sale, etc.). */
+export function isMovementReturned(
+  row: Pick<CustodyLabelRow, "state" | "return_date">,
+): boolean {
+  return (
     row.return_date != null ||
     row.state === "CLOSED" ||
     row.state === "SWAPPED" ||
     row.state === "LOST" ||
-    row.state === "SOLD";
+    row.state === "SOLD" ||
+    row.state === "VOID"
+  );
+}
+
+/**
+ * Operator-facing custody label (client ledger, cylinder history, movements).
+ * Rentals: on loan / returned. Refills (customer-owned): in progress / refilled —
+ * never "loan" or ticket-style wording for closed refills.
+ */
+export function clientCustodyLabel(
+  row: CustodyLabelRow,
+  translate: TFunction,
+): string {
+  const isRefill = row.movement_kind === "REFILL";
+  const returned = isMovementReturned(row);
 
   if (returned) {
     if (row.state === "SWAPPED")

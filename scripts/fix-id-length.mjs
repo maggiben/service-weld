@@ -458,10 +458,14 @@ function fixFileLocal(filePath) {
           return;
         }
         let replacement = next;
+        // Object binding `{ id }` → `{ id: entityId }`. Array binding
+        // `[id]` must stay `[entityId]` — `id: entityId` is a parse error.
         if (
           ts.isBindingElement(n.parent) &&
           n.parent.name === n &&
-          !n.parent.propertyName
+          !n.parent.propertyName &&
+          n.parent.parent &&
+          ts.isObjectBindingPattern(n.parent.parent)
         ) {
           replacement = `${old}: ${next}`;
         } else if (

@@ -1,6 +1,7 @@
 "use client";
 
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import EditIcon from "@mui/icons-material/Edit";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -29,6 +30,8 @@ import {
   buildHistoryColumns,
   buildOutstandingColumns,
 } from "../features/clients/clientLedgerColumns";
+import { ClientLocationMapPanel } from "../features/clients/ClientLocationMapPanel";
+import { buildClientLocationQuery } from "../features/clients/clientLocationMap";
 import { CreateClientDrawer } from "../features/clients/CreateClientDrawer";
 import { useLocations } from "../hooks/useLocations";
 import {
@@ -41,12 +44,16 @@ import { useUiStore } from "../store/uiStore";
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 
-type LedgerTab = "outstanding" | "history" | "rentals" | "refills";
+type DetailTab = "outstanding" | "history" | "rentals" | "refills" | "location";
 
 export default function ClientDetailPage() {
   const { t: translate } = useTranslation();
   const locale = useUiStore((state) => state.locale);
-  const { localityLabel } = useLocations();
+  const {
+    localities,
+    localityLabel,
+    isLoading: locationsLoading,
+  } = useLocations();
   const canWrite = useSessionStore((state) =>
     state.hasCapability("clients:write"),
   );
@@ -54,7 +61,7 @@ export default function ClientDetailPage() {
   const params = useParams<{ id: string }>();
   const clientId = Number(params.id);
 
-  const [tab, setTab] = useState<LedgerTab>("outstanding");
+  const [tab, setTab] = useState<DetailTab>("outstanding");
   const [editOpen, setEditOpen] = useState(false);
   const [openOnly, setOpenOnly] = useState(false);
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
@@ -136,7 +143,34 @@ export default function ClientDetailPage() {
 
   const client = clientQuery.data;
   const isOutstandingTab = tab === "outstanding";
+  const isLocationTab = tab === "location";
+  const isLedgerTab = !isLocationTab;
   const pageMeta = accountQuery.data?.page;
+
+  const locality = useMemo(() => {
+    if (client?.locality_id == null) return null;
+    return localities.find((row) => row.id === client.locality_id) ?? null;
+  }, [client?.locality_id, localities]);
+
+  const locationParts = useMemo(
+    () => ({
+      addressStreet: client?.address_street,
+      localityName: locality?.name ?? null,
+      province: locality?.province ?? null,
+    }),
+    [client?.address_street, locality],
+  );
+
+  const showLocationTab =
+    Boolean(client?.address_street?.trim()) ||
+    (client?.locality_id != null && (locality != null || locationsLoading));
+  const locationQuery = buildClientLocationQuery(locationParts);
+
+  useEffect(() => {
+    if (!showLocationTab && tab === "location") {
+      setTab("outstanding");
+    }
+  }, [showLocationTab, tab]);
 
   if (!Number.isFinite(clientId)) {
     return <Alert severity="error">{translate("errors.load_failed")}</Alert>;
@@ -161,6 +195,7 @@ export default function ClientDetailPage() {
           <Button
             variant="outlined"
             size="small"
+            startIcon={<EditIcon />}
             onClick={() => setEditOpen(true)}
           >
             {translate("actions.edit")}
@@ -307,7 +342,7 @@ export default function ClientDetailPage() {
 
       <Tabs
         value={tab}
-        onChange={(_, value: LedgerTab) => setTab(value)}
+        onChange={(_, value: DetailTab) => setTab(value)}
         variant="scrollable"
         allowScrollButtonsMobile
       >
@@ -318,9 +353,15 @@ export default function ClientDetailPage() {
         <Tab value="history" label={translate("clients.detail.tabs.history")} />
         <Tab value="rentals" label={translate("clients.detail.tabs.rentals")} />
         <Tab value="refills" label={translate("clients.detail.tabs.refills")} />
+        {showLocationTab && (
+          <Tab
+            value="location"
+            label={translate("clients.detail.tabs.location")}
+          />
+        )}
       </Tabs>
 
-      {!isOutstandingTab && (
+      {isLedgerTab && !isOutstandingTab && (
         <FormControlLabel
           control={
             <Switch
@@ -332,12 +373,29 @@ export default function ClientDetailPage() {
         />
       )}
 
-      {accountQuery.isError && (
+      {isLedgerTab && accountQuery.isError && (
         <Alert severity="error">{translate("errors.load_failed")}</Alert>
       )}
 
       <Box sx={{ flex: 1, minHeight: 360 }}>
-        {isOutstandingTab ? (
+        {isLocationTab && locationQuery ? (
+          <ClientLocationMapPanel query={locationQuery} locale={locale} />
+        ) : isLocationTab ? (
+          <Paper
+            variant="outlined"
+            sx={{
+              p: 2,
+              height: "100%",
+              minHeight: 360,
+              display: "grid",
+              placeItems: "center",
+            }}
+          >
+            <Typography color="text.secondary">
+              {translate("clients.detail.map.loading")}
+            </Typography>
+          </Paper>
+        ) : isOutstandingTab ? (
           <DataGrid
             rows={outstanding}
             columns={outstandingColumns}

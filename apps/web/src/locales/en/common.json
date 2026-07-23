@@ -45,6 +45,7 @@
       "name": "Name",
       "territory": "City",
       "coverage": "Coverage",
+      "outstanding": "Outstanding",
       "segment": "Segment",
       "status": "Status",
       "version": "Version"
@@ -62,7 +63,8 @@
         "outstanding": "Outstanding",
         "history": "History",
         "rentals": "Our property",
-        "refills": "Their property"
+        "refills": "Their property",
+        "location": "Location"
       },
       "filters": {
         "open_only": "Open only"
@@ -88,9 +90,14 @@
         "on_loan": "On loan",
         "returned": "Returned",
         "refill_open": "In progress",
-        "refill_closed": "Closed"
+        "refill_closed": "Refilled"
       },
-      "locality": "Locality"
+      "locality": "Locality",
+      "map": {
+        "directions": "Directions",
+        "iframe_title": "Map of client location",
+        "loading": "Loading location…"
+      }
     },
     "form": {
       "title_create": "New client",
@@ -159,6 +166,13 @@
       "title": "Cylinder {{serial}}",
       "current_holder": "Current holder",
       "in_stock": "In stock",
+      "location_title": "Current location",
+      "location_place": "Place",
+      "home_depot": "Home depot",
+      "at_depot": "At depot",
+      "at_client": "With client",
+      "at_supplier": "At supplier",
+      "elsewhere": "Other status",
       "history_title": "Circulation ledger",
       "empty": "No movements yet — cylinder is new",
       "columns": {
@@ -176,6 +190,7 @@
       "title_create": "Register cylinder",
       "title_edit": "Edit cylinder details",
       "edit_hint": "You can correct gas, capacity, and home depot. Ledger movements are managed under Movements.",
+      "edit_locked_at_client": "Cylinder data cannot be edited while it is held by a client. Record a return first.",
       "unsaved_confirm": "You have unsaved changes. Close anyway?",
       "serial": "Serial number",
       "owner": "Owner",
@@ -191,6 +206,10 @@
       "territory_hint": "Home depot for the cylinder. Cities are used in the location filter or when creating a locality.",
       "acquisition_date": "Acquisition date",
       "condition": "Condition",
+      "mark_full": "Mark as full",
+      "mark_full_hint": "Record a plant fill: empty stock → full stock.",
+      "mark_empty": "Mark as empty",
+      "mark_empty_hint": "Record emptying: full stock → empty stock.",
       "create_territory": "+ Create depot / origin…",
       "create_locality": "+ Create city…",
       "create_territory_title": "New depot / origin",
@@ -198,6 +217,26 @@
       "location_name": "Name",
       "location_name_required": "Enter a name",
       "locality_territory_hint": "Optional: operating territory this city belongs to"
+    },
+    "workshop": {
+      "title": "Workshop",
+      "hint": "Fill/empty and correct master data while the cylinder is in plant.",
+      "edit_locked_at_client": "Gas and capacity cannot be changed while the cylinder is with a client.",
+      "fill_label": "Condition",
+      "fill_hint": "Cylinder is empty in stock — mark it full after filling.",
+      "empty_hint": "Cylinder is full in stock — mark it empty if needed.",
+      "condition_unavailable": "Fill/empty is only available when the cylinder is in plant stock.",
+      "fill_unavailable": "No fill/empty action available for this state.",
+      "gas_label": "Gas",
+      "capacity_label": "Capacity",
+      "hydro_label": "Hydrotest",
+      "hydro_none": "No hydrotest date on record",
+      "hydro_action": "Record hydrotest",
+      "hydro_soon": "Hydrotest tracking coming soon"
+    },
+    "inline": {
+      "edit_capacity": "Click to edit capacity",
+      "capacity_invalid": "Enter a capacity greater than zero"
     },
     "loss": {
       "title": "Report loss / breakage",
@@ -471,6 +510,7 @@
     "duplicate_serial": "That serial already exists for this owner",
     "duplicate_location": "A location with that name already exists",
     "cylinder_already_out": "Cylinder is already out",
+    "cylinder_held_by_client": "Cylinder data cannot be edited while held by a client",
     "cylinder_terminal": "Cylinder is in a terminal state",
     "kind_basis_mismatch": "Refill applies only to customer-owned cylinders; rental to ours/supplier",
     "return_before_delivery": "Return cannot be before delivery",
@@ -501,6 +541,8 @@
     "cancel": "Cancel",
     "close": "Close",
     "edit": "Edit",
+    "mark_full": "Mark full",
+    "mark_empty": "Mark empty",
     "new_client": "New client",
     "register_cylinder": "Register cylinder",
     "new_delivery": "New delivery",

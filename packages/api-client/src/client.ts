@@ -345,6 +345,24 @@ export class WeldApiClient {
     });
   }
 
+  fillCylinder(id: number, options?: { ifMatch?: number }): Promise<Cylinder> {
+    return this.request<Cylinder>("POST", `/cylinders/${id}/fill`, {
+      headers:
+        options?.ifMatch != null
+          ? { "If-Match": String(options.ifMatch) }
+          : undefined,
+    });
+  }
+
+  emptyCylinder(id: number, options?: { ifMatch?: number }): Promise<Cylinder> {
+    return this.request<Cylinder>("POST", `/cylinders/${id}/empty`, {
+      headers:
+        options?.ifMatch != null
+          ? { "If-Match": String(options.ifMatch) }
+          : undefined,
+    });
+  }
+
   listMovements(
     query: Partial<MovementListQuery> & Record<string, QueryValue> = {},
   ): Promise<MovementListResponse> {

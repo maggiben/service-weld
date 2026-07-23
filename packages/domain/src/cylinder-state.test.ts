@@ -1,10 +1,16 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
+  assertCanEditCylinderData,
+  assertCanEmpty,
+  assertCanFill,
   assertDeliverable,
   DELIVERABLE_STATES,
+  isCylinderDataEditable,
   isTerminalCylinderState,
   stateAfterDelivery,
+  stateAfterEmpty,
+  stateAfterFill,
   stateAfterReturn,
 } from "./cylinder-state";
 import { DomainError } from "./errors";
@@ -55,9 +61,89 @@ describe("delivery state helpers", () => {
     assert.equal(stateAfterReturn(), "IN_STOCK_EMPTY");
   });
 
+  it("fill lands IN_STOCK_FULL", () => {
+    assert.equal(stateAfterFill(), "IN_STOCK_FULL");
+  });
+
+  it("empty lands IN_STOCK_EMPTY", () => {
+    assert.equal(stateAfterEmpty(), "IN_STOCK_EMPTY");
+  });
+
   it("marks terminal states", () => {
     assert.equal(isTerminalCylinderState("LOST"), true);
     assert.equal(isTerminalCylinderState("IN_STOCK_FULL"), false);
+  });
+});
+
+describe("assertCanEditCylinderData", () => {
+  it("allows plant and supplier custody", () => {
+    assert.equal(isCylinderDataEditable("IN_STOCK_EMPTY"), true);
+    assert.equal(isCylinderDataEditable("IN_STOCK_FULL"), true);
+    assert.equal(isCylinderDataEditable("AT_SUPPLIER"), true);
+    assert.doesNotThrow(() => assertCanEditCylinderData("IN_STOCK_FULL"));
+  });
+
+  it("rejects while held by a client", () => {
+    assert.equal(isCylinderDataEditable("AT_CLIENT"), false);
+    assert.throws(
+      () => assertCanEditCylinderData("AT_CLIENT"),
+      (err: unknown) =>
+        err instanceof DomainError && err.code === "CYLINDER_HELD_BY_CLIENT",
+    );
+  });
+});
+
+describe("assertCanFill", () => {
+  it("allows IN_STOCK_EMPTY", () => {
+    assert.doesNotThrow(() => assertCanFill("IN_STOCK_EMPTY"));
+  });
+
+  it("rejects already full or out-of-stock states", () => {
+    assert.throws(
+      () => assertCanFill("IN_STOCK_FULL"),
+      (err: unknown) =>
+        err instanceof DomainError && err.code === "ILLEGAL_STATE_TRANSITION",
+    );
+    assert.throws(
+      () => assertCanFill("AT_CLIENT"),
+      (err: unknown) =>
+        err instanceof DomainError && err.code === "ILLEGAL_STATE_TRANSITION",
+    );
+  });
+
+  it("rejects terminal", () => {
+    assert.throws(
+      () => assertCanFill("SOLD"),
+      (err: unknown) =>
+        err instanceof DomainError && err.code === "ALREADY_TERMINAL",
+    );
+  });
+});
+
+describe("assertCanEmpty", () => {
+  it("allows IN_STOCK_FULL", () => {
+    assert.doesNotThrow(() => assertCanEmpty("IN_STOCK_FULL"));
+  });
+
+  it("rejects already empty or out-of-stock states", () => {
+    assert.throws(
+      () => assertCanEmpty("IN_STOCK_EMPTY"),
+      (err: unknown) =>
+        err instanceof DomainError && err.code === "ILLEGAL_STATE_TRANSITION",
+    );
+    assert.throws(
+      () => assertCanEmpty("AT_CLIENT"),
+      (err: unknown) =>
+        err instanceof DomainError && err.code === "ILLEGAL_STATE_TRANSITION",
+    );
+  });
+
+  it("rejects terminal", () => {
+    assert.throws(
+      () => assertCanEmpty("SOLD"),
+      (err: unknown) =>
+        err instanceof DomainError && err.code === "ALREADY_TERMINAL",
+    );
   });
 });
 

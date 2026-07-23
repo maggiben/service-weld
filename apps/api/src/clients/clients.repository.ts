@@ -10,6 +10,7 @@ import type {
   RoleCode,
   UpdateClientInput,
 } from "@weld/schemas";
+import { sql, type SqlBool } from "kysely";
 import { ApiErrors } from "../common/errors/api-error";
 import {
   buildPageMeta,
@@ -29,6 +30,9 @@ import type {
   OwnershipBasis,
 } from "../database/schema.types";
 
+/** Coalesced open-movement count for ORDER BY / keyset cursor. */
+const OPEN_COUNT_EXPR = sql<number>`coalesce(open_by_holder.cnt, 0)`;
+
 interface ClientRow {
   party_id: number;
   display_name: string;
@@ -44,6 +48,7 @@ interface ClientRow {
   status: ClientStatus;
   version: number;
   created_at: Date;
+  outstanding_count?: string | number | null;
 }
 
 interface AccountMovementRow {
@@ -115,11 +120,27 @@ export class ClientsRepository {
       "name",
       "created_at",
       "territory_id",
+      "outstanding_count",
     ]);
 
     let qb = db
       .selectFrom("client")
       .innerJoin("party", "party.id", "client.party_id")
+      .leftJoin(
+        (eb) =>
+          eb
+            .selectFrom("movement_event")
+            .select((eb2) => [
+              "movement_event.holder_party_id",
+              eb2.fn.countAll<string>().as("cnt"),
+            ])
+            .where("movement_event.state", "=", "OPEN")
+            .where("movement_event.return_date", "is", null)
+            .groupBy("movement_event.holder_party_id")
+            .as("open_by_holder"),
+        (join) =>
+          join.onRef("open_by_holder.holder_party_id", "=", "client.party_id"),
+      )
       .select([
         "client.party_id as party_id",
         "party.display_name as display_name",
@@ -136,6 +157,7 @@ export class ClientsRepository {
         "client.version",
         "client.created_at",
       ])
+      .select(OPEN_COUNT_EXPR.as("outstanding_count"))
       .where("client.deleted_at", "is", null)
       .where("party.deleted_at", "is", null);
 
@@ -177,9 +199,9 @@ export class ClientsRepository {
 
     if (input.query.cursor) {
       const cursor = decodeCursor(input.query.cursor);
-      const cursorName = String(cursor.name ?? "");
       const cursorId = Number(cursor.id ?? 0);
       if (sort.field === "name") {
+        const cursorName = String(cursor.name ?? "");
         qb =
           sort.direction === "asc"
             ? qb.where((eb) =>
@@ -200,21 +222,36 @@ export class ClientsRepository {
                   ]),
                 ]),
               );
+      } else if (sort.field === "outstanding_count") {
+        const cursorCount = Number(cursor.outstanding_count ?? 0);
+        qb =
+          sort.direction === "asc"
+            ? qb.where(
+                sql<SqlBool>`(${OPEN_COUNT_EXPR} > ${cursorCount} or (${OPEN_COUNT_EXPR} = ${cursorCount} and client.party_id > ${cursorId}))`,
+              )
+            : qb.where(
+                sql<SqlBool>`(${OPEN_COUNT_EXPR} < ${cursorCount} or (${OPEN_COUNT_EXPR} = ${cursorCount} and client.party_id < ${cursorId}))`,
+              );
       }
     }
 
-    const sortColumn =
-      sort.field === "name"
-        ? "party.display_name"
-        : sort.field === "created_at"
-          ? "client.created_at"
-          : "client.territory_id";
+    const ordered =
+      sort.field === "outstanding_count"
+        ? qb
+            .orderBy(OPEN_COUNT_EXPR, sort.direction)
+            .orderBy("client.party_id", sort.direction)
+        : qb
+            .orderBy(
+              sort.field === "name"
+                ? "party.display_name"
+                : sort.field === "created_at"
+                  ? "client.created_at"
+                  : "client.territory_id",
+              sort.direction,
+            )
+            .orderBy("client.party_id", sort.direction);
 
-    const rows = await qb
-      .orderBy(sortColumn, sort.direction)
-      .orderBy("client.party_id", sort.direction)
-      .limit(limit + 1)
-      .execute();
+    const rows = await ordered.limit(limit + 1).execute();
 
     const hasMore = rows.length > limit;
     const pageRows = hasMore ? rows.slice(0, limit) : rows;
@@ -227,10 +264,17 @@ export class ClientsRepository {
         hasMore,
         nextCursor:
           hasMore && last
-            ? encodeCursor({
-                name: last.display_name,
-                id: Number(last.party_id),
-              })
+            ? encodeCursor(
+                sort.field === "outstanding_count"
+                  ? {
+                      outstanding_count: Number(last.outstanding_count ?? 0),
+                      id: Number(last.party_id),
+                    }
+                  : {
+                      name: last.display_name,
+                      id: Number(last.party_id),
+                    },
+              )
             : null,
       }),
     };
@@ -810,6 +854,12 @@ export class ClientsRepository {
       status: row.status,
       version: row.version,
       created_at: row.created_at.toISOString(),
+      ...(row.outstanding_count !== undefined
+        ? {
+            outstanding_count:
+              row.outstanding_count == null ? 0 : Number(row.outstanding_count),
+          }
+        : {}),
     };
   }
 }

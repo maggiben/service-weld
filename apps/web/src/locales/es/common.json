@@ -45,6 +45,7 @@
       "name": "Nombre",
       "territory": "Ciudad",
       "coverage": "Cobertura",
+      "outstanding": "En poder",
       "segment": "Segmento",
       "status": "Estado",
       "version": "Versión"
@@ -62,7 +63,8 @@
         "outstanding": "En poder",
         "history": "Historial",
         "rentals": "Nuestra propiedad",
-        "refills": "Su propiedad"
+        "refills": "Su propiedad",
+        "location": "Ubicación"
       },
       "filters": {
         "open_only": "Solo abiertos"
@@ -88,9 +90,14 @@
         "on_loan": "En préstamo",
         "returned": "Devuelto",
         "refill_open": "En curso",
-        "refill_closed": "Cerrado"
+        "refill_closed": "Recargado"
       },
-      "locality": "Localidad"
+      "locality": "Localidad",
+      "map": {
+        "directions": "Cómo llegar",
+        "iframe_title": "Mapa de la ubicación del cliente",
+        "loading": "Cargando ubicación…"
+      }
     },
     "form": {
       "title_create": "Nuevo cliente",
@@ -159,6 +166,13 @@
       "title": "Cilindro {{serial}}",
       "current_holder": "Titular actual",
       "in_stock": "En stock",
+      "location_title": "Ubicación actual",
+      "location_place": "Lugar",
+      "home_depot": "Depósito base",
+      "at_depot": "En depósito",
+      "at_client": "En cliente",
+      "at_supplier": "En proveedor",
+      "elsewhere": "Otro estado",
       "history_title": "Ledger de circulación",
       "empty": "Sin movimientos todavía — cilindro nuevo",
       "columns": {
@@ -176,6 +190,7 @@
       "title_create": "Registrar cilindro",
       "title_edit": "Editar datos del cilindro",
       "edit_hint": "Podés corregir gas, capacidad y depósito. Los movimientos del ledger se gestionan en Movimientos.",
+      "edit_locked_at_client": "No se pueden editar los datos del cilindro mientras está en posesión del cliente. Primero registrá la devolución.",
       "unsaved_confirm": "Hay cambios sin guardar. ¿Cerrar de todos modos?",
       "serial": "Número de serie",
       "owner": "Propietario",
@@ -191,6 +206,10 @@
       "territory_hint": "Depósito base del cilindro. Las ciudades se eligen al filtrar o al crear una localidad.",
       "acquisition_date": "Fecha de alta",
       "condition": "Condición",
+      "mark_full": "Marcar como lleno",
+      "mark_full_hint": "Registrar carga en planta: stock vacío → stock lleno.",
+      "mark_empty": "Marcar como vacío",
+      "mark_empty_hint": "Registrar vaciado: stock lleno → stock vacío.",
       "create_territory": "+ Crear depósito / origen…",
       "create_locality": "+ Crear ciudad…",
       "create_territory_title": "Nuevo depósito / origen",
@@ -198,6 +217,26 @@
       "location_name": "Nombre",
       "location_name_required": "Ingresá un nombre",
       "locality_territory_hint": "Opcional: territorio operativo al que pertenece la ciudad"
+    },
+    "workshop": {
+      "title": "Taller",
+      "hint": "Llenado/vaciado y corrección de datos maestros mientras el cilindro está en planta.",
+      "edit_locked_at_client": "No se puede cambiar gas ni capacidad mientras el cilindro está en el cliente.",
+      "fill_label": "Condición",
+      "fill_hint": "El cilindro está vacío en stock — marcalo lleno después de cargar.",
+      "empty_hint": "El cilindro está lleno en stock — marcalo vacío si hace falta.",
+      "condition_unavailable": "Llenado/vaciado solo está disponible cuando el cilindro está en stock de planta.",
+      "fill_unavailable": "No hay acción de llenado/vaciado para este estado.",
+      "gas_label": "Gas",
+      "capacity_label": "Capacidad",
+      "hydro_label": "Prueba hidráulica",
+      "hydro_none": "Sin fecha de prueba hidráulica registrada",
+      "hydro_action": "Registrar prueba hidráulica",
+      "hydro_soon": "Seguimiento de prueba hidráulica próximamente"
+    },
+    "inline": {
+      "edit_capacity": "Clic para editar capacidad",
+      "capacity_invalid": "Ingresá una capacidad mayor que cero"
     },
     "loss": {
       "title": "Reportar pérdida / rotura",
@@ -471,6 +510,7 @@
     "duplicate_serial": "Ya existe ese serial para el propietario",
     "duplicate_location": "Ya existe una ubicación con ese nombre",
     "cylinder_already_out": "El cilindro ya está en circulación",
+    "cylinder_held_by_client": "No se pueden editar los datos del cilindro mientras está en posesión del cliente",
     "cylinder_terminal": "El cilindro está en estado terminal",
     "kind_basis_mismatch": "Recarga solo aplica a cilindros del cliente (Su Propiedad); alquiler a nuestra/proveedor",
     "return_before_delivery": "La devolución no puede ser anterior a la entrega",
@@ -501,6 +541,8 @@
     "cancel": "Cancelar",
     "close": "Cerrar",
     "edit": "Editar",
+    "mark_full": "Marcar lleno",
+    "mark_empty": "Marcar vacío",
     "new_client": "Nuevo cliente",
     "register_cylinder": "Registrar cilindro",
     "new_delivery": "Nueva entrega",

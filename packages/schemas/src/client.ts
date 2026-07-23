@@ -113,6 +113,8 @@ export const ClientListQuery = PaginationQuery.extend({
       "-created_at",
       "territory_id",
       "-territory_id",
+      "outstanding_count",
+      "-outstanding_count",
     ])
     .default("name"),
   has_outstanding: zod

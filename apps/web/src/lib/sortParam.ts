@@ -20,6 +20,7 @@ export const CLIENT_SORT_FIELDS = [
   "name",
   "territory_id",
   "created_at",
+  "outstanding_count",
 ] as const;
 
 export const CYLINDER_SORT_FIELDS = [

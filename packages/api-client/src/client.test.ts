@@ -120,6 +120,8 @@ describe("WeldApiClient", () => {
       ownership_basis: "OURS",
     });
     await api.updateCylinder(1, { gas_code: "O2" }, { ifMatch: 1 });
+    await api.fillCylinder(1, { ifMatch: 1 });
+    await api.emptyCylinder(1, { ifMatch: 1 });
     await api.listMovements({});
     await api.getMovement(1);
     await api.createMovement({

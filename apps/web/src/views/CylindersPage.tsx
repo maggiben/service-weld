@@ -8,6 +8,7 @@ import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
+import Link from "@mui/material/Link";
 import ListSubheader from "@mui/material/ListSubheader";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
@@ -29,15 +30,15 @@ import type {
   OwnershipBasis,
 } from "@weld/schemas";
 import { useQuery } from "@tanstack/react-query";
+import NextLink from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useRouter } from "next/navigation";
 import { api } from "../api/client";
+import { CapacityInlineCell } from "../features/cylinders/CapacityInlineCell";
 import { RegisterCylinderDrawer } from "../features/cylinders/RegisterCylinderDrawer";
 import { ReplaceCylinderDialog } from "../features/cylinders/ReplaceCylinderDialog";
 import { ReportLossDialog } from "../features/cylinders/ReportLossDialog";
 import { useLocations } from "../hooks/useLocations";
-import { formatCapacity } from "../lib/format";
 import {
   stashNextCursor,
   cursorPageRowCount,
@@ -64,7 +65,6 @@ const BASES: OwnershipBasis[] = ["OURS", "SUPPLIER", "CUSTOMER"];
 export default function CylindersPage() {
   const { t: translate } = useTranslation();
   const locale = useUiStore((state) => state.locale);
-  const router = useRouter();
   const canWrite = useSessionStore((state) =>
     state.hasCapability("cylinders:write"),
   );
@@ -184,6 +184,16 @@ export default function CylindersPage() {
         headerName: translate("cylinders.columns.serial"),
         flex: 1,
         minWidth: 120,
+        renderCell: (params) => (
+          <Link
+            component={NextLink}
+            href={`/cylinders/${params.row.id}`}
+            underline="hover"
+            onClick={(event) => event.stopPropagation()}
+          >
+            {params.value}
+          </Link>
+        ),
       },
       {
         field: "owner_name",
@@ -196,7 +206,27 @@ export default function CylindersPage() {
         headerName: translate("cylinders.columns.holder"),
         width: 180,
         sortable: false,
-        valueFormatter: (value: string | null | undefined) => value ?? "—",
+        renderCell: (params) => {
+          const holderId = params.row.current_holder_party_id;
+          const label = params.row.current_holder_name;
+          if (holderId == null) {
+            return (
+              <Typography variant="body2" color="text.secondary">
+                —
+              </Typography>
+            );
+          }
+          return (
+            <Link
+              component={NextLink}
+              href={`/clients/${holderId}`}
+              underline="hover"
+              onClick={(event) => event.stopPropagation()}
+            >
+              {label ?? `#${holderId}`}
+            </Link>
+          );
+        },
       },
       {
         field: "current_location_name",
@@ -214,10 +244,11 @@ export default function CylindersPage() {
       {
         field: "capacity_m3",
         headerName: translate("cylinders.columns.capacity"),
-        width: 110,
+        width: 220,
         sortable: false,
-        valueGetter: (_v, row: Cylinder) =>
-          formatCapacity(row.capacity_m3, row.capacity_unit),
+        renderCell: (params) => (
+          <CapacityInlineCell cylinder={params.row} canWrite={canWrite} />
+        ),
       },
       {
         field: "ownership_basis",
@@ -480,7 +511,6 @@ export default function CylindersPage() {
             pageMeta?.has_more ?? false,
           )}
           disableRowSelectionOnClick
-          onRowClick={(params) => router.push(`/cylinders/${params.id}`)}
           localeText={
             locale === "es"
               ? esES.components.MuiDataGrid.defaultProps.localeText
@@ -511,7 +541,6 @@ export default function CylindersPage() {
           }}
           sx={{
             [`& .${gridClasses.cell}`]: { outline: "none" },
-            [`& .${gridClasses.row}`]: { cursor: "pointer" },
           }}
         />
       </Box>

@@ -748,6 +748,64 @@ export class CylindersRepository {
       .execute();
   }
 
+  /** Plant fill: IN_STOCK_EMPTY → IN_STOCK_FULL with optimistic lock. */
+  async fill(
+    id: number,
+    actorUserId: number,
+    expectedVersion: number,
+  ): Promise<Cylinder> {
+    const db = resolveDb(this.db);
+    const updated = await db
+      .updateTable("cylinder")
+      .set({
+        state: "IN_STOCK_FULL",
+        condition: "FULL",
+        updated_by: actorUserId,
+      })
+      .where("id", "=", id)
+      .where("version", "=", expectedVersion)
+      .where("deleted_at", "is", null)
+      .where("state", "=", "IN_STOCK_EMPTY")
+      .executeTakeFirst();
+
+    if (Number(updated.numUpdatedRows ?? 0) === 0) {
+      throw ApiErrors.conflict("VERSION_CONFLICT", "Cylinder version conflict");
+    }
+
+    const result = await this.getById(id);
+    if (!result) throw ApiErrors.notFound("Cylinder not found");
+    return result;
+  }
+
+  /** Plant empty: IN_STOCK_FULL → IN_STOCK_EMPTY with optimistic lock. */
+  async empty(
+    id: number,
+    actorUserId: number,
+    expectedVersion: number,
+  ): Promise<Cylinder> {
+    const db = resolveDb(this.db);
+    const updated = await db
+      .updateTable("cylinder")
+      .set({
+        state: "IN_STOCK_EMPTY",
+        condition: "EMPTY",
+        updated_by: actorUserId,
+      })
+      .where("id", "=", id)
+      .where("version", "=", expectedVersion)
+      .where("deleted_at", "is", null)
+      .where("state", "=", "IN_STOCK_FULL")
+      .executeTakeFirst();
+
+    if (Number(updated.numUpdatedRows ?? 0) === 0) {
+      throw ApiErrors.conflict("VERSION_CONFLICT", "Cylinder version conflict");
+    }
+
+    const result = await this.getById(id);
+    if (!result) throw ApiErrors.notFound("Cylinder not found");
+    return result;
+  }
+
   async reportLoss(params: {
     cylinderId: number;
     outcome: "LOST" | "BROKEN";

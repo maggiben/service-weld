@@ -30,6 +30,12 @@ export const DomainErrors = {
       "Cylinder already has an open movement",
     );
   },
+  cylinderHeldByClient(): DomainError {
+    return new DomainError(
+      "CYLINDER_HELD_BY_CLIENT",
+      "Cylinder data cannot be edited while held by a client",
+    );
+  },
   kindBasisMismatch(kind: string, basis: string): DomainError {
     return new DomainError(
       "KIND_BASIS_MISMATCH",

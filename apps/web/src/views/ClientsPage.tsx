@@ -6,6 +6,7 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
+import Link from "@mui/material/Link";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import Stack from "@mui/material/Stack";
@@ -24,7 +25,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useRouter } from "next/navigation";
 import { api } from "../api/client";
-import type { ClientCoverage, ClientStatus } from "@weld/schemas";
+import type { Client, ClientCoverage, ClientStatus } from "@weld/schemas";
+import { ClientLedgerDrawer } from "../features/clients/ClientLedgerDrawer";
 import { CreateClientDrawer } from "../features/clients/CreateClientDrawer";
 import {
   stashNextCursor,
@@ -93,6 +95,10 @@ export default function ClientsPage() {
   });
   const [cursors, setCursors] = useState<(string | undefined)[]>([undefined]);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [ledgerClient, setLedgerClient] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
 
   const handleSearchChange = (value: string) => {
     setSearch(value);
@@ -153,7 +159,7 @@ export default function ClientsPage() {
     setPaginationModel(pagination);
   };
 
-  const columns: GridColDef[] = useMemo(
+  const columns: GridColDef<Client>[] = useMemo(
     () => [
       {
         field: "name",
@@ -175,11 +181,25 @@ export default function ClientsPage() {
         valueFormatter: (value: string) => translate(`enums.coverage.${value}`),
       },
       {
-        field: "segment",
-        headerName: translate("clients.columns.segment"),
-        width: 160,
-        valueFormatter: (value: string | null) =>
-          value ? translate(`enums.segment.${value}`) : "—",
+        field: "outstanding_count",
+        headerName: translate("clients.columns.outstanding"),
+        width: 110,
+        type: "number",
+        valueGetter: (_value, row) => row.outstanding_count ?? 0,
+        renderCell: (params) => (
+          <Link
+            component="button"
+            type="button"
+            underline="hover"
+            onClick={(event) => {
+              event.stopPropagation();
+              setLedgerClient({ id: params.row.id, name: params.row.name });
+            }}
+            sx={{ fontWeight: params.value > 0 ? 600 : undefined }}
+          >
+            {params.value}
+          </Link>
+        ),
       },
       {
         field: "status",
@@ -191,6 +211,13 @@ export default function ClientsPage() {
         field: "version",
         headerName: translate("clients.columns.version"),
         width: 90,
+      },
+      {
+        field: "segment",
+        headerName: translate("clients.columns.segment"),
+        width: 160,
+        valueFormatter: (value: string | null) =>
+          value ? translate(`enums.segment.${value}`) : "—",
       },
     ],
     [translate, localityLabel],
@@ -346,6 +373,13 @@ export default function ClientsPage() {
       <CreateClientDrawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
+      />
+
+      <ClientLedgerDrawer
+        open={ledgerClient != null}
+        clientPartyId={ledgerClient?.id ?? null}
+        clientName={ledgerClient?.name}
+        onClose={() => setLedgerClient(null)}
       />
     </Stack>
   );
