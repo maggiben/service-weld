@@ -174,17 +174,22 @@
     },
     "form": {
       "title_create": "Registrar cilindro",
+      "title_edit": "Editar datos del cilindro",
+      "edit_hint": "Podés corregir gas, capacidad y depósito. Los movimientos del ledger se gestionan en Movimientos.",
       "unsaved_confirm": "Hay cambios sin guardar. ¿Cerrar de todos modos?",
       "serial": "Número de serie",
       "owner": "Propietario",
       "basis": "Base de propiedad",
       "basis_hint": "Se deriva del propietario (BR-07)",
       "gas": "Gas",
+      "gas_none": "Sin gas",
       "capacity": "Capacidad",
       "capacity_unit": "Unidad",
       "capacity_hint": "m³ para gas comprimido, kg para licuados / vendidos por peso",
       "territory": "Depósito / origen",
+      "territory_none": "Sin depósito",
       "territory_hint": "Depósito base del cilindro. Las ciudades se eligen al filtrar o al crear una localidad.",
+      "acquisition_date": "Fecha de alta",
       "condition": "Condición",
       "create_territory": "+ Crear depósito / origen…",
       "create_locality": "+ Crear ciudad…",
@@ -448,6 +453,10 @@
   "validation": {
     "required": "Campo obligatorio"
   },
+  "notes": {
+    "healed_stale_open": "Cierre automático por entrega posterior",
+    "healed_truncate_span": "Fin de préstamo ajustado por entrega posterior"
+  },
   "errors": {
     "invalid_credentials": "Usuario o contraseña incorrectos",
     "generic": "Ocurrió un error. Intentá de nuevo.",
@@ -520,13 +529,19 @@
   "loans": {
     "title": "Préstamos de proveedor",
     "overdue_yes": "Vencido",
-    "overdue_threshold_chip": "{{days}} días",
+    "overdue_threshold_chip": "Límite {{days}} días sin devolver al proveedor",
+    "status": {
+      "returned_on": "Devuelto {{date}}",
+      "overdue_on": "Sin devolver · {{days}} días (límite {{threshold}})",
+      "overdue_hint": "Recibido del proveedor el {{received}}. Sigue abierto {{days}} días; el límite configurado es {{threshold}} días."
+    },
     "columns": {
       "cylinder": "Cilindro",
       "supplier": "Proveedor",
       "stage": "Etapa",
       "received": "Recibido",
       "client": "Cliente",
+      "disposition": "Devolución",
       "overdue": "Vencido"
     },
     "filters": {

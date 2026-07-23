@@ -15,6 +15,7 @@ import type {
   CreateClientInput,
   UpdateClientInput,
   CreateCylinderInput,
+  UpdateCylinderInput,
   CreateMovementInput,
   CreateRentalRateInput,
   UpdateRentalRateInput,
@@ -327,6 +328,20 @@ export class WeldApiClient {
       headers: options?.idempotencyKey
         ? { "Idempotency-Key": options.idempotencyKey }
         : undefined,
+    });
+  }
+
+  updateCylinder(
+    id: number,
+    input: UpdateCylinderInput,
+    options?: { ifMatch?: number },
+  ): Promise<Cylinder> {
+    return this.request<Cylinder>("PATCH", `/cylinders/${id}`, {
+      body: input,
+      headers:
+        options?.ifMatch != null
+          ? { "If-Match": String(options.ifMatch) }
+          : undefined,
     });
   }
 

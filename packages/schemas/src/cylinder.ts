@@ -51,6 +51,30 @@ export const CreateCylinderInput = z.object({
 });
 export type CreateCylinderInput = z.infer<typeof CreateCylinderInput>;
 
+/**
+ * Correct mutable attributes that do not rewrite the custody ledger
+ * (gas, capacity, home depot, acquisition date). State/owner/serial
+ * changes use dedicated endpoints.
+ */
+export const UpdateCylinderInput = z
+  .object({
+    gas_code: GasCode.nullable().optional(),
+    capacity_m3: z.coerce.number().positive().nullable().optional(),
+    capacity_unit: CapacityUnit.optional(),
+    home_territory_id: z.number().int().nullable().optional(),
+    acquisition_date: IsoDate.nullable().optional(),
+  })
+  .refine(
+    (value) =>
+      value.gas_code !== undefined ||
+      value.capacity_m3 !== undefined ||
+      value.capacity_unit !== undefined ||
+      value.home_territory_id !== undefined ||
+      value.acquisition_date !== undefined,
+    { message: "At least one field is required" },
+  );
+export type UpdateCylinderInput = z.infer<typeof UpdateCylinderInput>;
+
 export const CylinderListQuery = PaginationQuery.extend({
   q: z.string().optional(),
   sort: z

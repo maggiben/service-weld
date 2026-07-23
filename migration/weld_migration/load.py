@@ -272,7 +272,12 @@ class Loader:
         for row in rows:
             was_open = row["state"] == "OPEN" and row["return_date"] is None
             new_state = "CLOSED" if row["state"] == "OPEN" else row["state"]
-            tag = "HEALED_STALE_OPEN" if was_open else "HEALED_TRUNCATE_SPAN"
+            old_tag = "HEALED_STALE_OPEN" if was_open else "HEALED_TRUNCATE_SPAN"
+            tag = (
+                "Cierre automático por entrega posterior"
+                if was_open
+                else "Fin de préstamo ajustado por entrega posterior"
+            )
             conn.execute(
                 """
                 UPDATE movement_event
@@ -281,11 +286,12 @@ class Loader:
                     note = CASE
                       WHEN note IS NULL OR btrim(note) = '' THEN %s
                       WHEN note LIKE '%%' || %s || '%%' THEN note
+                      WHEN note LIKE '%%' || %s || '%%' THEN note
                       ELSE note || '; ' || %s
                     END
                 WHERE id = %s
                 """,
-                (new_delivery, new_state, tag, tag, tag, row["id"]),
+                (new_delivery, new_state, tag, tag, old_tag, tag, row["id"]),
             )
             self.stats["stale_open_healed" if was_open else "span_truncated"] += 1
         return len(rows)

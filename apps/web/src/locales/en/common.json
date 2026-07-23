@@ -174,17 +174,22 @@
     },
     "form": {
       "title_create": "Register cylinder",
+      "title_edit": "Edit cylinder details",
+      "edit_hint": "You can correct gas, capacity, and home depot. Ledger movements are managed under Movements.",
       "unsaved_confirm": "You have unsaved changes. Close anyway?",
       "serial": "Serial number",
       "owner": "Owner",
       "basis": "Ownership basis",
       "basis_hint": "Derived from the owner (BR-07)",
       "gas": "Gas",
+      "gas_none": "No gas",
       "capacity": "Capacity",
       "capacity_unit": "Unit",
       "capacity_hint": "m³ for compressed gas, kg for liquefied / weight-sold",
       "territory": "Depot / origin",
+      "territory_none": "No depot",
       "territory_hint": "Home depot for the cylinder. Cities are used in the location filter or when creating a locality.",
+      "acquisition_date": "Acquisition date",
       "condition": "Condition",
       "create_territory": "+ Create depot / origin…",
       "create_locality": "+ Create city…",
@@ -448,6 +453,10 @@
   "validation": {
     "required": "Required field"
   },
+  "notes": {
+    "healed_stale_open": "Auto-closed due to a later delivery",
+    "healed_truncate_span": "Loan end adjusted for a later delivery"
+  },
   "errors": {
     "invalid_credentials": "Invalid username or password",
     "generic": "Something went wrong. Please try again.",
@@ -520,13 +529,19 @@
   "loans": {
     "title": "Supplier loans",
     "overdue_yes": "Overdue",
-    "overdue_threshold_chip": "{{days}} days",
+    "overdue_threshold_chip": "{{days}}-day limit without return to supplier",
+    "status": {
+      "returned_on": "Returned {{date}}",
+      "overdue_on": "Not returned · {{days}} days (limit {{threshold}})",
+      "overdue_hint": "Received from supplier on {{received}}. Still open for {{days}} days; configured limit is {{threshold}} days."
+    },
     "columns": {
       "cylinder": "Cylinder",
       "supplier": "Supplier",
       "stage": "Stage",
       "received": "Received",
       "client": "Client",
+      "disposition": "Return",
       "overdue": "Overdue"
     },
     "filters": {

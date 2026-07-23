@@ -161,48 +161,84 @@ export class SupplierLoansRepository {
 
     if (query.cursor) {
       const cursor = decodeCursor(query.cursor);
-      const cursorDate = String(cursor.received_from_supplier ?? "");
+      const rawDate = cursor.received_from_supplier;
+      const cursorDate =
+        rawDate == null || rawDate === "" ? null : String(rawDate);
       const cursorId = Number(cursor.id ?? 0);
+
+      // received_from_supplier is nullable. ASC uses NULLS LAST (PG default);
+      // a cursor whose date is null must only walk remaining null rows by id.
+      // A non-null cursor must also eventually include null-dated rows.
       qb =
         sort.direction === "asc"
-          ? qb.where((eb) =>
-              eb.or([
-                eb(
-                  "supplier_loan_cycle.received_from_supplier",
-                  ">",
-                  cursorDate,
-                ),
+          ? cursorDate == null
+            ? qb.where((eb) =>
                 eb.and([
-                  eb(
-                    "supplier_loan_cycle.received_from_supplier",
-                    "=",
-                    cursorDate,
-                  ),
+                  eb("supplier_loan_cycle.received_from_supplier", "is", null),
                   eb("supplier_loan_cycle.id", ">", cursorId),
                 ]),
-              ]),
-            )
-          : qb.where((eb) =>
-              eb.or([
-                eb(
-                  "supplier_loan_cycle.received_from_supplier",
-                  "<",
-                  cursorDate,
-                ),
-                eb.and([
+              )
+            : qb.where((eb) =>
+                eb.or([
                   eb(
                     "supplier_loan_cycle.received_from_supplier",
-                    "=",
+                    ">",
                     cursorDate,
                   ),
-                  eb("supplier_loan_cycle.id", "<", cursorId),
+                  eb.and([
+                    eb(
+                      "supplier_loan_cycle.received_from_supplier",
+                      "=",
+                      cursorDate,
+                    ),
+                    eb("supplier_loan_cycle.id", ">", cursorId),
+                  ]),
+                  eb("supplier_loan_cycle.received_from_supplier", "is", null),
                 ]),
-              ]),
-            );
+              )
+          : cursorDate == null
+            ? qb.where((eb) =>
+                eb.or([
+                  eb.and([
+                    eb(
+                      "supplier_loan_cycle.received_from_supplier",
+                      "is",
+                      null,
+                    ),
+                    eb("supplier_loan_cycle.id", "<", cursorId),
+                  ]),
+                  eb(
+                    "supplier_loan_cycle.received_from_supplier",
+                    "is not",
+                    null,
+                  ),
+                ]),
+              )
+            : qb.where((eb) =>
+                eb.or([
+                  eb(
+                    "supplier_loan_cycle.received_from_supplier",
+                    "<",
+                    cursorDate,
+                  ),
+                  eb.and([
+                    eb(
+                      "supplier_loan_cycle.received_from_supplier",
+                      "=",
+                      cursorDate,
+                    ),
+                    eb("supplier_loan_cycle.id", "<", cursorId),
+                  ]),
+                ]),
+              );
     }
 
     const rows = (await qb
-      .orderBy("supplier_loan_cycle.received_from_supplier", sort.direction)
+      .orderBy("supplier_loan_cycle.received_from_supplier", (ob) =>
+        sort.direction === "asc"
+          ? ob.asc().nullsLast()
+          : ob.desc().nullsFirst(),
+      )
       .orderBy("supplier_loan_cycle.id", sort.direction)
       .limit(limit + 1)
       .execute()) as LoanRow[];

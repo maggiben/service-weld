@@ -1,6 +1,7 @@
 "use client";
 
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import EditIcon from "@mui/icons-material/Edit";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -23,8 +24,10 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
+import { EditCylinderDrawer } from "../features/cylinders/EditCylinderDrawer";
 import { displayRentalDays } from "../features/movements/displayRentalDays";
-import { formatCapacity } from "../lib/format";
+import { formatCapacity, formatLedgerNote } from "../lib/format";
+import { useSessionStore } from "../store/sessionStore";
 import { useUiStore } from "../store/uiStore";
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
@@ -39,10 +42,12 @@ function formatDate(value: string | null | undefined): string {
 export default function CylinderDetailPage() {
   const { t } = useTranslation();
   const locale = useUiStore((s) => s.locale);
+  const canWrite = useSessionStore((s) => s.hasCapability("cylinders:write"));
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const cylinderId = Number(params.id);
 
+  const [editOpen, setEditOpen] = useState(false);
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
     page: 0,
     pageSize: 50,
@@ -166,7 +171,8 @@ export default function CylinderDetailPage() {
         headerName: t("cylinders.detail.columns.note"),
         flex: 1,
         minWidth: 140,
-        valueFormatter: (value: string | null) => value ?? "—",
+        valueFormatter: (value: string | null) =>
+          formatLedgerNote(value, (key) => t(key)),
       },
     ],
     [t],
@@ -204,11 +210,28 @@ export default function CylinderDetailPage() {
             justifyContent="space-between"
           >
             <Box>
-              <Typography variant="h5">
-                {t("cylinders.detail.title", {
-                  serial: cylinder.serial_number,
-                })}
-              </Typography>
+              <Stack
+                direction="row"
+                spacing={1}
+                alignItems="center"
+                flexWrap="wrap"
+                useFlexGap
+              >
+                <Typography variant="h5">
+                  {t("cylinders.detail.title", {
+                    serial: cylinder.serial_number,
+                  })}
+                </Typography>
+                {canWrite && (
+                  <Button
+                    size="small"
+                    startIcon={<EditIcon />}
+                    onClick={() => setEditOpen(true)}
+                  >
+                    {t("actions.edit")}
+                  </Button>
+                )}
+              </Stack>
               <Stack
                 direction="row"
                 spacing={1}
@@ -319,6 +342,12 @@ export default function CylinderDetailPage() {
           sx={{ [`& .${gridClasses.cell}`]: { outline: "none" } }}
         />
       </Box>
+
+      <EditCylinderDrawer
+        open={editOpen}
+        cylinder={cylinder ?? null}
+        onClose={() => setEditOpen(false)}
+      />
     </Stack>
   );
 }

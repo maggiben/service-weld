@@ -6,6 +6,7 @@ import type {
   CylinderHistoryResponse,
   CylinderHistoryRow,
   CylinderListQuery,
+  UpdateCylinderInput,
 } from "@weld/schemas";
 import { sql } from "kysely";
 import { ApiErrors } from "../common/errors/api-error";
@@ -676,6 +677,56 @@ export class CylindersRepository {
       }
       throw error;
     }
+  }
+
+  async update(
+    id: number,
+    input: UpdateCylinderInput,
+    actorUserId: number,
+    expectedVersion: number,
+  ): Promise<Cylinder> {
+    const db = resolveDb(this.db);
+    const patch: {
+      gas_code?: string | null;
+      capacity_m3?: string | null;
+      capacity_unit?: CapacityUnit;
+      home_territory_id?: number | null;
+      acquisition_date?: string | null;
+      updated_by: number;
+    } = {
+      updated_by: actorUserId,
+    };
+
+    if (input.gas_code !== undefined) patch.gas_code = input.gas_code;
+    if (input.capacity_m3 !== undefined) {
+      patch.capacity_m3 =
+        input.capacity_m3 == null ? null : String(input.capacity_m3);
+    }
+    if (input.capacity_unit !== undefined) {
+      patch.capacity_unit = input.capacity_unit;
+    }
+    if (input.home_territory_id !== undefined) {
+      patch.home_territory_id = input.home_territory_id;
+    }
+    if (input.acquisition_date !== undefined) {
+      patch.acquisition_date = input.acquisition_date;
+    }
+
+    const updated = await db
+      .updateTable("cylinder")
+      .set(patch)
+      .where("id", "=", id)
+      .where("version", "=", expectedVersion)
+      .where("deleted_at", "is", null)
+      .executeTakeFirst();
+
+    if (Number(updated.numUpdatedRows ?? 0) === 0) {
+      throw ApiErrors.conflict("VERSION_CONFLICT", "Cylinder version conflict");
+    }
+
+    const result = await this.getById(id);
+    if (!result) throw ApiErrors.notFound("Cylinder not found");
+    return result;
   }
 
   async updateState(

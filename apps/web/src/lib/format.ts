@@ -40,3 +40,26 @@ export function formatCapacity(
 export function capacityUnitLabel(unit: CapacityUnit): string {
   return unit === "KG" ? "kg" : "m³";
 }
+
+/**
+ * Migration heal tags written into movement notes. Maps machine codes
+ * (and legacy Spanish variants) to a natural label for display.
+ */
+const LEDGER_NOTE_TAGS: Record<string, string> = {
+  HEALED_STALE_OPEN: "notes.healed_stale_open",
+  HEALED_TRUNCATE_SPAN: "notes.healed_truncate_span",
+};
+
+export function formatLedgerNote(
+  note: string | null | undefined,
+  translate: (key: string) => string,
+  empty = "—",
+): string {
+  if (note == null || note.trim() === "") return empty;
+  let result = note;
+  for (const [tag, key] of Object.entries(LEDGER_NOTE_TAGS)) {
+    if (!result.includes(tag)) continue;
+    result = result.split(tag).join(translate(key));
+  }
+  return result;
+}

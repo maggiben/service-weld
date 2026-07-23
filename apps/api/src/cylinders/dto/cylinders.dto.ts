@@ -7,9 +7,11 @@ import {
   CylinderListResponse,
   ReplaceCylinderInput,
   ReportCylinderLossInput,
+  UpdateCylinderInput,
 } from "@weld/schemas";
 
 export class CreateCylinderDto extends createZodDto(CreateCylinderInput) {}
+export class UpdateCylinderDto extends createZodDto(UpdateCylinderInput) {}
 export class CylinderListQueryDto extends createZodDto(CylinderListQuery) {}
 export class CylinderListResponseDto extends createZodDto(
   CylinderListResponse,

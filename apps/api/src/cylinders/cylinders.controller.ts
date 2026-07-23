@@ -5,6 +5,7 @@ import {
   Headers,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   Query,
 } from "@nestjs/common";
@@ -32,6 +33,7 @@ import {
   CylinderListResponseDto,
   ReplaceCylinderDto,
   ReportCylinderLossDto,
+  UpdateCylinderDto,
 } from "./dto/cylinders.dto";
 
 @ApiTags("Cylinders")
@@ -72,6 +74,24 @@ export class CylindersController {
   @ApiOkResponse({ description: "Cylinder detail" })
   getById(@Param("id", ParseIntPipe) id: number): Promise<Cylinder> {
     return this.cylindersService.getById(id);
+  }
+
+  @Patch(":id")
+  @RequireCapabilities("cylinders:write")
+  @ApiOkResponse({ description: "Cylinder attributes corrected" })
+  update(
+    @CurrentUser() user: AuthPrincipal,
+    @Param("id", ParseIntPipe) id: number,
+    @Body() body: UpdateCylinderDto,
+    @Headers("if-match") ifMatch?: string,
+  ): Promise<Cylinder> {
+    const version = ifMatch ? Number(ifMatch.replaceAll('"', "")) : undefined;
+    return this.cylindersService.update(
+      user,
+      id,
+      body,
+      Number.isFinite(version) ? version : undefined,
+    );
   }
 
   @Post(":id/loss")

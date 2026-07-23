@@ -17,6 +17,7 @@ import Snackbar from "@mui/material/Snackbar";
 import Stack from "@mui/material/Stack";
 import Switch from "@mui/material/Switch";
 import TextField from "@mui/material/TextField";
+import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import {
   DataGrid,
@@ -32,6 +33,7 @@ import type {
   LoanStage,
   SupplierLoan,
 } from "@weld/schemas";
+import { businessTodayIso, calendarDaysBetween } from "@weld/domain";
 import { ApiClientError } from "@weld/api-client";
 import { api } from "../api/client";
 import { useSessionStore } from "../store/sessionStore";
@@ -47,6 +49,13 @@ function todayIso() {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Argentina/Buenos_Aires",
   }).format(new Date());
+}
+
+function formatLoanDate(value: string | null | undefined): string {
+  if (!value) return "—";
+  const [y, m, d] = value.split("-");
+  if (!y || !m || !d) return value;
+  return `${d}/${m}/${y}`;
 }
 
 export default function SupplierLoansPage() {
@@ -268,15 +277,58 @@ export default function SupplierLoansPage() {
         minWidth: 120,
       },
       {
-        field: "overdue",
-        headerName: t("loans.columns.overdue"),
-        width: 100,
-        renderCell: (params) =>
-          params.value ? (
-            <Chip size="small" color="warning" label={t("loans.overdue_yes")} />
-          ) : (
-            "—"
-          ),
+        field: "disposition",
+        headerName: t("loans.columns.disposition"),
+        width: 260,
+        sortable: false,
+        valueGetter: (_v, row) => {
+          // Solo devolución del cliente o vencido. Sin returned_by_client → nada
+          // (no mostrar "Entregado": la entrega ya está en la etapa / otros datos).
+          if (row.returned_by_client) {
+            return `returned:${row.returned_by_client}`;
+          }
+          if (row.overdue) return "overdue";
+          return "";
+        },
+        renderCell: (params) => {
+          const row = params.row;
+          if (row.returned_by_client) {
+            return (
+              <Chip
+                size="small"
+                color="success"
+                label={t("loans.status.returned_on", {
+                  date: formatLoanDate(row.returned_by_client),
+                })}
+              />
+            );
+          }
+          if (row.overdue && row.received_from_supplier) {
+            const daysOpen = calendarDaysBetween(
+              row.received_from_supplier,
+              businessTodayIso(),
+            );
+            return (
+              <Tooltip
+                title={t("loans.status.overdue_hint", {
+                  days: daysOpen,
+                  threshold: overdueDays,
+                  received: formatLoanDate(row.received_from_supplier),
+                })}
+              >
+                <Chip
+                  size="small"
+                  color="warning"
+                  label={t("loans.status.overdue_on", {
+                    days: daysOpen,
+                    threshold: overdueDays,
+                  })}
+                />
+              </Tooltip>
+            );
+          }
+          return "—";
+        },
       },
       {
         field: "actions",
@@ -306,7 +358,7 @@ export default function SupplierLoansPage() {
         },
       },
     ],
-    [t, canWrite],
+    [t, canWrite, overdueDays],
   );
 
   return (

@@ -19,6 +19,7 @@ import type {
   ReplaceCylinderResponse,
   ReportCylinderLossInput,
   ReportCylinderLossResponse,
+  UpdateCylinderInput,
 } from "@weld/schemas";
 import type { AuthPrincipal } from "../auth/principal";
 import { ApiErrors } from "../common/errors/api-error";
@@ -84,6 +85,40 @@ export class CylindersService {
     }
 
     return this.repository.create(input, principal.id);
+  }
+
+  async update(
+    principal: AuthPrincipal,
+    id: number,
+    input: UpdateCylinderInput,
+    ifMatchVersion?: number,
+  ): Promise<Cylinder> {
+    const cylinder = await this.repository.getById(id);
+    if (!cylinder) throw ApiErrors.notFound("Cylinder not found");
+
+    try {
+      if (input.capacity_m3 != null) {
+        Capacity.of(input.capacity_m3);
+      }
+    } catch (error) {
+      mapDomainError(error);
+    }
+
+    if (input.gas_code) {
+      const exists = await this.repository.gasExists(input.gas_code);
+      if (!exists) {
+        throw ApiErrors.validationFailed("Unknown gas code", [
+          { field: "gas_code", issue: "UNKNOWN_GAS" },
+        ]);
+      }
+    }
+
+    const expectedVersion = ifMatchVersion ?? cylinder.version;
+    if (expectedVersion !== cylinder.version) {
+      throw ApiErrors.conflict("VERSION_CONFLICT", "Cylinder version conflict");
+    }
+
+    return this.repository.update(id, input, principal.id, expectedVersion);
   }
 
   async reportLoss(

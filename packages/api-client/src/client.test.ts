@@ -119,6 +119,7 @@ describe("WeldApiClient", () => {
       serial_number: "S",
       ownership_basis: "OURS",
     });
+    await api.updateCylinder(1, { gas_code: "O2" }, { ifMatch: 1 });
     await api.listMovements({});
     await api.getMovement(1);
     await api.createMovement({
