@@ -6,16 +6,21 @@ module.exports = {
   transform: {
     "^.+\\.(t|j)s$": "ts-jest",
   },
-  // Unit coverage focuses on pure modules exercised by *.spec.ts.
-  // Controllers/repositories/services with DB I/O are covered by e2e / invariants.
+  // Services + auth/common pure logic. Repositories/controllers stay on e2e;
+  // migration-data is CLI orchestration (covered by dedicated extract helper tests).
   collectCoverageFrom: [
+    "**/*.service.ts",
+    "!migration-data/**",
     "auth/password.ts",
     "auth/capabilities.ts",
     "auth/principal.ts",
+    "auth/guards/capabilities.guard.ts",
+    "auth/guards/territory-scope.guard.ts",
     "common/pagination/**/*.ts",
     "common/errors/**/*.ts",
     "config/config.schema.ts",
     "health/health.controller.ts",
+    "database/transaction.context.ts",
   ],
   coverageDirectory: "../coverage",
   testEnvironment: "node",

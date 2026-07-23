@@ -1,0 +1,249 @@
+import { ApiError } from "../common/errors/api-error";
+import { principal } from "../test-utils/fixtures";
+import { MovementsService } from "./movements.service";
+
+function cylinder(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 5,
+    ownership_basis: "OURS",
+    state: "IN_STOCK_FULL",
+    packaging: "SINGLE",
+    gas_code: "O2",
+    ...overrides,
+  };
+}
+
+function movement(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 9,
+    cylinder_id: 5,
+    holder_party_id: 2,
+    state: "OPEN",
+    movement_kind: "RENTAL",
+    property_basis: "OURS",
+    gas_code: "O2",
+    delivery_date: "2026-06-01",
+    version: 1,
+    ...overrides,
+  };
+}
+
+describe("MovementsService", () => {
+  const repository = {
+    list: jest.fn(),
+    getById: jest.fn(),
+    getCylinderForDelivery: jest.fn(),
+    holderExists: jest.fn(),
+    hasOpenMovement: jest.fn(),
+    createDelivery: jest.fn(),
+    closeReturn: jest.fn(),
+    swapReturn: jest.fn(),
+    voidMovement: jest.fn(),
+  };
+  const billingLookup = {
+    movementHasLockedCharges: jest.fn(),
+  };
+  const service = new MovementsService(
+    repository as never,
+    billingLookup as never,
+  );
+  const user = principal();
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("lists and gets by id", async () => {
+    repository.list.mockResolvedValue({ data: [] });
+    expect(await service.list({} as never)).toEqual({ data: [] });
+
+    repository.getById.mockResolvedValue(null);
+    await expect(service.getById(1)).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
+
+    repository.getById.mockResolvedValue(movement());
+    expect(await service.getById(9)).toMatchObject({ id: 9 });
+  });
+
+  describe("create", () => {
+    const input = {
+      cylinder_id: 5,
+      holder_party_id: 2,
+      movement_kind: "RENTAL" as const,
+      delivery_date: "2026-06-01",
+    };
+
+    it("validates cylinder, holder, open movement, and creates", async () => {
+      repository.getCylinderForDelivery.mockResolvedValue(null);
+      await expect(service.create(user, input)).rejects.toMatchObject({
+        code: "NOT_FOUND",
+      });
+
+      repository.getCylinderForDelivery.mockResolvedValue(cylinder());
+      repository.holderExists.mockResolvedValue(false);
+      await expect(service.create(user, input)).rejects.toMatchObject({
+        code: "VALIDATION_FAILED",
+      });
+
+      repository.holderExists.mockResolvedValue(true);
+      repository.hasOpenMovement.mockResolvedValue(true);
+      await expect(service.create(user, input)).rejects.toMatchObject({
+        code: "CYLINDER_ALREADY_OUT",
+      });
+
+      repository.hasOpenMovement.mockResolvedValue(false);
+      repository.createDelivery.mockResolvedValue(movement());
+      await expect(service.create(user, input)).resolves.toMatchObject({
+        id: 9,
+      });
+      expect(repository.createDelivery).toHaveBeenCalledWith(
+        input,
+        "OURS",
+        "O2",
+        user.id,
+      );
+    });
+
+    it("validates origin party when provided", async () => {
+      repository.getCylinderForDelivery.mockResolvedValue(cylinder());
+      repository.holderExists
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(false);
+      await expect(
+        service.create(user, { ...input, origin_party_id: 99 }),
+      ).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+    });
+
+    it("maps domain deliverability failures", async () => {
+      repository.getCylinderForDelivery.mockResolvedValue(
+        cylinder({ state: "LOST" }),
+      );
+      repository.holderExists.mockResolvedValue(true);
+      repository.hasOpenMovement.mockResolvedValue(false);
+      await expect(service.create(user, input)).rejects.toBeInstanceOf(
+        ApiError,
+      );
+    });
+
+    it("maps exclusion violations on create", async () => {
+      repository.getCylinderForDelivery.mockResolvedValue(cylinder());
+      repository.holderExists.mockResolvedValue(true);
+      repository.hasOpenMovement.mockResolvedValue(false);
+      repository.createDelivery.mockRejectedValue({ code: "23P01" });
+      await expect(service.create(user, input)).rejects.toMatchObject({
+        code: "CYLINDER_ALREADY_OUT",
+      });
+    });
+  });
+
+  describe("returnMovement", () => {
+    const input = { return_date: "2026-06-08" };
+
+    it("rejects missing, closed, customer-owned, and closes rental", async () => {
+      repository.getById.mockResolvedValue(null);
+      await expect(
+        service.returnMovement(user, 1, input),
+      ).rejects.toMatchObject({ code: "NOT_FOUND" });
+
+      repository.getById.mockResolvedValue(movement({ state: "CLOSED" }));
+      await expect(
+        service.returnMovement(user, 1, input),
+      ).rejects.toMatchObject({ code: "NOT_OPEN" });
+
+      repository.getById.mockResolvedValue(
+        movement({ property_basis: "CUSTOMER", movement_kind: "REFILL" }),
+      );
+      await expect(
+        service.returnMovement(user, 1, input),
+      ).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+
+      repository.getById.mockResolvedValue(movement());
+      repository.closeReturn.mockResolvedValue(movement({ state: "CLOSED" }));
+      await expect(
+        service.returnMovement(user, 9, input, 1),
+      ).resolves.toMatchObject({
+        state: "CLOSED",
+      });
+    });
+  });
+
+  describe("swap", () => {
+    const input = {
+      returned_cylinder_id: 7,
+      return_date: "2026-06-08",
+    };
+
+    it("validates open state, distinct cylinder, availability, and swaps", async () => {
+      repository.getById.mockResolvedValue(null);
+      await expect(service.swap(user, 1, input)).rejects.toMatchObject({
+        code: "NOT_FOUND",
+      });
+
+      repository.getById.mockResolvedValue(movement({ state: "CLOSED" }));
+      await expect(service.swap(user, 1, input)).rejects.toMatchObject({
+        code: "NOT_OPEN",
+      });
+
+      repository.getById.mockResolvedValue(movement());
+      await expect(
+        service.swap(user, 9, { ...input, returned_cylinder_id: 5 }),
+      ).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+
+      repository.getCylinderForDelivery.mockResolvedValue(null);
+      await expect(service.swap(user, 9, input)).rejects.toMatchObject({
+        code: "NOT_FOUND",
+      });
+
+      repository.getCylinderForDelivery.mockResolvedValue(
+        cylinder({ id: 7, ownership_basis: "OURS" }),
+      );
+      repository.hasOpenMovement.mockResolvedValue(true);
+      await expect(service.swap(user, 9, input)).rejects.toMatchObject({
+        code: "RETURNED_CYLINDER_BUSY",
+      });
+
+      repository.hasOpenMovement.mockResolvedValue(false);
+      repository.swapReturn.mockResolvedValue(movement({ id: 10 }));
+      await expect(service.swap(user, 9, input)).resolves.toMatchObject({
+        id: 10,
+      });
+    });
+
+    it("maps exclusion violations on swap", async () => {
+      repository.getById.mockResolvedValue(movement());
+      repository.getCylinderForDelivery.mockResolvedValue(cylinder({ id: 7 }));
+      repository.hasOpenMovement.mockResolvedValue(false);
+      repository.swapReturn.mockRejectedValue({ code: "23P01" });
+      await expect(service.swap(user, 9, input)).rejects.toMatchObject({
+        code: "CYLINDER_ALREADY_OUT",
+      });
+    });
+  });
+
+  describe("void", () => {
+    it("rejects missing, already void, billed, and voids otherwise", async () => {
+      repository.getById.mockResolvedValue(null);
+      await expect(
+        service.void(user, 1, { reason: "mistake" }),
+      ).rejects.toMatchObject({ code: "NOT_FOUND" });
+
+      repository.getById.mockResolvedValue(movement({ state: "VOID" }));
+      await expect(
+        service.void(user, 1, { reason: "mistake" }),
+      ).rejects.toMatchObject({ code: "ALREADY_VOID" });
+
+      repository.getById.mockResolvedValue(movement());
+      billingLookup.movementHasLockedCharges.mockResolvedValue(true);
+      await expect(
+        service.void(user, 9, { reason: "mistake" }),
+      ).rejects.toMatchObject({ code: "ALREADY_BILLED" });
+
+      billingLookup.movementHasLockedCharges.mockResolvedValue(false);
+      repository.voidMovement.mockResolvedValue(movement({ state: "VOID" }));
+      await expect(
+        service.void(user, 9, { reason: "mistake" }),
+      ).resolves.toMatchObject({ state: "VOID" });
+    });
+  });
+});
