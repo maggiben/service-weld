@@ -719,7 +719,7 @@ export default function ReportsPage() {
               ? paginationModel.page * paginationModel.pageSize +
                 rows.length +
                 (cursors[paginationModel.page + 1] ? 1 : 0)
-              : rows.length
+              : undefined
           }
           paginationModel={paginationModel}
           onPaginationModelChange={setPaginationModel}
