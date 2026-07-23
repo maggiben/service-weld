@@ -229,11 +229,15 @@
     },
     "form": {
       "title": "New battery",
+      "edit_title": "Edit battery",
       "code": "Code",
       "owner": "Owner",
       "gas": "Gas",
-      "members": "Cylinder IDs",
-      "members_hint": "At least 2 IDs, comma-separated (BR-13)"
+      "members": "Member cylinders",
+      "members_hint": "Pick cylinders (chips). You can also paste comma-separated IDs. At least 2 (BR-13).",
+      "members_owner_first": "Select an owner first",
+      "member_not_found": "Cylinder #{{id}} was not found",
+      "member_not_packable": "Cylinder #{{id}} cannot join this battery"
     }
   },
   "movements": {

@@ -114,7 +114,13 @@ export class BatteriesService {
     batteryId: number,
     cylinderId: number,
   ): Promise<Battery> {
-    await this.getById(batteryId);
+    const battery = await this.getById(batteryId);
+    const activeCount = battery.members?.length ?? battery.member_count ?? 0;
+    try {
+      assertBatteryMemberCount(activeCount - 1);
+    } catch (error) {
+      mapDomainError(error);
+    }
     return this.repository.removeMember(batteryId, cylinderId, principal.id);
   }
 }

@@ -344,6 +344,13 @@ export default function CylindersPage() {
       </Stack>
 
       <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+        <TextField
+          size="small"
+          label={t("cylinders.filters.serial")}
+          value={search}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          sx={{ minWidth: 200 }}
+        />
         <FormControl size="small" sx={{ minWidth: 220 }}>
           <InputLabel>{t("cylinders.filters.location")}</InputLabel>
           <Select
@@ -407,13 +414,6 @@ export default function CylindersPage() {
           renderInput={(params) => (
             <TextField {...params} label={t("cylinders.filters.client")} />
           )}
-        />
-        <TextField
-          size="small"
-          label={t("cylinders.filters.serial")}
-          value={search}
-          onChange={(e) => handleSearchChange(e.target.value)}
-          sx={{ minWidth: 200 }}
         />
         <FormControl size="small" sx={{ minWidth: 180 }}>
           <InputLabel>{t("cylinders.filters.state")}</InputLabel>

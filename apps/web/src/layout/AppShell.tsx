@@ -77,12 +77,6 @@ const NAV_ITEMS: NavItem[] = [
     icon: <PropaneTankIcon />,
   },
   {
-    to: "/batteries",
-    labelKey: "nav.batteries",
-    capability: "batteries:read",
-    icon: <Inventory2Icon />,
-  },
-  {
     to: "/movements",
     labelKey: "nav.movements",
     capability: "movements:read",
@@ -117,6 +111,12 @@ const NAV_ITEMS: NavItem[] = [
     labelKey: "nav.accessories",
     capability: "accessories:read",
     icon: <BuildIcon />,
+  },
+  {
+    to: "/batteries",
+    labelKey: "nav.batteries",
+    capability: "batteries:read",
+    icon: <Inventory2Icon />,
   },
   {
     to: "/alerts",
@@ -266,21 +266,34 @@ export default function AppShell({ children }: PropsWithChildren) {
             </IconButton>
           )}
           <Box
-            component="img"
-            src={
-              themePreset.appBar.tone === "dark"
-                ? "/service-weld-remove-bg-bw.webp"
-                : "/service-weld-remove-bg-wb.webp"
-            }
-            alt="Service Weld"
+            component={Link}
+            href="/"
+            aria-label={t("app.title")}
             sx={{
-              height: 36,
-              width: "auto",
-              display: "block",
+              display: "flex",
+              alignItems: "center",
               mr: 1.5,
               flexShrink: 0,
+              lineHeight: 0,
+              textDecoration: "none",
+              color: "inherit",
             }}
-          />
+          >
+            <Box
+              component="img"
+              src={
+                themePreset.appBar.tone === "dark"
+                  ? "/service-weld-remove-bg-bw.webp"
+                  : "/service-weld-remove-bg-wb.webp"
+              }
+              alt="Service Weld"
+              sx={{
+                height: 36,
+                width: "auto",
+                display: "block",
+              }}
+            />
+          </Box>
           <Typography variant="h6" sx={{ flexGrow: 1 }} noWrap>
             {t("app.title")}
           </Typography>

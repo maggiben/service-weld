@@ -229,11 +229,15 @@
     },
     "form": {
       "title": "Nueva batería",
+      "edit_title": "Editar batería",
       "code": "Código",
       "owner": "Propietario",
       "gas": "Gas",
-      "members": "IDs de cilindros",
-      "members_hint": "Al menos 2 IDs, separados por coma (BR-13)"
+      "members": "Cilindros miembros",
+      "members_hint": "Elegí cilindros (chips). También podés pegar IDs separados por coma. Mínimo 2 (BR-13).",
+      "members_owner_first": "Primero elegí el propietario",
+      "member_not_found": "No se encontró el cilindro #{{id}}",
+      "member_not_packable": "El cilindro #{{id}} no puede sumarse a la batería"
     }
   },
   "movements": {
