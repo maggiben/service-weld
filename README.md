@@ -5,109 +5,219 @@
 <img src="apps/web/public/service-weld-remove-bg-bw.webp" alt="ServiceWeld" height="124" />
 </p>
 
-<p align="center">
-Service Weld
-</p>
+# Gas-Cylinder Distribution ERP
+
+**Service Weld** — cylinder custody, circulation, rental & billing for industrial and medical gas distributors.
+
+[![CI](https://github.com/maggiben/service-weld/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/maggiben/service-weld/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/badge/coverage-%E2%89%A580%25-brightgreen?logo=jest&logoColor=white)](./scripts/check-coverage.mjs)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Node](https://img.shields.io/badge/node-24.18-339933?logo=nodedotjs&logoColor=white)](./.nvmrc)
+[![pnpm](https://img.shields.io/badge/pnpm-10.8-F69220?logo=pnpm&logoColor=white)](./package.json)
+[![NestJS](https://img.shields.io/badge/NestJS-API-E0234E?logo=nestjs&logoColor=white)](./apps/api)
+[![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)](./apps/web)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](./db)
+[![License](https://img.shields.io/badge/license-Proprietary-red)](./LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/maggiben/service-weld?style=flat&logo=github)](https://github.com/maggiben/service-weld/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/maggiben/service-weld?style=flat&logo=github)](https://github.com/maggiben/service-weld/network/members)
+[![GitHub issues](https://img.shields.io/github/issues/maggiben/service-weld?logo=github)](https://github.com/maggiben/service-weld/issues)
+[![GitHub pull requests](https://img.shields.io/github/issues-pr/maggiben/service-weld?logo=github)](https://github.com/maggiben/service-weld/pulls)
+[![Last commit](https://img.shields.io/github/last-commit/maggiben/service-weld?logo=git&logoColor=white)](https://github.com/maggiben/service-weld/commits/main)
+[![Commit activity](https://img.shields.io/github/commit-activity/m/maggiben/service-weld?logo=github)](https://github.com/maggiben/service-weld/graphs/commit-activity)
+[![Contributors](https://img.shields.io/github/contributors/maggiben/service-weld)](https://github.com/maggiben/service-weld/graphs/contributors)
+[![Repo size](https://img.shields.io/github/repo-size/maggiben/service-weld?logo=github)](https://github.com/maggiben/service-weld)
+[![Code size](https://img.shields.io/github/languages/code-size/maggiben/service-weld?logo=github)](https://github.com/maggiben/service-weld)
+[![Top language](https://img.shields.io/github/languages/top/maggiben/service-weld)](https://github.com/maggiben/service-weld)
+[![Locale](https://img.shields.io/badge/locale-es--AR-blue)](./docs/DEVELOPMENT.md)
+[![Made with](https://img.shields.io/badge/made%20with-%E2%9D%A4%EF%B8%8F%20in%20Argentina-74acdf)](https://github.com/maggiben/service-weld)
+
 </div>
 <!-- prettier-ignore-end -->
 
-# Gas-Cylinder Distribution — Reverse-Engineering & System Design
+---
 
-[![CI](https://github.com/maggiben/service-weld/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/maggiben/service-weld/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/badge/coverage-%E2%89%A580%25-brightgreen)](./scripts/check-coverage.mjs)
-[![Node](https://img.shields.io/badge/node-24.18-blue)](./.nvmrc)
-[![pnpm](https://img.shields.io/badge/pnpm-10.8-blue)](./package.json)
+## What it is
 
-This repository reverse-engineers a real, spreadsheet-run business — a regional **industrial & medical gas-cylinder distributor/refiller** in northwest Buenos Aires Province, Argentina — and specifies the software system to replace it.
+**Gas-Cylinder Distribution ERP** (product name: **Service Weld**) is a single system of record for a regional Argentine **industrial & medical gas-cylinder distributor/refiller**. It tracks every cylinder, custody movement, rental day, and party (clients, suppliers, sub-distributors), enforces domain invariants automatically, computes rental billing deterministically, and delivers the reporting the old process never had.
 
-The entire operation lives today in **three Excel workbooks** (~2,140 sheets, ~180,000 movement rows). These documents decode that business and turn it into an implementable design.
+Locale: **Spanish (Argentina)** · dates `dd/mm/yyyy` · currency **ARS** · CUIT validation · multi-territory (Junín, Chacabuco, Ceres).
+
+## What it replaces
+
+The entire operation previously lived in **three Excel workbooks** (~2,140 sheets, ~180,000 movement rows):
+
+| Legacy workbook                                | Sheets | One sheet =                                            |
+| ---------------------------------------------- | ------ | ------------------------------------------------------ |
+| `CILINDRO CLIENT REPARTO …(Autoguardado)….xls` | 291    | one **client** (Junín delivery route)                  |
+| `CILINDROS CLIENTES CHACABUCO.xls`             | 366    | one **client** (Chacabuco / municipal hospital routes) |
+| `CILINDROS PROPIOS.xls`                        | 1,483  | one **physical cylinder** (by serial)                  |
+
+Those workbooks had dual manual posting, no integrity checks, formula `ERROR` cells, and almost no reporting. This ERP replaces them with one event model, database-enforced rules, migration tooling, and operational UIs.
 
 ---
 
-## The legacy source (what was analysed)
+## Features
 
-| Workbook                                       | Sheets | One sheet =                                                                        |
-| ---------------------------------------------- | ------ | ---------------------------------------------------------------------------------- |
-| `CILINDRO CLIENT REPARTO …(Autoguardado)….xls` | 291    | one **client** (Junín delivery route)                                              |
-| `CILINDROS CLIENTES CHACABUCO.xls`             | 366    | one **client** (Chacabuco route; many `HOSP.MUNIC.` = municipal-hospital patients) |
-| `CILINDROS PROPIOS.xls`                        | 1,483  | one **physical cylinder** (by serial)                                              |
-
-Each client ledger has two panes — **NUESTRA PROPIEDAD** (cylinders we own, rented out) and **SU PROPIEDAD** (client-owned cylinders we refill). The cylinder workbook tracks every serial's full circulation history (2004→2026). Gas types: O2 (incl. medical/laser), CO2, N2, Argon (incl. 5.0), ATAL (Ar/CO₂ mix), acetylene, MAPAX30, helium, thermolene. Cylinder pool is multi-owner: **ours, Linde, Intergas, Nordelta, DSJ**, and customer-owned.
-
----
-
-## Documents (read in this order)
-
-| #   | File                                   | What it is                                                                                                                                                                                                                                              |
-| --- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | **`domain.md`**                        | Complete domain model — 16 entities (attributes, keys, relationships, validation, lifecycle, states), aggregates, value objects, enumerations, ER diagram, invariants.                                                                                  |
-| 2   | **`workflows.md`**                     | Every business workflow (W1–W20) with Goal, Trigger, Actors, Preconditions, Happy path, Alternative flows, Error cases, Postconditions.                                                                                                                 |
-| 3   | **`product_requirements_document.md`** | PRD — 10 user roles (R1–R10), 34 user stories (`As a / I want / So that`) with Gherkin acceptance criteria, traceability to every workflow.                                                                                                             |
-| 4   | **`sdd.md`**                           | Software Design Document — functional/non-functional reqs, business rules (BR-01…BR-20), state & sequence diagrams, data flow, API/auth/authorization/audit, rental logic, edge cases, error handling, future improvements.                             |
-| 5   | **`database.md`**                      | PostgreSQL database design — every table (columns, types, constraints, FKs, indexes, unique constraints) with rationale, plus partitioning, audit, soft-delete, history, and optimistic-locking strategy.                                               |
-| 6   | **`schema.sql`**                       | Runnable DDL implementing `database.md` (verified — see below).                                                                                                                                                                                         |
-| 7   | **`openapi_specification.md`**         | OpenAPI 3.1 REST API — ~60 endpoints across 15 tags, each with method, URL, purpose, auth, request/response JSON, validation, error codes, pagination, filtering, sorting, permissions.                                                                 |
-| 8   | **`frontend_design.md`**               | Frontend UI/UX — back-office web app + offline mobile field app; every screen (purpose, components, tables, forms, filters, dialogs, validation, actions, permissions, loading/error/empty states, navigation, responsive, shortcuts) + navigation map. |
-| 9   | **`specs/`**                           | Agent-ready implementation specifications (000–012), each with Purpose · Requirements · Constraints · Acceptance Criteria · Edge Cases · Dependencies · Implementation Notes. See `specs/README.md`.                                                    |
-| 10  | **`docs/DEVELOPMENT.md`**              | Dev setup + **quality gates** (pre-commit / pre-push / CI; **≥80% coverage**; never commit without checks).                                                                                                                                             |
-| 11  | **`AGENTS.md`**                        | Short agent policy: hooks, coverage threshold, do not commit until checks pass.                                                                                                                                                                         |
-
-Everything is cross-referenced: workflows `Wnn` → stories `US-nn` → rules `BR-nn` → tables/constraints → API endpoints.
+| Area                    | Capabilities                                                                                                                          |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| **Clients & parties**   | Client master data, ledgers, territories, CUIT validation, multi-node / sub-distributor support                                       |
+| **Cylinder inventory**  | Serial identity as `(owner, serial)`, multi-owner pool (ours, Linde, Intergas, Nordelta, DSJ, customer-owned), life & status tracking |
+| **Movements**           | Deliver, return, refill, swap, void — single-custody enforcement, rental days auto-computed                                           |
+| **Rental & billing**    | Per-day-on-hire rates (global or per-client), draft → approve → export hand-off (AFIP accounting remains external)                    |
+| **Medical O₂**          | High-frequency home-oxygen cycles, municipal (`HOSP.MUNIC.`) statements                                                               |
+| **Accessories**         | Regulators, portable units, and related rentals                                                                                       |
+| **Batteries & replace** | Battery inventory and cylinder replacement workflows                                                                                  |
+| **Supplier loans**      | Multi-stage round-trips with suppliers / sub-distributors                                                                             |
+| **Transfers**           | Inter-node stock transfers with reconciliation                                                                                        |
+| **Alerts**              | In-app worklist, AppBar bell, toasts                                                                                                  |
+| **Reporting**           | Fleet, float/aging, rental/revenue, loss, supplier returns, cylinder life, medical statement, data quality                            |
+| **Field PWA**           | Offline-capable driver app: capture deliver/return → outbox → sync with conflict handling                                             |
+| **Migration**           | Import legacy `.xls` workbooks with dry-run, exceptions pipeline, and reconciliation report                                           |
+| **Auth & audit**        | JWT auth, role-based access (10 roles), immutable audit trail                                                                         |
+| **Marketing site**      | Public corporate landing (`apps/www` → serviceweld.com)                                                                               |
 
 ---
 
-## Key business facts (decoded from the data)
+## Architecture
 
-- **Rental billed per day-on-hire.** The column labelled `METROS` is actually a computed day-count (`return − delivery`); one sheet renames it `ALQUILER` with `alquiler $85 por día`. Verified 373/373 rows in one client.
-- **Two commercial models:** rent-out our cylinders (gas + rental) vs refill customer-owned cylinders (gas only, no rental).
-- **Medical home-oxygen line:** named `HOSP.MUNIC.` patients with near-daily O2 swaps, portable `mochila` units and rented regulators, billed to the municipality.
-- **Cylinder identity is `(owner, serial)`** — the same serial recurs across different owners (e.g. Linde `309817` vs ours).
-- **Supplier loan loops** (Nordelta/Intergas) tracked as a 4-stage round-trip.
-- **No reporting, no integrity, dual manual posting, and formula ERROR cells** are the legacy system's core failures — all designed out here.
+```
+apps/api          NestJS API + worker          → :3000  (Swagger /api/docs)
+apps/web          Back-office (Next.js + MUI)  → :3001  app.serviceweld.com
+apps/field        Field PWA (Next.js + MUI)    → :3002
+apps/www          Marketing site               → :3003  serviceweld.com
+packages/schemas  Shared Zod schemas
+packages/domain   Domain model
+packages/api-client  Typed HTTP client
+db/               schema.sql + additive migrations + invariant tests
+migration/        Legacy .xls importer (Python)
+specs/            Authoritative implementation specs (000–013)
+```
+
+**Stack:** Node 24 · pnpm · TypeScript · NestJS · Next.js 16 · React 19 · MUI · PostgreSQL 15+ · Zod · Passport JWT · Turbo monorepo.
 
 ---
 
-## Using `schema.sql`
+## Prerequisites
+
+- **Node** `24.18.x` (see [`.nvmrc`](./.nvmrc))
+- **pnpm** `10.x` (`corepack enable`)
+- **Docker** (local Postgres 16)
+- **Python 3** (only for legacy `.xls` migration)
+- **psql** client (for `pnpm db:invariants`)
+
+---
+
+## Build, run & test
+
+### First-time setup
 
 ```bash
-# any PostgreSQL 15+ instance
-createdb weld
-psql -d weld -v ON_ERROR_STOP=1 -f schema.sql
+corepack enable
+pnpm install
+cp .env.example .env
+
+pnpm db:up                                          # Postgres via docker-compose.dev.yml
+export DATABASE_URL=postgres://postgres:test@localhost:5432/weld
+pnpm db:load                                        # baseline schema.sql
+pnpm db:migrate                                     # additive migrations
+pnpm db:invariants                                  # business-rule smoke suite (must exit 0)
+
+pnpm --filter @weld/schemas build && pnpm --filter @weld/domain build
+pnpm --filter @weld/api bootstrap:admin             # once — creates BOOTSTRAP_ADMIN_* user
 ```
 
-The script is transactional (all-or-nothing) and self-contained: extensions, enum types, ~25 tables, indexes, the single-custody exclusion constraint, generated `rental_days` column, audit/history/optimistic-lock triggers, and seed reference data (roles, territories, gas types + legacy-spelling aliases, our own party + suppliers/sub-distributors).
+### Run (development)
 
-Before writes, set the session context so the audit trail captures the actor:
-
-```sql
-SET app.current_user_id = '12';
-SET app.current_role_code = 'CLERK';
-SET app.source = 'web';
+```bash
+pnpm db:up
+pnpm --filter @weld/api dev      # API :3000 — Swagger at /api/docs
+pnpm --filter @weld/web dev      # Back-office :3001
+pnpm --filter @weld/field dev    # Field PWA :3002
+pnpm --filter @weld/www dev      # Marketing :3003
 ```
 
-### Verification status
+Sign in with `BOOTSTRAP_ADMIN_USER` / `BOOTSTRAP_ADMIN_PASSWORD` from `.env`.
 
-`schema.sql` was **loaded into PostgreSQL 16 with zero errors**, and the domain invariants were exercised and confirmed:
+Or from the repo root: `pnpm build` / `pnpm dev` (Turbo).
 
-| Invariant                               | Enforcement                         | Verified     |
-| --------------------------------------- | ----------------------------------- | ------------ |
-| Rental days = return − delivery         | generated column                    | ✓ (67 days)  |
-| Single custody (no 2 open per cylinder) | `ex_move_no_overlap` gist exclusion | ✓ blocked    |
-| Refill ⇔ customer-owned                 | `ck_move_kind_basis`                | ✓ blocked    |
-| Return ≥ delivery                       | `ck_move_dates`                     | ✓ blocked    |
-| Plausible dates (≤ today+30)            | trigger                             | ✓ blocked    |
-| CUIT format                             | `ck_client_cuit_format`             | ✓ blocked    |
-| Serial unique per owner                 | `uq_cyl_owner_serial`               | ✓ blocked    |
-| Generic audit capture                   | `fn_audit` trigger                  | ✓ logged     |
-| SCD-2 history + version bump            | history + touch triggers            | ✓ 2 versions |
+### Test
+
+```bash
+pnpm test                 # unit tests (Turbo)
+pnpm run test:coverage    # ≥80% lines/branches/functions/statements per package (required before push)
+pnpm db:invariants        # DB business-rule enforcement suite
+```
+
+### Quality gates
+
+| Gate           | When                | Checks                                                                      |
+| -------------- | ------------------- | --------------------------------------------------------------------------- |
+| **pre-commit** | every `git commit`  | secrets → deps (audit + deprecated) → Prettier → typecheck                  |
+| **pre-push**   | every `git push`    | `test:coverage` — **≥80%** on every workspace package                       |
+| **CI**         | PR / push to `main` | format, typecheck, unit tests, coverage ≥80%, build, DB schema + invariants |
+
+Manual check before commit:
+
+```bash
+pnpm run check:secrets
+pnpm run check:deps
+pnpm run format:check
+pnpm run typecheck
+pnpm run test:coverage   # required before push; recommended if tests/covered code changed
+```
+
+Full day-to-day notes: [`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md).
+
+### Legacy Excel migration
+
+```bash
+pnpm migrate:xls:dry     # dry-run → exceptions + reconciliation report
+pnpm migrate:xls         # load into Postgres
+```
+
+Customer-facing exception language: [`docs/MIGRATION_EXCEPTIONS_CUSTOMER.md`](./docs/MIGRATION_EXCEPTIONS_CUSTOMER.md).
 
 ---
 
-## Open questions carried forward
+## Documentation
 
-- **`PH` gas prefix** (`ph o2`, `ph atal`) meaning is unresolved — confirm with the business during migration.
-- **Hydrostatic re-certification / cylinder expiry** is _not_ tracked in the legacy data — flagged as a high-priority Phase-2 safety feature in `sdd.md`.
+| Doc                                                                      | Purpose                                                             |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------- |
+| [`specs/`](./specs/)                                                     | Authoritative implementation specs (`000`–`013`) — start with `000` |
+| [`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md)                           | Setup, phases, quality gates                                        |
+| [`AGENTS.md`](./AGENTS.md)                                               | Agent / contributor policy for hooks & coverage                     |
+| [`domain.md`](./domain.md) · [`workflows.md`](./workflows.md)            | Domain model & business workflows (W1–W20)                          |
+| [`product_requirements_document.md`](./product_requirements_document.md) | PRD, roles, user stories                                            |
+| [`sdd.md`](./sdd.md) · [`database.md`](./database.md)                    | Design + PostgreSQL design                                          |
+| [`schema.sql`](./schema.sql)                                             | Runnable baseline DDL                                               |
+| [`openapi_specification.md`](./openapi_specification.md)                 | REST API contract                                                   |
+| [`frontend_design.md`](./frontend_design.md)                             | UI/UX for web + field                                               |
 
 ---
 
-_Analysis method: the `.xls` workbooks were parsed with Python/`xlrd`; findings labelled `» observed` are grounded in actual cells, `INFERRED` are reconstructions. See `sdd.md` §Executive Summary for the full narrative._
+## Contributing
+
+This is **proprietary software**, not an open-source project. There is no public contribution license and no CLA that grants rights to redistribute the code.
+
+If you (including future-you) need to change the product:
+
+1. Work on a **feature branch**; keep `main` green.
+2. Follow [`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md) and the numbered specs under [`specs/`](./specs/). Specs win if prose docs disagree.
+3. **Never** commit until pre-commit checks pass; **never** push until `pnpm run test:coverage` passes (≥80%). Do not use `--no-verify` unless you consciously choose to bypass.
+4. Prefer small, reviewable PRs with a clear “why”; keep secrets out of the repo (`.env` stays local).
+5. Match existing TypeScript / Nest / Next / MUI patterns; do not weaken coverage thresholds or DB invariants.
+6. For agent-assisted work, read [`AGENTS.md`](./AGENTS.md) first.
+
+External parties: contact the copyright holder for a written agreement before any use, fork, or distribution.
+
+---
+
+## Copyright & license
+
+Copyright © 2026 **Benjamin Maggi**. All rights reserved.
+
+This software is proprietary. See [`LICENSE`](./LICENSE) for the full notice. Unauthorized copying, modification, distribution, or use is prohibited except as expressly authorized in writing by the copyright holder.
+
+---
+
+_Reverse-engineered from the legacy “CILINDROS” Excel workbooks; analysis method and open questions live in the root design docs and `specs/`._
