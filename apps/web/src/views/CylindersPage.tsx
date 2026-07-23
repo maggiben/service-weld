@@ -294,8 +294,8 @@ export default function CylindersPage() {
         width: gridActionsColumnWidth(2),
         sortable: false,
         filterable: false,
-        align: "right",
-        headerAlign: "right",
+        align: "left",
+        headerAlign: "left",
         renderCell: (params) => {
           if (!canWrite) return null;
           const terminal = [

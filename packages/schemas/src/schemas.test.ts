@@ -333,7 +333,7 @@ describe("movement schemas", () => {
     assert.throws(() => VoidMovementInput.parse({ reason: "" }));
   });
 
-  it("accepts serial search on MovementListQuery", () => {
+  it("accepts serial or holder search on MovementListQuery", () => {
     const query = MovementListQuery.parse({
       limit: 50,
       q: "3232",

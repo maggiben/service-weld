@@ -63,7 +63,7 @@ export function SwapPickDialog({ open, onClose, onSelect }: Props) {
     const rows = openMovements.data?.data ?? [];
     const needle = query.trim().toLowerCase();
     if (!needle) return rows;
-    // Client-side refine for holder name / id while typing (serial is server-side via q).
+    // Refine while the server debounce catches up (q matches serial + holder name).
     return rows.filter((row) => {
       const hay =
         `${row.cylinder_serial ?? ""} ${row.holder_name ?? ""} ${row.id}`.toLowerCase();

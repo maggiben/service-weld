@@ -107,6 +107,28 @@ lets an ORM own or sync the schema/constraints/triggers (004).
 
 ESLint packages are deferred — see `docs/ESLINT.md`.
 
+## Engineering principles
+
+Maintainability for this codebase follows **SOLID** and **DRY** (`sdd.md` NFR-10). Apply them on every change; agents MUST treat them as defaults (see `AGENTS.md`, `.cursor/rules/engineering-principles.mdc`).
+
+### DRY — Don't Repeat Yourself
+
+- One source of truth for a given rule or transformation.
+- Shared **domain** rules live in `packages/domain`; shared **DTO/validation** in `packages/schemas`; shared **view/form** helpers in feature-level `*Logic.ts` (with unit tests) — not copy-pasted across drawers, pages, or Nest services.
+- Duplicate only when behavior must diverge. If two call sites stay identical, extract.
+
+### SOLID (pragmatic)
+
+| Letter | Meaning               | Weld default                                                                                                                       |
+| ------ | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **S**  | Single responsibility | One reason to change per module (custody posting ≠ remito PDF ≠ drawer layout).                                                    |
+| **O**  | Open/closed           | Extend with new handlers/types rather than endlessly growing core conditionals.                                                    |
+| **L**  | Liskov substitution   | Adapters and subtypes honor the same contracts (DTOs, domain invariants).                                                          |
+| **I**  | Interface segregation | Narrow Zod schemas, props, and repository methods; callers should not depend on unused fields.                                     |
+| **D**  | Dependency inversion  | Controllers/UI depend on domain + schemas; do not bury invariants only in React or Nest controllers when they belong in domain/DB. |
+
+Do **not** over-abstract for speculative reuse — extract when duplication is real or about to be.
+
 ## Quality gates (mandatory)
 
 Local hooks and CI enforce the same intent. **Never commit without the pre-commit checks having passed. Never push without the coverage gate having passed. Never skip hooks with `--no-verify` unless you explicitly choose to bypass.**

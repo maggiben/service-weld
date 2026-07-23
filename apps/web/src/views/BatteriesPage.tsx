@@ -129,8 +129,8 @@ export default function BatteriesPage() {
               width: gridActionsColumnWidth(1),
               sortable: false,
               filterable: false,
-              align: "right",
-              headerAlign: "right",
+              align: "left",
+              headerAlign: "left",
               renderCell: (params) => (
                 <GridActionsCell
                   actions={[

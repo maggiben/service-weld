@@ -257,8 +257,8 @@ export default function AccessoriesPage() {
         width: gridActionsColumnWidth(1),
         sortable: false,
         filterable: false,
-        align: "right",
-        headerAlign: "right",
+        align: "left",
+        headerAlign: "left",
         renderCell: (params) =>
           canWrite && params.row.state === "ON_LOAN" ? (
             <GridActionsCell

@@ -281,8 +281,8 @@ export default function MovementsPage() {
         width: gridActionsColumnWidth(3),
         sortable: false,
         filterable: false,
-        align: "right",
-        headerAlign: "right",
+        align: "left",
+        headerAlign: "left",
         renderCell: (params) => {
           // Customer-owned (refill) stock is theirs — no "return to us", only canje.
           const canReturn =

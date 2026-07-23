@@ -396,8 +396,8 @@ function UsersPageInner() {
         width: gridActionsColumnWidth(2),
         sortable: false,
         filterable: false,
-        align: "right",
-        headerAlign: "right",
+        align: "left",
+        headerAlign: "left",
         renderCell: (params) => (
           <GridActionsCell
             actions={[

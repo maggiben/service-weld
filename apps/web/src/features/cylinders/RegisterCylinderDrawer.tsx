@@ -17,8 +17,8 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import {
@@ -32,6 +32,14 @@ import { api } from "../../api/client";
 import { GAS_CODES, SEED_OWNERS } from "../../constants/masters";
 import { applyServerErrors } from "../../hooks/useServerErrors";
 import { useLocations } from "../../hooks/useLocations";
+import {
+  defaultCapacityUnitForGas,
+  emptyRegisterCylinderValues,
+  findCylinderBySerial,
+  hasSerialNumber,
+  prefillRegisterFromCylinder,
+  resolveDefaultTerritoryId,
+} from "./cylinderFormLogic";
 
 interface Props {
   open: boolean;
@@ -50,6 +58,14 @@ export function RegisterCylinderDrawer({ open, onClose }: Props) {
   const [createName, setCreateName] = useState("");
   const [createTerritoryId, setCreateTerritoryId] = useState<number | "">("");
   const [createError, setCreateError] = useState<string | null>(null);
+  const [lockGas, setLockGas] = useState(false);
+  const [lockCapacity, setLockCapacity] = useState(false);
+  const appliedSerialRef = useRef("");
+
+  const defaultTerritoryId = useMemo(
+    () => resolveDefaultTerritoryId(territories),
+    [territories],
+  );
 
   const {
     control,
@@ -61,25 +77,41 @@ export function RegisterCylinderDrawer({ open, onClose }: Props) {
     formState: { errors, isDirty, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(CreateCylinderInput),
-    defaultValues: {
-      owner_party_id: 1,
-      serial_number: "",
-      gas_code: "O2",
-      capacity_m3: null,
-      capacity_unit: "M3",
-      ownership_basis: "OURS",
-      packaging: "SINGLE",
-      home_territory_id: territories[0]?.id ?? 1,
-      acquisition_date: null,
-      condition: "EMPTY",
-    },
+    defaultValues: emptyRegisterCylinderValues(defaultTerritoryId),
   });
 
   const ownerId = watch("owner_party_id");
+  const serialNumber = watch("serial_number");
+  const condition = watch("condition");
+  const serialReady = hasSerialNumber(serialNumber);
+  const fieldsDisabled = !serialReady;
+  /** Empty → gas stays free so it can be filled later with any gas. */
+  const gasOptional = condition === "EMPTY";
+  const gasDisabled = fieldsDisabled || (lockGas && !gasOptional);
+
   const owner = useMemo(
     () => SEED_OWNERS.find((item) => item.id === ownerId),
     [ownerId],
   );
+
+  const serialLookup = useQuery({
+    queryKey: ["cylinders", "register-serial", serialNumber.trim()],
+    queryFn: () =>
+      api.listCylinders({
+        q: serialNumber.trim(),
+        limit: 20,
+      }),
+    enabled: open && serialReady,
+  });
+
+  const matchedCylinder = useMemo(() => {
+    if (!serialLookup.data) return null;
+    return findCylinderBySerial(
+      serialLookup.data.data,
+      serialNumber,
+      Number(ownerId),
+    );
+  }, [serialLookup.data, serialNumber, ownerId]);
 
   useEffect(() => {
     if (owner) {
@@ -88,22 +120,60 @@ export function RegisterCylinderDrawer({ open, onClose }: Props) {
   }, [owner, setValue]);
 
   useEffect(() => {
-    if (open) {
-      reset({
-        owner_party_id: 1,
-        serial_number: "",
-        gas_code: "O2",
-        capacity_m3: null,
-        capacity_unit: "M3",
-        ownership_basis: "OURS",
-        packaging: "SINGLE",
-        home_territory_id: territories[0]?.id ?? 1,
-        acquisition_date: null,
-        condition: "EMPTY",
-      });
-      setConflictError(null);
+    if (!open) return;
+    reset(emptyRegisterCylinderValues(defaultTerritoryId));
+    setConflictError(null);
+    setLockGas(false);
+    setLockCapacity(false);
+    appliedSerialRef.current = "";
+  }, [open, reset, defaultTerritoryId]);
+
+  // Prefill once per serial from an existing match (full → gas; empty → free gas).
+  useEffect(() => {
+    if (!open || !serialReady) {
+      appliedSerialRef.current = "";
+      setLockGas(false);
+      setLockCapacity(false);
+      return;
     }
-  }, [open, reset, territories]);
+    if (serialLookup.isFetching) return;
+
+    const serialKey = serialNumber.trim().toLowerCase();
+    if (appliedSerialRef.current === serialKey) return;
+    appliedSerialRef.current = serialKey;
+
+    if (!matchedCylinder) {
+      setValue("condition", "EMPTY");
+      setValue("gas_code", null);
+      setValue("capacity_m3", null);
+      setValue("capacity_unit", "M3");
+      setValue("home_territory_id", defaultTerritoryId);
+      setLockGas(false);
+      setLockCapacity(false);
+      return;
+    }
+
+    const prefill = prefillRegisterFromCylinder(matchedCylinder);
+    setValue("condition", prefill.condition);
+    setValue("gas_code", prefill.gas_code);
+    setValue("capacity_m3", prefill.capacity_m3);
+    setValue("capacity_unit", prefill.capacity_unit);
+    if (matchedCylinder.home_territory_id != null) {
+      setValue("home_territory_id", matchedCylinder.home_territory_id);
+    } else {
+      setValue("home_territory_id", defaultTerritoryId);
+    }
+    setLockGas(prefill.lockGas);
+    setLockCapacity(prefill.lockCapacity);
+  }, [
+    open,
+    serialReady,
+    serialNumber,
+    matchedCylinder,
+    serialLookup.isFetching,
+    defaultTerritoryId,
+    setValue,
+  ]);
 
   const create = useMutation({
     mutationFn: (values: FormValues) =>
@@ -194,7 +264,7 @@ export function RegisterCylinderDrawer({ open, onClose }: Props) {
   const openCreateDialog = (kind: CreateLocationKind) => {
     setCreateKind(kind);
     setCreateName("");
-    setCreateTerritoryId(territories[0]?.id ?? "");
+    setCreateTerritoryId(defaultTerritoryId);
     setCreateError(null);
     setCreateOpen(true);
   };
@@ -237,13 +307,34 @@ export function RegisterCylinderDrawer({ open, onClose }: Props) {
                 <TextField
                   {...field}
                   required
+                  autoFocus
                   label={translate("cylinders.form.serial")}
                   fullWidth
                   error={Boolean(errors.serial_number)}
-                  helperText={errors.serial_number?.message}
+                  helperText={
+                    errors.serial_number?.message ??
+                    translate("cylinders.form.serial_first_hint")
+                  }
                 />
               )}
             />
+
+            {!serialReady && (
+              <Alert severity="info" sx={{ py: 0.5 }}>
+                {translate("cylinders.form.await_serial")}
+              </Alert>
+            )}
+
+            {serialReady && matchedCylinder && (
+              <Alert severity="info" sx={{ py: 0.5 }}>
+                {matchedCylinder.condition === "FULL" ||
+                matchedCylinder.state === "IN_STOCK_FULL"
+                  ? translate("cylinders.form.prefill_full_hint", {
+                      gas: matchedCylinder.gas_code ?? "—",
+                    })
+                  : translate("cylinders.form.prefill_empty_hint")}
+              </Alert>
+            )}
 
             <Controller
               name="owner_party_id"
@@ -252,12 +343,14 @@ export function RegisterCylinderDrawer({ open, onClose }: Props) {
                 <FormControl
                   fullWidth
                   required
+                  disabled={fieldsDisabled}
                   error={Boolean(errors.owner_party_id)}
                 >
                   <InputLabel>{translate("cylinders.form.owner")}</InputLabel>
                   <Select
                     label={translate("cylinders.form.owner")}
                     value={field.value}
+                    disabled={fieldsDisabled}
                     onChange={(event) =>
                       field.onChange(Number(event.target.value))
                     }
@@ -281,7 +374,7 @@ export function RegisterCylinderDrawer({ open, onClose }: Props) {
               name="ownership_basis"
               control={control}
               render={({ field }) => (
-                <FormControl fullWidth required>
+                <FormControl fullWidth required disabled={fieldsDisabled}>
                   <InputLabel>{translate("cylinders.form.basis")}</InputLabel>
                   <Select
                     {...field}
@@ -302,24 +395,80 @@ export function RegisterCylinderDrawer({ open, onClose }: Props) {
             />
 
             <Controller
+              name="condition"
+              control={control}
+              render={({ field }) => (
+                <FormControl fullWidth disabled={fieldsDisabled}>
+                  <InputLabel>
+                    {translate("cylinders.form.condition")}
+                  </InputLabel>
+                  <Select
+                    {...field}
+                    label={translate("cylinders.form.condition")}
+                    disabled={fieldsDisabled}
+                    onChange={(event) => {
+                      const next = event.target
+                        .value as FormValues["condition"];
+                      field.onChange(next);
+                      // Empty → unlock gas so it can be filled with any gas.
+                      if (next === "EMPTY") {
+                        setLockGas(false);
+                      }
+                    }}
+                  >
+                    <MenuItem value="EMPTY">
+                      {translate("enums.condition.EMPTY")}
+                    </MenuItem>
+                    <MenuItem value="FULL">
+                      {translate("enums.condition.FULL")}
+                    </MenuItem>
+                  </Select>
+                  <FormHelperText>
+                    {gasOptional
+                      ? translate("cylinders.form.condition_empty_hint")
+                      : translate("cylinders.form.condition_full_hint")}
+                  </FormHelperText>
+                </FormControl>
+              )}
+            />
+
+            <Controller
               name="gas_code"
               control={control}
               render={({ field }) => (
-                <FormControl fullWidth>
+                <FormControl fullWidth disabled={gasDisabled}>
                   <InputLabel>{translate("cylinders.form.gas")}</InputLabel>
                   <Select
                     label={translate("cylinders.form.gas")}
                     value={field.value ?? ""}
-                    onChange={(event) =>
-                      field.onChange(event.target.value || null)
-                    }
+                    disabled={gasDisabled}
+                    onChange={(event) => {
+                      const next = event.target.value || null;
+                      field.onChange(next);
+                      if (!lockCapacity) {
+                        setValue(
+                          "capacity_unit",
+                          defaultCapacityUnitForGas(
+                            next as FormValues["gas_code"],
+                          ),
+                        );
+                      }
+                    }}
                   >
+                    <MenuItem value="">
+                      <em>—</em>
+                    </MenuItem>
                     {GAS_CODES.map((code) => (
                       <MenuItem key={code} value={code}>
                         {translate(`enums.gas.${code}`, { defaultValue: code })}
                       </MenuItem>
                     ))}
                   </Select>
+                  <FormHelperText>
+                    {gasOptional
+                      ? translate("cylinders.form.gas_empty_hint")
+                      : translate("cylinders.form.gas_full_hint")}
+                  </FormHelperText>
                 </FormControl>
               )}
             />
@@ -328,13 +477,17 @@ export function RegisterCylinderDrawer({ open, onClose }: Props) {
               name="capacity_unit"
               control={control}
               render={({ field }) => (
-                <FormControl fullWidth>
+                <FormControl
+                  fullWidth
+                  disabled={fieldsDisabled || lockCapacity}
+                >
                   <InputLabel>
                     {translate("cylinders.form.capacity_unit")}
                   </InputLabel>
                   <Select
                     label={translate("cylinders.form.capacity_unit")}
                     value={field.value ?? "M3"}
+                    disabled={fieldsDisabled || lockCapacity}
                     onChange={(event) =>
                       field.onChange(
                         event.target.value as FormValues["capacity_unit"],
@@ -371,8 +524,12 @@ export function RegisterCylinderDrawer({ open, onClose }: Props) {
                   type="number"
                   label={translate("cylinders.form.capacity")}
                   fullWidth
+                  disabled={fieldsDisabled || lockCapacity}
                   error={Boolean(errors.capacity_m3)}
-                  helperText={errors.capacity_m3?.message}
+                  helperText={
+                    errors.capacity_m3?.message ??
+                    translate("cylinders.form.capacity_tank_hint")
+                  }
                 />
               )}
             />
@@ -381,13 +538,14 @@ export function RegisterCylinderDrawer({ open, onClose }: Props) {
               name="home_territory_id"
               control={control}
               render={({ field }) => (
-                <FormControl fullWidth>
+                <FormControl fullWidth disabled={fieldsDisabled}>
                   <InputLabel>
                     {translate("cylinders.form.territory")}
                   </InputLabel>
                   <Select
                     label={translate("cylinders.form.territory")}
                     value={field.value ?? ""}
+                    disabled={fieldsDisabled}
                     onChange={(event) => {
                       const value = event.target.value;
                       if (value === "__create_territory__") {
@@ -419,29 +577,6 @@ export function RegisterCylinderDrawer({ open, onClose }: Props) {
                 </FormControl>
               )}
             />
-
-            <Controller
-              name="condition"
-              control={control}
-              render={({ field }) => (
-                <FormControl fullWidth>
-                  <InputLabel>
-                    {translate("cylinders.form.condition")}
-                  </InputLabel>
-                  <Select
-                    {...field}
-                    label={translate("cylinders.form.condition")}
-                  >
-                    <MenuItem value="EMPTY">
-                      {translate("enums.condition.EMPTY")}
-                    </MenuItem>
-                    <MenuItem value="FULL">
-                      {translate("enums.condition.FULL")}
-                    </MenuItem>
-                  </Select>
-                </FormControl>
-              )}
-            />
           </Stack>
 
           <Stack
@@ -454,7 +589,7 @@ export function RegisterCylinderDrawer({ open, onClose }: Props) {
             <Button
               type="submit"
               variant="contained"
-              disabled={isSubmitting || create.isPending}
+              disabled={fieldsDisabled || isSubmitting || create.isPending}
             >
               {translate("actions.save")}
             </Button>

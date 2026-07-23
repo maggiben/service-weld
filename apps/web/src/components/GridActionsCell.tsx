@@ -32,7 +32,7 @@ export function GridActionsCell({
       direction="row"
       spacing={0.5}
       alignItems="center"
-      justifyContent="flex-end"
+      justifyContent="flex-start"
       sx={{ width: "100%", height: "100%" }}
       onClick={
         stopPropagation

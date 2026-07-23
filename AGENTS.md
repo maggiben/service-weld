@@ -2,6 +2,15 @@
 
 Authoritative implementation specs live in `specs/` (start with `000-project-overview.md`). Architecture decisions: `specs/DECISIONS.md`. Day-to-day setup: `docs/DEVELOPMENT.md`.
 
+## Engineering principles — SOLID + DRY
+
+Apply **SOLID** and **DRY** on every change (`docs/DEVELOPMENT.md` § Engineering principles, `sdd.md` NFR-10):
+
+- **DRY:** one source of truth — shared domain in `packages/domain`, shared Zod in `packages/schemas`, shared view/form helpers in feature `*Logic.ts` with tests. Do not copy-paste identical logic across drawers/pages/services.
+- **SOLID:** single-responsibility modules; extend rather than bloat core paths; honor contracts; keep interfaces/schemas narrow; keep business invariants in domain/DB, not only in UI/controllers.
+
+Prefer extracting real duplication over speculative abstraction.
+
 ## Quality gates — never commit without checks
 
 Local hooks and CI enforce the same rules. **Do not create a git commit until these pass. Do not skip hooks (`--no-verify`) unless the user explicitly requests a bypass.**

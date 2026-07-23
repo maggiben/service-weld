@@ -271,8 +271,8 @@ export default function AlertsPage() {
         width: gridActionsColumnWidth(2),
         sortable: false,
         filterable: false,
-        align: "right",
-        headerAlign: "right",
+        align: "left",
+        headerAlign: "left",
         renderCell: (params) => {
           const actions: GridActionItem[] = [];
           if (canWrite) {

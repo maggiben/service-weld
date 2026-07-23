@@ -215,7 +215,13 @@ export class MovementsRepository {
         .where("movement_event.return_date", "is", null);
     }
     if (query.q) {
-      qb = qb.where("cylinder.serial_number", "ilike", `%${query.q}%`);
+      const term = `%${query.q.trim()}%`;
+      qb = qb.where((eb) =>
+        eb.or([
+          eb("cylinder.serial_number", "ilike", term),
+          eb("party.display_name", "ilike", term),
+        ]),
+      );
     }
     if (query["filter[cylinder_id]"] != null) {
       qb = qb.where(
@@ -455,6 +461,7 @@ export class MovementsRepository {
     const db = resolveDb(this.db);
     let qb = db
       .selectFrom("movement_event")
+      .innerJoin("party", "party.id", "movement_event.holder_party_id")
       .innerJoin("cylinder", "cylinder.id", "movement_event.cylinder_id")
       .leftJoin("client", "client.party_id", "movement_event.holder_party_id")
       .select((eb) => eb.fn.countAll<string>().as("c"));
@@ -465,7 +472,13 @@ export class MovementsRepository {
         .where("movement_event.return_date", "is", null);
     }
     if (query.q) {
-      qb = qb.where("cylinder.serial_number", "ilike", `%${query.q}%`);
+      const term = `%${query.q.trim()}%`;
+      qb = qb.where((eb) =>
+        eb.or([
+          eb("cylinder.serial_number", "ilike", term),
+          eb("party.display_name", "ilike", term),
+        ]),
+      );
     }
     if (query["filter[cylinder_id]"] != null) {
       qb = qb.where(

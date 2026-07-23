@@ -6,6 +6,7 @@ import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Drawer from "@mui/material/Drawer";
 import FormControl from "@mui/material/FormControl";
+import FormHelperText from "@mui/material/FormHelperText";
 import FormLabel from "@mui/material/FormLabel";
 import InputLabel from "@mui/material/InputLabel";
 import MenuItem from "@mui/material/MenuItem";
@@ -33,10 +34,12 @@ import { ApiClientError } from "@weld/api-client";
 import { api } from "../../api/client";
 import { GAS_CODES } from "../../constants/masters";
 import { applyServerErrors } from "../../hooks/useServerErrors";
+import { formatCapacity } from "../../lib/format";
 import {
   isRentalPickable,
   isRefillPickable,
   cylinderPickerLabel,
+  prefillMovementFromCylinder,
 } from "./movementLogic";
 
 interface Props {
@@ -150,9 +153,19 @@ export function DeliverDrawer({
     return fromSearch;
   }, [clientsSearch.data, selectedClient]);
 
+  const cylinderPrefill = useMemo(
+    () =>
+      selectedCylinder ? prefillMovementFromCylinder(selectedCylinder) : null,
+    [selectedCylinder],
+  );
+
   useEffect(() => {
-    if (!selectedCylinder) return;
-    setValue("gas_code", selectedCylinder.gas_code ?? null);
+    if (!selectedCylinder || !cylinderPrefill) {
+      if (!selectedCylinder) setValue("gas_code", null);
+      return;
+    }
+    // Full → autocomplete gas. Empty → leave gas free (clear form value).
+    setValue("gas_code", cylinderPrefill.gas_code);
     // Recarga = siempre el dueño del cilindro (Su Propiedad); sin picker de cliente.
     if (
       movementKind === "REFILL" &&
@@ -163,7 +176,7 @@ export function DeliverDrawer({
         shouldDirty: true,
       });
     }
-  }, [selectedCylinder, movementKind, setValue]);
+  }, [selectedCylinder, cylinderPrefill, movementKind, setValue]);
 
   const onKindChange = (kind: MovementKind) => {
     setValue("movement_kind", kind);
@@ -398,6 +411,33 @@ export function DeliverDrawer({
             />
           )}
 
+          {cylinderPrefill && (
+            <>
+              <TextField
+                label={translate("movements.form.condition")}
+                value={translate(
+                  `enums.condition.${cylinderPrefill.condition}`,
+                )}
+                fullWidth
+                InputProps={{ readOnly: true }}
+              />
+              <TextField
+                label={translate("movements.form.capacity")}
+                value={formatCapacity(
+                  cylinderPrefill.capacity_m3,
+                  cylinderPrefill.capacity_unit,
+                )}
+                fullWidth
+                InputProps={{ readOnly: true }}
+                helperText={
+                  cylinderPrefill.capacity_m3 != null
+                    ? translate("movements.form.capacity_known_hint")
+                    : translate("movements.form.capacity_unknown_hint")
+                }
+              />
+            </>
+          )}
+
           <Controller
             name="gas_code"
             control={control}
@@ -417,10 +457,17 @@ export function DeliverDrawer({
                   </MenuItem>
                   {GAS_CODES.map((code) => (
                     <MenuItem key={code} value={code}>
-                      {code}
+                      {translate(`enums.gas.${code}`, { defaultValue: code })}
                     </MenuItem>
                   ))}
                 </Select>
+                {selectedCylinder && (
+                  <FormHelperText>
+                    {cylinderPrefill?.gasFromCylinder
+                      ? translate("movements.form.gas_hint_full")
+                      : translate("movements.form.gas_hint_empty")}
+                  </FormHelperText>
+                )}
               </FormControl>
             )}
           />

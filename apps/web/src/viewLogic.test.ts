@@ -27,6 +27,7 @@ import {
   cylinderPickerLabel,
   isRefillPickable,
   isRentalPickable,
+  prefillMovementFromCylinder,
 } from "./features/movements/movementLogic";
 import { partyTypeLabel } from "./features/transfers/transferLogic";
 import {
@@ -291,16 +292,73 @@ describe("movementLogic", () => {
         serial_number: "X",
         owner_name: "O",
         gas_code: "N2",
+        condition: "FULL",
+        capacity_m3: 10,
+        capacity_unit: "M3",
       }),
-      "X · O · N2",
+      "X · O · N2 · FULL · 10m³",
     );
     assert.equal(
       cylinderPickerLabel({
         serial_number: "X",
         owner_name: undefined,
         gas_code: null,
+        condition: "EMPTY",
+        capacity_m3: null,
+        capacity_unit: "M3",
       }),
-      "X",
+      "X · EMPTY",
+    );
+  });
+
+  it("prefills gas only when full; always keeps known capacity", () => {
+    assert.deepEqual(
+      prefillMovementFromCylinder({
+        condition: "FULL",
+        state: "IN_STOCK_FULL",
+        gas_code: "O2",
+        capacity_m3: 10,
+        capacity_unit: "M3",
+      }),
+      {
+        gas_code: "O2",
+        gasFromCylinder: true,
+        capacity_m3: 10,
+        capacity_unit: "M3",
+        condition: "FULL",
+      },
+    );
+    assert.deepEqual(
+      prefillMovementFromCylinder({
+        condition: "EMPTY",
+        state: "IN_STOCK_EMPTY",
+        gas_code: "CO2",
+        capacity_m3: 25,
+        capacity_unit: "KG",
+      }),
+      {
+        gas_code: null,
+        gasFromCylinder: false,
+        capacity_m3: 25,
+        capacity_unit: "KG",
+        condition: "EMPTY",
+      },
+    );
+    assert.deepEqual(
+      prefillMovementFromCylinder({
+        condition: "EMPTY",
+        state: "IN_STOCK_EMPTY",
+        gas_code: null,
+        capacity_m3: null,
+        capacity_unit: "M3",
+      }),
+      {
+        gas_code: null,
+        gasFromCylinder: false,
+        capacity_m3: null,
+        capacity_unit: "M3",
+        condition: "EMPTY",
+      },
     );
   });
 });

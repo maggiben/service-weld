@@ -55,7 +55,7 @@ export const VoidMovementInput = zod.object({
 export type VoidMovementInput = zod.infer<typeof VoidMovementInput>;
 
 export const MovementListQuery = PaginationQuery.extend({
-  /** Partial match on cylinder serial number. */
+  /** Partial match on cylinder serial or holder (client) display name. */
   q: zod.string().optional(),
   sort: zod
     .enum([

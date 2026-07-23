@@ -333,8 +333,8 @@ export default function TransfersPage() {
               width: gridActionsColumnWidth(1),
               sortable: false,
               filterable: false,
-              align: "right",
-              headerAlign: "right",
+              align: "left",
+              headerAlign: "left",
               renderCell: (params: { row: StockTransfer }) =>
                 params.row.return_date ? null : (
                   <GridActionsCell

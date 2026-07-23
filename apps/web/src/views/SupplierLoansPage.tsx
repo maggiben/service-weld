@@ -350,8 +350,8 @@ export default function SupplierLoansPage() {
         width: gridActionsColumnWidth(1),
         sortable: false,
         filterable: false,
-        align: "right",
-        headerAlign: "right",
+        align: "left",
+        headerAlign: "left",
         renderCell: (params) => {
           const next = LOAN_STAGE_NEXT[params.row.stage];
           if (!canWrite || !next) return null;

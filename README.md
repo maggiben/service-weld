@@ -184,8 +184,8 @@ Customer-facing exception language: [`docs/MIGRATION_EXCEPTIONS_CUSTOMER.md`](./
 | Doc                                                                      | Purpose                                                             |
 | ------------------------------------------------------------------------ | ------------------------------------------------------------------- |
 | [`specs/`](./specs/)                                                     | Authoritative implementation specs (`000`–`013`) — start with `000` |
-| [`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md)                           | Setup, phases, quality gates                                        |
-| [`AGENTS.md`](./AGENTS.md)                                               | Agent / contributor policy for hooks & coverage                     |
+| [`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md)                           | Setup, phases, SOLID/DRY principles, quality gates                  |
+| [`AGENTS.md`](./AGENTS.md)                                               | Agent / contributor policy for SOLID/DRY, hooks & coverage          |
 | [`domain.md`](./domain.md) · [`workflows.md`](./workflows.md)            | Domain model & business workflows (W1–W20)                          |
 | [`product_requirements_document.md`](./product_requirements_document.md) | PRD, roles, user stories                                            |
 | [`sdd.md`](./sdd.md) · [`database.md`](./database.md)                    | Design + PostgreSQL design                                          |
@@ -203,10 +203,11 @@ If you (including future-you) need to change the product:
 
 1. Work on a **feature branch**; keep `main` green.
 2. Follow [`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md) and the numbered specs under [`specs/`](./specs/). Specs win if prose docs disagree.
-3. **Never** commit until pre-commit checks pass; **never** push until `pnpm run test:coverage` passes (≥80%). Do not use `--no-verify` unless you consciously choose to bypass.
-4. Prefer small, reviewable PRs with a clear “why”; keep secrets out of the repo (`.env` stays local).
-5. Match existing TypeScript / Nest / Next / MUI patterns; do not weaken coverage thresholds or DB invariants.
-6. For agent-assisted work, read [`AGENTS.md`](./AGENTS.md) first.
+3. Apply **SOLID** and **DRY** (`docs/DEVELOPMENT.md` § Engineering principles): extract shared domain/validation/form logic instead of duplicating it across surfaces.
+4. **Never** commit until pre-commit checks pass; **never** push until `pnpm run test:coverage` passes (≥80%). Do not use `--no-verify` unless you consciously choose to bypass.
+5. Prefer small, reviewable PRs with a clear “why”; keep secrets out of the repo (`.env` stays local).
+6. Match existing TypeScript / Nest / Next / MUI patterns; do not weaken coverage thresholds or DB invariants.
+7. For agent-assisted work, read [`AGENTS.md`](./AGENTS.md) first.
 
 External parties: contact the copyright holder for a written agreement before any use, fork, or distribution.
 
