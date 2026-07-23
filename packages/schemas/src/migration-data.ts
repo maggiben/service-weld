@@ -39,6 +39,19 @@ export const MigrationDataStatus = z.object({
   last_report: z.record(z.unknown()).nullable(),
   last_report_at: z.string().datetime().nullable(),
   busy: z.boolean(),
+  live_job: z
+    .object({
+      kind: z.enum(["sync", "dry_run"]),
+      state: z.enum(["running", "succeeded", "failed"]),
+      phase: z.string(),
+      progress_pct: z.number().min(0).max(100).nullable(),
+      lines: z.array(z.string()),
+      error: z.string().nullable(),
+      result: z.record(z.unknown()).nullable(),
+      started_at: z.string().datetime(),
+      finished_at: z.string().datetime().nullable(),
+    })
+    .nullable(),
   workbook_guide: z.array(
     z.object({
       slot: MigrationWorkbookSlot,
@@ -50,6 +63,12 @@ export const MigrationDataStatus = z.object({
   ),
 });
 export type MigrationDataStatus = z.infer<typeof MigrationDataStatus>;
+
+export const MigrationJobAccepted = z.object({
+  accepted: z.literal(true),
+  kind: z.enum(["sync", "dry_run"]),
+});
+export type MigrationJobAccepted = z.infer<typeof MigrationJobAccepted>;
 
 export const MigrationRunRequest = z.object({
   dry_run: z.boolean().default(true),

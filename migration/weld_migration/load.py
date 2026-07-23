@@ -93,10 +93,22 @@ class Loader:
                         conn.execute("TRUNCATE migration_exception RESTART IDENTITY")
                         self._ensure_gas_aliases(conn)
                         self._ensure_seed_parties(conn)
+                        print("Loading cylinders…", flush=True)
                         self._load_cylinders(conn, extracted.cylinders)
+                        print(
+                            f"  cylinders inserted/seen: {self.stats['cylinder_inserted'] + self.stats['cylinder_exists']}",
+                            flush=True,
+                        )
+                        print("Loading clients…", flush=True)
                         self._load_clients(conn, extracted.clients)
+                        print(
+                            f"  clients processed: {self.stats.get('client_inserted', 0) + self.stats.get('client_exists', 0)}",
+                            flush=True,
+                        )
+                        print("Loading movements…", flush=True)
                         self._load_movements(conn, extracted.movements)
                         self._flush_exceptions(conn, extracted)
+                        print("Load complete.", flush=True)
                         self._enable_audit_triggers(conn)
                 except Exception:
                     # Ensure triggers are back even if the migration txn aborted.

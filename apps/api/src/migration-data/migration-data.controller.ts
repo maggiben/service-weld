@@ -23,7 +23,7 @@ import {
   MigrationExportDataset,
   MigrationWorkbookSlot,
   type MigrationDataStatus,
-  type MigrationRunResult,
+  type MigrationJobAccepted,
   type MigrationSnapshot,
   type MigrationUploadedFile,
 } from "@weld/schemas";
@@ -95,19 +95,22 @@ export class MigrationDataController {
 
   @Post("dry-run")
   @RequireCapabilities("admin:write")
-  @ApiOkResponse({ description: "Parse + reconcile without writing" })
-  dryRun(@Body() body: MigrationRunRequestDto): Promise<MigrationRunResult> {
-    return this.migrationData.runImport({ ...body, dry_run: true });
+  @ApiOkResponse({
+    description:
+      "Start parse + reconcile without writes (poll status.live_job for logs)",
+  })
+  dryRun(@Body() body: MigrationRunRequestDto): MigrationJobAccepted {
+    return this.migrationData.startImport({ ...body, dry_run: true });
   }
 
   @Post("sync")
   @RequireCapabilities("admin:write")
   @ApiOkResponse({
     description:
-      "Snapshot DB then load workbooks (destructive to exception queue)",
+      "Start snapshot + load (poll status.live_job for progress/terminal)",
   })
-  sync(@Body() body: MigrationRunRequestDto): Promise<MigrationRunResult> {
-    return this.migrationData.runImport({ ...body, dry_run: false });
+  sync(@Body() body: MigrationRunRequestDto): MigrationJobAccepted {
+    return this.migrationData.startImport({ ...body, dry_run: false });
   }
 
   @Post("rollback")

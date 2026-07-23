@@ -23,6 +23,7 @@ import { sql } from "kysely";
 import type {
   MigrationDataStatus,
   MigrationExportDataset,
+  MigrationJobAccepted,
   MigrationPurgeBusinessResult,
   MigrationRunRequest,
   MigrationRunResult,
@@ -115,9 +116,27 @@ interface UploadManifest {
   >;
 }
 
+type LiveJobKind = "sync" | "dry_run";
+type LiveJobState = "running" | "succeeded" | "failed";
+
+interface LiveJob {
+  kind: LiveJobKind;
+  state: LiveJobState;
+  phase: string;
+  progress_pct: number | null;
+  lines: string[];
+  error: string | null;
+  result: Record<string, unknown> | null;
+  started_at: string;
+  finished_at: string | null;
+}
+
+const MAX_LIVE_LINES = 800;
+
 @Injectable()
 export class MigrationDataService implements OnModuleInit {
   private busy = false;
+  private liveJob: LiveJob | null = null;
   private readonly dataDir: string;
   private readonly uploadsDir: string;
   private readonly snapshotsDir: string;
@@ -203,6 +222,7 @@ export class MigrationDataService implements OnModuleInit {
       last_report: lastReport,
       last_report_at: lastReportAt,
       busy: this.busy,
+      live_job: this.liveJob,
       workbook_guide: WORKBOOK_GUIDE,
     };
   }
@@ -251,7 +271,11 @@ export class MigrationDataService implements OnModuleInit {
     return uploaded;
   }
 
-  async runImport(body: MigrationRunRequest): Promise<MigrationRunResult> {
+  /**
+   * Start sync/dry-run in the background so the HTTP request does not time out
+   * on large workbooks. Progress + terminal lines are exposed via getStatus().
+   */
+  startImport(body: MigrationRunRequest): MigrationJobAccepted {
     this.assertIdle();
     const status = this.getStatus();
     if (!body.skip_clients) {
@@ -268,10 +292,34 @@ export class MigrationDataService implements OnModuleInit {
       throw new BadRequestException("Missing Propios workbook upload.");
     }
 
+    const kind: LiveJobKind = body.dry_run ? "dry_run" : "sync";
     this.busy = true;
+    this.liveJob = {
+      kind,
+      state: "running",
+      phase: "starting",
+      progress_pct: 1,
+      lines: [],
+      error: null,
+      result: null,
+      started_at: new Date().toISOString(),
+      finished_at: null,
+    };
+    this.appendLiveLine(`[weld] starting ${kind}…`);
+
+    void this.runImportBackground(body).catch((err: unknown) => {
+      this.finishLiveJob("failed", nestErrorMessage(err));
+    });
+
+    return { accepted: true, kind };
+  }
+
+  private async runImportBackground(body: MigrationRunRequest): Promise<void> {
     let snapshotId: string | null = null;
     try {
       if (!body.dry_run) {
+        this.setLivePhase("snapshot", 5);
+        this.appendLiveLine("[weld] creating pre-sync database snapshot…");
         const label =
           body.label?.trim() ||
           `pre-sync ${new Date().toISOString().slice(0, 19)}`;
@@ -282,8 +330,10 @@ export class MigrationDataService implements OnModuleInit {
           this.snapshotsDir,
         ]);
         snapshotId = String(snapRaw.id ?? "");
+        this.appendLiveLine(`[weld] snapshot ready: ${snapshotId || "(none)"}`);
       }
 
+      this.setLivePhase("extract", 12);
       const args = [
         `--junin=${join(this.uploadsDir, "junin.xls")}`,
         `--chacabuco=${join(this.uploadsDir, "chacabuco.xls")}`,
@@ -296,10 +346,119 @@ export class MigrationDataService implements OnModuleInit {
 
       const report = await this.runPythonJson(args);
       writeFileSync(this.reportPath, JSON.stringify(report, null, 2));
-      return { dry_run: body.dry_run, snapshot_id: snapshotId, report };
-    } finally {
-      this.busy = false;
+      const result: MigrationRunResult = {
+        dry_run: body.dry_run,
+        snapshot_id: snapshotId,
+        report,
+      };
+      if (this.liveJob) {
+        this.liveJob.result = result as unknown as Record<string, unknown>;
+      }
+      this.setLivePhase("done", 100);
+      this.appendLiveLine("[weld] finished successfully");
+      this.finishLiveJob("succeeded");
+    } catch (err) {
+      const message = nestErrorMessage(err);
+      this.appendLiveLine(`[weld] ERROR: ${message.slice(0, 2000)}`);
+      this.finishLiveJob("failed", message);
     }
+  }
+
+  /** @deprecated Prefer startImport — kept for tests that call the body path. */
+  async runImport(body: MigrationRunRequest): Promise<MigrationRunResult> {
+    const accepted = this.startImport(body);
+    // Wait until job finishes (used by older callers / tests).
+    while (this.busy) {
+      await new Promise((r) => setTimeout(r, 200));
+    }
+    if (this.liveJob?.state === "failed") {
+      throw new BadRequestException(
+        this.liveJob.error ?? `${accepted.kind} failed`,
+      );
+    }
+    const result = this.liveJob?.result;
+    if (!result) {
+      throw new ServiceUnavailableException(
+        "Migration finished without result",
+      );
+    }
+    return result as unknown as MigrationRunResult;
+  }
+
+  private setLivePhase(phase: string, progressPct: number | null): void {
+    if (!this.liveJob || this.liveJob.state !== "running") return;
+    this.liveJob.phase = phase;
+    if (progressPct != null) this.liveJob.progress_pct = progressPct;
+  }
+
+  private appendLiveLine(line: string): void {
+    if (!this.liveJob) return;
+    const cleaned = line.replace(/\r/g, "").trimEnd();
+    if (!cleaned) return;
+    for (const part of cleaned.split("\n")) {
+      const row = part.trimEnd();
+      if (!row) continue;
+      this.liveJob.lines.push(row);
+      this.inferProgressFromLine(row);
+    }
+    if (this.liveJob.lines.length > MAX_LIVE_LINES) {
+      this.liveJob.lines = this.liveJob.lines.slice(-MAX_LIVE_LINES);
+    }
+  }
+
+  private inferProgressFromLine(line: string): void {
+    if (!this.liveJob || this.liveJob.state !== "running") return;
+    const lower = line.toLowerCase();
+    if (
+      lower.includes("extracting junín") ||
+      lower.includes("extracting junin")
+    ) {
+      this.setLivePhase("extract_junin", 18);
+    } else if (lower.includes("extracting chacabuco")) {
+      this.setLivePhase("extract_chacabuco", 32);
+    } else if (lower.includes("extracting propios")) {
+      this.setLivePhase("extract_propios", 48);
+    } else if (lower.includes("extract done")) {
+      this.setLivePhase("extract_done", 55);
+    } else if (lower.includes("loading into db")) {
+      this.setLivePhase("load", 60);
+    } else if (
+      lower.includes("seed parties") ||
+      lower.includes("loading cylinders")
+    ) {
+      this.setLivePhase("load_cylinders", 65);
+    } else if (lower.includes("loading clients")) {
+      this.setLivePhase("load_clients", 72);
+    } else if (
+      lower.includes("loading movements") ||
+      lower.includes("movements inserted")
+    ) {
+      this.setLivePhase("load_movements", 82);
+      const m = /(\d+)\s*$/.exec(line.replace(/,/g, ""));
+      if (m) {
+        const n = Number(m[1]);
+        if (Number.isFinite(n) && n > 0) {
+          // Soft ramp while movements stream in.
+          this.liveJob.progress_pct = Math.min(95, 82 + Math.floor(n / 5000));
+        }
+      }
+    } else if (lower.includes("wrote report")) {
+      this.setLivePhase("report", 98);
+    }
+  }
+
+  private finishLiveJob(state: "succeeded" | "failed", error?: string): void {
+    if (this.liveJob) {
+      this.liveJob.state = state;
+      this.liveJob.finished_at = new Date().toISOString();
+      if (state === "succeeded") {
+        this.liveJob.progress_pct = 100;
+        this.liveJob.error = null;
+      } else {
+        this.liveJob.error = error ?? "Migration failed";
+      }
+    }
+    this.busy = false;
   }
 
   async rollback(snapshotId: string): Promise<Record<string, unknown>> {
@@ -526,6 +685,7 @@ print(json.dumps({"path": str(zip_path)}))
         DATABASE_URL: dsn,
         PYTHONPATH: this.migrationRoot,
         MIGRATION_DATA_DIR: this.dataDir,
+        PYTHONUNBUFFERED: "1",
       };
       const child = spawn(bin, cmdArgs, {
         env,
@@ -533,12 +693,21 @@ print(json.dumps({"path": str(zip_path)}))
       });
       let stdout = "";
       let stderr = "";
-      child.stdout.on("data", (chunk: Buffer) => {
-        stdout += chunk.toString("utf8");
-      });
-      child.stderr.on("data", (chunk: Buffer) => {
-        stderr += chunk.toString("utf8");
-      });
+      let stdoutCarry = "";
+      let stderrCarry = "";
+      const pushChunk = (chunk: Buffer, stream: "stdout" | "stderr") => {
+        const text = chunk.toString("utf8");
+        if (stream === "stdout") stdout += text;
+        else stderr += text;
+        const carry = stream === "stdout" ? stdoutCarry : stderrCarry;
+        const combined = carry + text;
+        const parts = combined.split("\n");
+        if (stream === "stdout") stdoutCarry = parts.pop() ?? "";
+        else stderrCarry = parts.pop() ?? "";
+        for (const line of parts) this.appendLiveLine(line);
+      };
+      child.stdout.on("data", (chunk: Buffer) => pushChunk(chunk, "stdout"));
+      child.stderr.on("data", (chunk: Buffer) => pushChunk(chunk, "stderr"));
       child.on("error", (err) => {
         reject(
           new ServiceUnavailableException(
@@ -547,6 +716,8 @@ print(json.dumps({"path": str(zip_path)}))
         );
       });
       child.on("close", (code) => {
+        if (stdoutCarry.trim()) this.appendLiveLine(stdoutCarry);
+        if (stderrCarry.trim()) this.appendLiveLine(stderrCarry);
         if (code !== 0) {
           reject(
             new BadRequestException(
@@ -598,6 +769,25 @@ function extractLastJson(stdout: string): string | null {
     }
   }
   return last;
+}
+
+function nestErrorMessage(err: unknown): string {
+  if (
+    err &&
+    typeof err === "object" &&
+    "getResponse" in err &&
+    typeof (err as { getResponse: () => unknown }).getResponse === "function"
+  ) {
+    const response = (err as { getResponse: () => unknown }).getResponse();
+    if (typeof response === "string") return response;
+    if (response && typeof response === "object" && "message" in response) {
+      const message = (response as { message: unknown }).message;
+      if (Array.isArray(message)) return message.map(String).join("; ");
+      if (message != null) return String(message);
+    }
+  }
+  if (err instanceof Error) return err.message;
+  return String(err);
 }
 
 export { extractLastJson };

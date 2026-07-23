@@ -102,12 +102,12 @@ import type {
   AuditLogListResponse,
   MigrationDataStatus,
   MigrationExportDataset,
+  MigrationJobAccepted,
   MigrationMarkGoodRequest,
   MigrationPurgeBusinessRequest,
   MigrationPurgeBusinessResult,
   MigrationRollbackRequest,
   MigrationRunRequest,
-  MigrationRunResult,
   MigrationSnapshot,
   MigrationUploadedFile,
   MigrationWorkbookSlot,
@@ -789,9 +789,18 @@ export class WeldApiClient {
     slot: MigrationWorkbookSlot,
     file: Blob,
     filename: string,
+    options: { onProgress?: (pct: number) => void } = {},
   ): Promise<MigrationUploadedFile> {
     const form = new FormData();
     form.append("file", file, filename);
+    if (options.onProgress) {
+      return this.requestFormWithProgress<MigrationUploadedFile>(
+        "POST",
+        `/admin/migration-data/uploads/${slot}`,
+        form,
+        options.onProgress,
+      );
+    }
     return this.requestForm<MigrationUploadedFile>(
       "POST",
       `/admin/migration-data/uploads/${slot}`,
@@ -801,8 +810,8 @@ export class WeldApiClient {
 
   dryRunMigration(
     input: Partial<MigrationRunRequest> = {},
-  ): Promise<MigrationRunResult> {
-    return this.request<MigrationRunResult>(
+  ): Promise<MigrationJobAccepted> {
+    return this.request<MigrationJobAccepted>(
       "POST",
       "/admin/migration-data/dry-run",
       {
@@ -813,8 +822,8 @@ export class WeldApiClient {
 
   syncMigration(
     input: Partial<MigrationRunRequest> = {},
-  ): Promise<MigrationRunResult> {
-    return this.request<MigrationRunResult>(
+  ): Promise<MigrationJobAccepted> {
+    return this.request<MigrationJobAccepted>(
       "POST",
       "/admin/migration-data/sync",
       {
@@ -1062,5 +1071,85 @@ export class WeldApiClient {
     }
 
     return json as T;
+  }
+
+  /**
+   * Multipart upload with XHR so browsers can report upload progress for large .xls files.
+   */
+  private requestFormWithProgress<T>(
+    method: string,
+    path: string,
+    form: FormData,
+    onProgress: (pct: number) => void,
+    options: { auth?: boolean; retried?: boolean } = {},
+  ): Promise<T> {
+    const useAuth = options.auth !== false;
+    return new Promise<T>((resolvePromise, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open(method, `${this.baseUrl}${path}`);
+      xhr.responseType = "text";
+      xhr.setRequestHeader("Accept", "application/json");
+      if (useAuth) {
+        const access = this.tokens.getAccessToken();
+        if (access) xhr.setRequestHeader("Authorization", `Bearer ${access}`);
+      }
+      xhr.upload.onprogress = (ev) => {
+        if (!ev.lengthComputable || ev.total <= 0) return;
+        onProgress(Math.min(100, Math.round((ev.loaded / ev.total) * 100)));
+      };
+      xhr.onload = () => {
+        void (async () => {
+          const text = xhr.responseText ?? "";
+          let json: unknown = null;
+          try {
+            json = text ? JSON.parse(text) : null;
+          } catch {
+            json = null;
+          }
+          if (xhr.status === 401 && useAuth && !options.retried) {
+            if (this.tokens.getRefreshToken()) {
+              try {
+                await this.refresh();
+                resolvePromise(
+                  await this.requestFormWithProgress<T>(
+                    method,
+                    path,
+                    form,
+                    onProgress,
+                    { ...options, retried: true },
+                  ),
+                );
+                return;
+              } catch {
+                this.tokens.clearTokens();
+              }
+            }
+          }
+          if (xhr.status < 200 || xhr.status >= 300) {
+            const parsed = ErrorEnvelope.safeParse(json);
+            if (parsed.success) {
+              reject(ApiClientError.fromEnvelope(xhr.status, parsed.data));
+              return;
+            }
+            reject(
+              new ApiClientError(
+                "HTTP_ERROR",
+                `Request failed with ${xhr.status}`,
+                xhr.status,
+              ),
+            );
+            return;
+          }
+          onProgress(100);
+          resolvePromise(json as T);
+        })();
+      };
+      xhr.onerror = () => {
+        reject(
+          new ApiClientError("NETWORK_ERROR", "Network error during upload", 0),
+        );
+      };
+      xhr.send(form);
+    });
   }
 }

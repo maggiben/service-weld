@@ -190,6 +190,7 @@ describe("migration-data schemas", () => {
       last_report: null,
       last_report_at: null,
       busy: false,
+      live_job: null,
       workbook_guide: [
         {
           slot: "junin",
@@ -201,6 +202,7 @@ describe("migration-data schemas", () => {
       ],
     });
     assert.equal(status.missing_slots.length, 3);
+    assert.equal(status.live_job, null);
   });
 
   it("parses upload, snapshot, run, rollback, and mark-good payloads", () => {
