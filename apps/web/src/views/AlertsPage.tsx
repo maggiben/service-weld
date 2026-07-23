@@ -66,24 +66,26 @@ export default function AlertsPage() {
   };
 
   const cursor = cursors[paginationModel.page];
-  const alertsQuery = useQuery({
-    queryKey: [
-      "alerts",
-      paginationModel.pageSize,
+  const queryParams = useMemo(
+    () => ({
+      limit: paginationModel.pageSize,
       cursor,
-      typeFilter,
-      kindFilter,
-    ],
-    queryFn: () =>
-      api.listAlerts({
-        limit: paginationModel.pageSize,
-        cursor,
-        open: true,
-        sort: "-created_at",
-        ...(typeFilter ? { "filter[alert_type]": typeFilter } : {}),
-        ...(kindFilter ? { "filter[movement_kind]": kindFilter } : {}),
-      }),
+      open: true as const,
+      sort: "-created_at" as const,
+      ...(typeFilter ? { "filter[alert_type]": typeFilter } : {}),
+      ...(kindFilter ? { "filter[movement_kind]": kindFilter } : {}),
+    }),
+    [paginationModel.pageSize, cursor, typeFilter, kindFilter],
+  );
+
+  const alertsQuery = useQuery({
+    queryKey: ["alerts", queryParams],
+    queryFn: () => api.listAlerts(queryParams),
+    enabled: paginationModel.page === 0 || cursor != null,
   });
+
+  const rows = alertsQuery.data?.data ?? [];
+  const pageMeta = alertsQuery.data?.page;
 
   useEffect(() => {
     const next = alertsQuery.data?.page.next_cursor;
@@ -94,6 +96,15 @@ export default function AlertsPage() {
       return copy;
     });
   }, [alertsQuery.data?.page.next_cursor, paginationModel.page]);
+
+  const handlePaginationModelChange = (model: GridPaginationModel) => {
+    if (model.pageSize !== paginationModel.pageSize) {
+      setCursors([undefined]);
+      setPaginationModel({ page: 0, pageSize: model.pageSize });
+      return;
+    }
+    setPaginationModel(model);
+  };
 
   useEffect(() => {
     if (alertsQuery.data?.page) {
@@ -374,18 +385,19 @@ export default function AlertsPage() {
 
       <Box sx={{ flex: 1, minHeight: 360 }}>
         <DataGrid
-          rows={alertsQuery.data?.data ?? []}
+          rows={rows}
           columns={columns}
           getRowId={(row) => row.id}
           loading={alertsQuery.isLoading || alertsQuery.isFetching}
           paginationMode="server"
           paginationModel={paginationModel}
-          onPaginationModelChange={setPaginationModel}
+          onPaginationModelChange={handlePaginationModelChange}
           pageSizeOptions={[25, 50]}
-          rowCount={alertsQuery.data?.page.total_estimate ?? -1}
-          paginationMeta={{
-            hasNextPage: alertsQuery.data?.page.has_more ?? false,
-          }}
+          rowCount={
+            paginationModel.page * paginationModel.pageSize +
+            rows.length +
+            (pageMeta?.has_more ? 1 : 0)
+          }
           disableRowSelectionOnClick
           onRowClick={(params) => {
             const href = alertEntityHref(params.row);
