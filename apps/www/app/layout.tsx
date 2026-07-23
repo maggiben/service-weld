@@ -9,6 +9,9 @@ export const metadata: Metadata = {
   },
   description:
     "Service Weld S.R.L. — gases industriales, cilindros e insumos de soldadura",
+  icons: {
+    icon: "/service-weld-remove-bg-bw.webp",
+  },
 };
 
 export default function RootLayout({

@@ -8,6 +8,9 @@ export const metadata: Metadata = {
     template: "%s · Service Weld",
   },
   description: "Custodia, circulación y alquiler — Service Weld S.R.L.",
+  icons: {
+    icon: "/service-weld-remove-bg-bw.webp",
+  },
 };
 
 export default function RootLayout({
