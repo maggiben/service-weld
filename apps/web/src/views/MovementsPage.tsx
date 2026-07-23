@@ -190,14 +190,12 @@ export default function MovementsPage() {
         field: "return_date",
         headerName: translate("movements.columns.return"),
         width: 120,
-        sortable: false,
         valueGetter: (_v, row) => row.return_date ?? "—",
       },
       {
         field: "cylinder_serial",
         headerName: translate("movements.columns.serial"),
         width: 120,
-        sortable: false,
         renderCell: (params) => (
           <Link
             component={NextLink}
@@ -213,7 +211,6 @@ export default function MovementsPage() {
         headerName: translate("movements.columns.holder"),
         flex: 1,
         minWidth: 160,
-        sortable: false,
         renderCell: (params) => (
           <Link
             component={NextLink}
@@ -228,14 +225,12 @@ export default function MovementsPage() {
         field: "property_basis",
         headerName: translate("movements.columns.property"),
         width: 120,
-        sortable: false,
         valueFormatter: (value: string) => translate(`enums.basis.${value}`),
       },
       {
         field: "movement_kind",
         headerName: translate("movements.columns.kind"),
         width: 110,
-        sortable: false,
         valueFormatter: (value: string) =>
           translate(`enums.movement_kind.${value}`),
       },
@@ -243,7 +238,6 @@ export default function MovementsPage() {
         field: "gas_code",
         headerName: translate("movements.columns.gas"),
         width: 100,
-        sortable: false,
       },
     ];
 
@@ -263,7 +257,6 @@ export default function MovementsPage() {
         field: "state",
         headerName: translate("movements.columns.state"),
         width: 120,
-        sortable: false,
         renderCell: (params) => {
           const returned = isMovementReturned(params.row);
           return (

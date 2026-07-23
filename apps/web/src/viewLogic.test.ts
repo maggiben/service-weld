@@ -21,6 +21,7 @@ import {
   clientSortParam,
   cylinderSortParam,
   movementSortParam,
+  supplierLoanSortParam,
 } from "./lib/sortParam";
 import {
   cylinderPickerLabel,
@@ -108,10 +109,100 @@ describe("sortParam", () => {
     );
     assert.equal(cylinderSortParam([]), "serial_number");
     assert.equal(cylinderSortParam([{ field: "state", sort: "asc" }]), "state");
+    assert.equal(
+      cylinderSortParam([{ field: "gas_code", sort: "desc" }]),
+      "-gas_code",
+    );
+    assert.equal(
+      cylinderSortParam([{ field: "capacity_m3", sort: "asc" }]),
+      "capacity_m3",
+    );
+    assert.equal(
+      cylinderSortParam([{ field: "current_location_name", sort: "asc" }]),
+      "current_location_name",
+    );
+    assert.equal(
+      cylinderSortParam([{ field: "ownership_basis", sort: "desc" }]),
+      "-ownership_basis",
+    );
+    assert.equal(
+      cylinderSortParam([{ field: "owner_name", sort: "asc" }]),
+      "owner_name",
+    );
+    assert.equal(
+      cylinderSortParam([{ field: "current_holder_name", sort: "desc" }]),
+      "-current_holder_name",
+    );
+    assert.equal(
+      cylinderSortParam([{ field: "condition", sort: "asc" }]),
+      "condition",
+    );
+    assert.equal(
+      cylinderSortParam([{ field: "home_territory_id", sort: "desc" }]),
+      "-home_territory_id",
+    );
     assert.equal(movementSortParam([]), "-delivery_date");
     assert.equal(
       movementSortParam([{ field: "rental_days", sort: "desc" }]),
       "-rental_days",
+    );
+    assert.equal(
+      movementSortParam([{ field: "holder_name", sort: "asc" }]),
+      "holder_name",
+    );
+    assert.equal(
+      movementSortParam([{ field: "cylinder_serial", sort: "desc" }]),
+      "-cylinder_serial",
+    );
+    assert.equal(movementSortParam([{ field: "state", sort: "asc" }]), "state");
+    assert.equal(
+      movementSortParam([{ field: "return_date", sort: "desc" }]),
+      "-return_date",
+    );
+    assert.equal(
+      movementSortParam([{ field: "property_basis", sort: "asc" }]),
+      "property_basis",
+    );
+    assert.equal(
+      movementSortParam([{ field: "movement_kind", sort: "desc" }]),
+      "-movement_kind",
+    );
+    assert.equal(
+      movementSortParam([{ field: "gas_code", sort: "asc" }]),
+      "gas_code",
+    );
+    assert.equal(supplierLoanSortParam([]), "received_from_supplier");
+    assert.equal(
+      supplierLoanSortParam([{ field: "returned_by_client", sort: "desc" }]),
+      "-returned_by_client",
+    );
+    assert.equal(
+      supplierLoanSortParam([{ field: "client_name", sort: "asc" }]),
+      "client_name",
+    );
+    assert.equal(
+      supplierLoanSortParam([{ field: "client_name", sort: "desc" }]),
+      "-client_name",
+    );
+    assert.equal(
+      supplierLoanSortParam([{ field: "cylinder_serial", sort: "asc" }]),
+      "cylinder_serial",
+    );
+    assert.equal(
+      supplierLoanSortParam([{ field: "supplier_name", sort: "desc" }]),
+      "-supplier_name",
+    );
+    assert.equal(
+      supplierLoanSortParam([{ field: "stage", sort: "asc" }]),
+      "stage",
+    );
+    assert.equal(
+      supplierLoanSortParam([{ field: "received_from_supplier", sort: "asc" }]),
+      "received_from_supplier",
+    );
+    assert.equal(
+      supplierLoanSortParam([{ field: "nope", sort: "desc" }]),
+      "received_from_supplier",
     );
   });
 });

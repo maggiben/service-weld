@@ -235,7 +235,6 @@
       "hydro_soon": "Hydrotest tracking coming soon"
     },
     "inline": {
-      "edit_capacity": "Click to edit capacity",
       "capacity_invalid": "Enter a capacity greater than zero"
     },
     "loss": {

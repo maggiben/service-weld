@@ -1,9 +1,11 @@
 import { Inject, Injectable } from "@nestjs/common";
+import { businessTodayIso, calendarDaysBetween } from "@weld/domain";
 import type {
   CreateMovementInput,
   MovementEvent,
   MovementListQuery,
 } from "@weld/schemas";
+import { sql, type SqlBool } from "kysely";
 import { ApiErrors } from "../common/errors/api-error";
 import {
   buildPageMeta,
@@ -57,6 +59,88 @@ function toIsoDate(value: string | Date | null): string | null {
   return value.toISOString().slice(0, 10);
 }
 
+const MOVEMENT_LIST_SORT_FIELDS = [
+  "delivery_date",
+  "return_date",
+  "cylinder_serial",
+  "holder_name",
+  "property_basis",
+  "movement_kind",
+  "gas_code",
+  "rental_days",
+  "state",
+] as const;
+
+/**
+ * Display / sort key for Días (BR-03): stored rental_days when set; else accrued
+ * calendar days for OPEN rentals. Matches web `displayRentalDays`.
+ */
+function effectiveRentalDaysSql(asOf: string) {
+  return sql<number | null>`
+    case
+      when movement_event.movement_kind = 'REFILL' then null
+      when movement_event.rental_days is not null then movement_event.rental_days
+      when movement_event.state = 'OPEN' then (${asOf}::date - movement_event.delivery_date)
+      else null
+    end
+  `;
+}
+
+function effectiveRentalDaysForRow(
+  row: Pick<
+    MovementRow,
+    "movement_kind" | "rental_days" | "state" | "delivery_date"
+  >,
+  asOf: string,
+): number | null {
+  if (row.movement_kind === "REFILL") return null;
+  if (row.rental_days != null) return Number(row.rental_days);
+  if (row.state === "OPEN") {
+    return calendarDaysBetween(toIsoDate(row.delivery_date)!, asOf);
+  }
+  return null;
+}
+
+function rentalDaysSortKey(asOf: string, direction: "asc" | "desc") {
+  const daysExpr = effectiveRentalDaysSql(asOf);
+  // Sentinels keep null display days (—, refill, void) at the end for both dirs.
+  return direction === "asc"
+    ? sql`coalesce((${daysExpr}), 2147483647)`
+    : sql`coalesce((${daysExpr}), -2147483648)`;
+}
+
+function movementListCursorPayload(
+  sortField: (typeof MOVEMENT_LIST_SORT_FIELDS)[number],
+  last: MovementRow,
+  asOf: string,
+): Record<string, string | number | null> {
+  const id = Number(last.id);
+  switch (sortField) {
+    case "return_date":
+      return { return_date: toIsoDate(last.return_date), id };
+    case "cylinder_serial":
+      return { cylinder_serial: last.cylinder_serial, id };
+    case "holder_name":
+      return { holder_name: last.holder_name, id };
+    case "property_basis":
+      return { property_basis: last.property_basis, id };
+    case "movement_kind":
+      return { movement_kind: last.movement_kind, id };
+    case "gas_code":
+      return { gas_code: last.gas_code, id };
+    case "rental_days":
+      return {
+        rental_days: effectiveRentalDaysForRow(last, asOf),
+        id,
+      };
+    case "state":
+      return { state: last.state, id };
+    case "delivery_date":
+    default:
+      return { delivery_date: toIsoDate(last.delivery_date), id };
+  }
+}
+
 function mapMovement(row: MovementRow): MovementEvent {
   return {
     id: Number(row.id),
@@ -93,7 +177,10 @@ export class MovementsRepository {
   }> {
     const db = resolveDb(this.db);
     const limit = query.limit;
-    const sort = parseSort(query.sort, ["delivery_date", "rental_days"]);
+    const sort = parseSort(query.sort, MOVEMENT_LIST_SORT_FIELDS);
+    const asOf = businessTodayIso();
+    const asc = sort.direction === "asc";
+    const daysSortKey = rentalDaysSortKey(asOf, sort.direction);
 
     let qb = db
       .selectFrom("movement_event")
@@ -160,12 +247,12 @@ export class MovementsRepository {
       qb = qb.where("movement_event.gas_code", "=", query["filter[gas_code]"]);
     }
 
-    if (query.cursor && sort.field === "delivery_date") {
+    if (query.cursor) {
       const cursor = decodeCursor(query.cursor);
-      const cursorDate = String(cursor.delivery_date ?? "");
       const cursorId = Number(cursor.id ?? 0);
-      qb =
-        sort.direction === "asc"
+      if (sort.field === "delivery_date") {
+        const cursorDate = String(cursor.delivery_date ?? "");
+        qb = asc
           ? qb.where((eb) =>
               eb.or([
                 eb("movement_event.delivery_date", ">", cursorDate),
@@ -184,19 +271,158 @@ export class MovementsRepository {
                 ]),
               ]),
             );
+      } else if (sort.field === "return_date") {
+        const cursorReturn = String(cursor.return_date ?? "");
+        const returnKey = sql`coalesce(movement_event.return_date::text, '')`;
+        qb = asc
+          ? qb.where(
+              sql<SqlBool>`(${returnKey} > ${cursorReturn} or (${returnKey} = ${cursorReturn} and movement_event.id > ${cursorId}))`,
+            )
+          : qb.where(
+              sql<SqlBool>`(${returnKey} < ${cursorReturn} or (${returnKey} = ${cursorReturn} and movement_event.id < ${cursorId}))`,
+            );
+      } else if (sort.field === "cylinder_serial") {
+        const cursorSerial = String(cursor.cylinder_serial ?? "");
+        qb = asc
+          ? qb.where((eb) =>
+              eb.or([
+                eb("cylinder.serial_number", ">", cursorSerial),
+                eb.and([
+                  eb("cylinder.serial_number", "=", cursorSerial),
+                  eb("movement_event.id", ">", cursorId),
+                ]),
+              ]),
+            )
+          : qb.where((eb) =>
+              eb.or([
+                eb("cylinder.serial_number", "<", cursorSerial),
+                eb.and([
+                  eb("cylinder.serial_number", "=", cursorSerial),
+                  eb("movement_event.id", "<", cursorId),
+                ]),
+              ]),
+            );
+      } else if (sort.field === "holder_name") {
+        const cursorHolder = String(cursor.holder_name ?? "");
+        qb = asc
+          ? qb.where(
+              sql<SqlBool>`(party.display_name > ${cursorHolder} or (party.display_name = ${cursorHolder} and movement_event.id > ${cursorId}))`,
+            )
+          : qb.where(
+              sql<SqlBool>`(party.display_name < ${cursorHolder} or (party.display_name = ${cursorHolder} and movement_event.id < ${cursorId}))`,
+            );
+      } else if (sort.field === "property_basis") {
+        const cursorBasis = String(cursor.property_basis ?? "");
+        qb = asc
+          ? qb.where(
+              sql<SqlBool>`(movement_event.property_basis::text > ${cursorBasis} or (movement_event.property_basis::text = ${cursorBasis} and movement_event.id > ${cursorId}))`,
+            )
+          : qb.where(
+              sql<SqlBool>`(movement_event.property_basis::text < ${cursorBasis} or (movement_event.property_basis::text = ${cursorBasis} and movement_event.id < ${cursorId}))`,
+            );
+      } else if (sort.field === "movement_kind") {
+        const cursorKind = String(cursor.movement_kind ?? "");
+        qb = asc
+          ? qb.where(
+              sql<SqlBool>`(movement_event.movement_kind::text > ${cursorKind} or (movement_event.movement_kind::text = ${cursorKind} and movement_event.id > ${cursorId}))`,
+            )
+          : qb.where(
+              sql<SqlBool>`(movement_event.movement_kind::text < ${cursorKind} or (movement_event.movement_kind::text = ${cursorKind} and movement_event.id < ${cursorId}))`,
+            );
+      } else if (sort.field === "gas_code") {
+        const cursorGas = String(cursor.gas_code ?? "");
+        const gasKey = sql`coalesce(movement_event.gas_code, '')`;
+        qb = asc
+          ? qb.where(
+              sql<SqlBool>`(${gasKey} > ${cursorGas} or (${gasKey} = ${cursorGas} and movement_event.id > ${cursorId}))`,
+            )
+          : qb.where(
+              sql<SqlBool>`(${gasKey} < ${cursorGas} or (${gasKey} = ${cursorGas} and movement_event.id < ${cursorId}))`,
+            );
+      } else if (sort.field === "rental_days") {
+        const cursorDaysRaw = cursor.rental_days;
+        const cursorDays =
+          cursorDaysRaw == null || cursorDaysRaw === ""
+            ? null
+            : Number(cursorDaysRaw);
+        const cursorKey =
+          cursorDays == null ? (asc ? 2147483647 : -2147483648) : cursorDays;
+        qb = asc
+          ? qb.where(
+              sql<SqlBool>`(${daysSortKey} > ${cursorKey} or (${daysSortKey} = ${cursorKey} and movement_event.id > ${cursorId}))`,
+            )
+          : qb.where(
+              sql<SqlBool>`(${daysSortKey} < ${cursorKey} or (${daysSortKey} = ${cursorKey} and movement_event.id < ${cursorId}))`,
+            );
+      } else if (sort.field === "state") {
+        const cursorState = String(cursor.state ?? "");
+        qb = asc
+          ? qb.where(
+              sql<SqlBool>`(movement_event.state::text > ${cursorState} or (movement_event.state::text = ${cursorState} and movement_event.id > ${cursorId}))`,
+            )
+          : qb.where(
+              sql<SqlBool>`(movement_event.state::text < ${cursorState} or (movement_event.state::text = ${cursorState} and movement_event.id < ${cursorId}))`,
+            );
+      }
     }
 
-    const sortColumn =
+    const ordered =
       sort.field === "rental_days"
-        ? "movement_event.rental_days"
-        : "movement_event.delivery_date";
+        ? qb
+            .orderBy(daysSortKey, sort.direction)
+            .orderBy("movement_event.id", sort.direction)
+        : sort.field === "return_date"
+          ? qb
+              .orderBy(
+                sql`coalesce(movement_event.return_date::text, '')`,
+                sort.direction,
+              )
+              .orderBy("movement_event.id", sort.direction)
+          : sort.field === "cylinder_serial"
+            ? qb
+                .orderBy("cylinder.serial_number", sort.direction)
+                .orderBy("movement_event.id", sort.direction)
+            : sort.field === "holder_name"
+              ? qb
+                  .orderBy("party.display_name", sort.direction)
+                  .orderBy("movement_event.id", sort.direction)
+              : sort.field === "property_basis"
+                ? qb
+                    .orderBy(
+                      sql`movement_event.property_basis::text`,
+                      sort.direction,
+                    )
+                    .orderBy("movement_event.id", sort.direction)
+                : sort.field === "movement_kind"
+                  ? qb
+                      .orderBy(
+                        sql`movement_event.movement_kind::text`,
+                        sort.direction,
+                      )
+                      .orderBy("movement_event.id", sort.direction)
+                  : sort.field === "gas_code"
+                    ? qb
+                        .orderBy(
+                          sql`coalesce(movement_event.gas_code, '')`,
+                          sort.direction,
+                        )
+                        .orderBy("movement_event.id", sort.direction)
+                    : sort.field === "state"
+                      ? qb
+                          .orderBy(
+                            sql`movement_event.state::text`,
+                            sort.direction,
+                          )
+                          .orderBy("movement_event.id", sort.direction)
+                      : qb
+                          .orderBy(
+                            "movement_event.delivery_date",
+                            sort.direction,
+                          )
+                          .orderBy("movement_event.id", sort.direction);
 
     const [rows, totalEstimate] = await Promise.all([
-      qb
-        .orderBy(sortColumn, sort.direction)
-        .orderBy("movement_event.id", sort.direction)
-        .limit(limit + 1)
-        .execute() as Promise<MovementRow[]>,
+      ordered.limit(limit + 1).execute() as Promise<MovementRow[]>,
       this.countMatching(query),
     ]);
 
@@ -211,10 +437,13 @@ export class MovementsRepository {
         hasMore,
         nextCursor:
           hasMore && last
-            ? encodeCursor({
-                delivery_date: toIsoDate(last.delivery_date),
-                id: Number(last.id),
-              })
+            ? encodeCursor(
+                movementListCursorPayload(
+                  sort.field as (typeof MOVEMENT_LIST_SORT_FIELDS)[number],
+                  last,
+                  asOf,
+                ),
+              )
             : null,
         totalEstimate,
       }),

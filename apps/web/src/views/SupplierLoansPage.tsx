@@ -19,13 +19,16 @@ import Switch from "@mui/material/Switch";
 import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
+import Link from "@mui/material/Link";
 import {
   DataGrid,
   type GridColDef,
   type GridPaginationModel,
+  type GridSortModel,
   gridClasses,
 } from "@mui/x-data-grid";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import NextLink from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type {
@@ -42,6 +45,7 @@ import {
   paginationAfterChange,
 } from "../lib/cursorPagination";
 import { todayIso } from "../lib/dateFormat";
+import { supplierLoanSortParam } from "../lib/sortParam";
 import {
   LOAN_STAGE_NEXT,
   formatLoanDate,
@@ -54,6 +58,9 @@ export default function SupplierLoansPage() {
     state.hasCapability("supplier_loans:write"),
   );
   const queryClient = useQueryClient();
+  const [sortModel, setSortModel] = useState<GridSortModel>([
+    { field: "received_from_supplier", sort: "asc" },
+  ]);
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
     page: 0,
     pageSize: 50,
@@ -78,11 +85,11 @@ export default function SupplierLoansPage() {
     () => ({
       limit: paginationModel.pageSize,
       cursor,
-      sort: "received_from_supplier" as const,
+      sort: supplierLoanSortParam(sortModel),
       open: openOnly ? true : undefined,
       overdue: overdueOnly ? true : undefined,
     }),
-    [paginationModel.pageSize, cursor, openOnly, overdueOnly],
+    [paginationModel.pageSize, cursor, sortModel, openOnly, overdueOnly],
   );
 
   const settingsQuery = useQuery({
@@ -221,6 +228,15 @@ export default function SupplierLoansPage() {
         headerName: translate("loans.columns.cylinder"),
         flex: 1,
         minWidth: 120,
+        renderCell: (params) => (
+          <Link
+            component={NextLink}
+            href={`/cylinders/${params.row.cylinder_id}`}
+            underline="hover"
+          >
+            {params.value ?? "—"}
+          </Link>
+        ),
       },
       {
         field: "supplier_name",
@@ -261,21 +277,28 @@ export default function SupplierLoansPage() {
         headerName: translate("loans.columns.client"),
         flex: 1,
         minWidth: 120,
+        renderCell: (params) => {
+          const name = params.value ?? params.row.client_name;
+          if (params.row.client_party_id == null || !name) {
+            return name ?? "—";
+          }
+          return (
+            <Link
+              component={NextLink}
+              href={`/clients/${params.row.client_party_id}`}
+              underline="hover"
+            >
+              {name}
+            </Link>
+          );
+        },
       },
       {
-        field: "disposition",
+        field: "returned_by_client",
         headerName: translate("loans.columns.disposition"),
         width: 260,
-        sortable: false,
-        valueGetter: (_v, row) => {
-          // Solo devolución del cliente o vencido. Sin returned_by_client → nada
-          // (no mostrar "Entregado": la entrega ya está en la etapa / otros datos).
-          if (row.returned_by_client) {
-            return `returned:${row.returned_by_client}`;
-          }
-          if (row.overdue) return "overdue";
-          return "";
-        },
+        // Solo devolución del cliente o vencido. Sin returned_by_client → nada
+        // (no mostrar "Entregado": la entrega ya está en la etapa / otros datos).
         renderCell: (params) => {
           const row = params.row;
           if (row.returned_by_client) {
@@ -430,7 +453,14 @@ export default function SupplierLoansPage() {
           columns={columns}
           getRowId={(row) => row.id}
           loading={loansQuery.isLoading || loansQuery.isFetching}
+          sortingMode="server"
           paginationMode="server"
+          sortModel={sortModel}
+          onSortModelChange={(model) => {
+            setSortModel(model);
+            setCursors([undefined]);
+            setPaginationModel((part) => ({ ...part, page: 0 }));
+          }}
           paginationModel={paginationModel}
           onPaginationModelChange={handlePaginationModelChange}
           pageSizeOptions={[25, 50, 100]}

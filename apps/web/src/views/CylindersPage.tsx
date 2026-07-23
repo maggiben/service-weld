@@ -34,7 +34,6 @@ import NextLink from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
-import { CapacityInlineCell } from "../features/cylinders/CapacityInlineCell";
 import { RegisterCylinderDrawer } from "../features/cylinders/RegisterCylinderDrawer";
 import { ReplaceCylinderDialog } from "../features/cylinders/ReplaceCylinderDialog";
 import { ReportLossDialog } from "../features/cylinders/ReportLossDialog";
@@ -44,6 +43,7 @@ import {
   cursorPageRowCount,
   paginationAfterChange,
 } from "../lib/cursorPagination";
+import { formatCapacity } from "../lib/format";
 import { cylinderSortParam } from "../lib/sortParam";
 import { useSessionStore } from "../store/sessionStore";
 import { useUiStore } from "../store/uiStore";
@@ -199,13 +199,11 @@ export default function CylindersPage() {
         field: "owner_name",
         headerName: translate("cylinders.columns.owner"),
         width: 160,
-        sortable: false,
       },
       {
         field: "current_holder_name",
         headerName: translate("cylinders.columns.holder"),
         width: 180,
-        sortable: false,
         renderCell: (params) => {
           const holderId = params.row.current_holder_party_id;
           const label = params.row.current_holder_name;
@@ -232,29 +230,24 @@ export default function CylindersPage() {
         field: "current_location_name",
         headerName: translate("cylinders.columns.city"),
         width: 140,
-        sortable: false,
         valueFormatter: (value: string | null | undefined) => value ?? "—",
       },
       {
         field: "gas_code",
         headerName: translate("cylinders.columns.gas"),
         width: 110,
-        sortable: false,
       },
       {
         field: "capacity_m3",
         headerName: translate("cylinders.columns.capacity"),
-        width: 220,
-        sortable: false,
-        renderCell: (params) => (
-          <CapacityInlineCell cylinder={params.row} canWrite={canWrite} />
-        ),
+        width: 110,
+        valueGetter: (_value, row) =>
+          formatCapacity(row.capacity_m3, row.capacity_unit),
       },
       {
         field: "ownership_basis",
         headerName: translate("cylinders.columns.basis"),
         width: 120,
-        sortable: false,
         valueFormatter: (value: string) => translate(`enums.basis.${value}`),
       },
       {
@@ -279,7 +272,6 @@ export default function CylindersPage() {
         field: "condition",
         headerName: translate("cylinders.columns.condition"),
         width: 100,
-        sortable: false,
         valueFormatter: (value: string) =>
           translate(`enums.condition.${value}`),
       },
@@ -287,7 +279,6 @@ export default function CylindersPage() {
         field: "home_territory_id",
         headerName: translate("cylinders.columns.territory"),
         width: 140,
-        sortable: false,
         valueFormatter: (value: number | null) => territoryLabel(value),
       },
       {

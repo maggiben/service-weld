@@ -235,7 +235,6 @@
       "hydro_soon": "Seguimiento de prueba hidráulica próximamente"
     },
     "inline": {
-      "edit_capacity": "Clic para editar capacidad",
       "capacity_invalid": "Ingresá una capacidad mayor que cero"
     },
     "loss": {

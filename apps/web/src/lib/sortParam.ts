@@ -27,9 +27,36 @@ export const CYLINDER_SORT_FIELDS = [
   "serial_number",
   "updated_at",
   "state",
+  "current_location_name",
+  "gas_code",
+  "capacity_m3",
+  "ownership_basis",
+  "owner_name",
+  "current_holder_name",
+  "condition",
+  "home_territory_id",
 ] as const;
 
-export const MOVEMENT_SORT_FIELDS = ["delivery_date", "rental_days"] as const;
+export const MOVEMENT_SORT_FIELDS = [
+  "delivery_date",
+  "return_date",
+  "cylinder_serial",
+  "holder_name",
+  "property_basis",
+  "movement_kind",
+  "gas_code",
+  "rental_days",
+  "state",
+] as const;
+
+export const SUPPLIER_LOAN_SORT_FIELDS = [
+  "received_from_supplier",
+  "returned_by_client",
+  "client_name",
+  "cylinder_serial",
+  "supplier_name",
+  "stage",
+] as const;
 
 export function clientSortParam(
   sortModel: readonly SortDirField[],
@@ -53,4 +80,16 @@ export function movementSortParam(
   | (typeof MOVEMENT_SORT_FIELDS)[number]
   | `-${(typeof MOVEMENT_SORT_FIELDS)[number]}` {
   return buildSortParam(sortModel, MOVEMENT_SORT_FIELDS, "-delivery_date");
+}
+
+export function supplierLoanSortParam(
+  sortModel: readonly SortDirField[],
+):
+  | (typeof SUPPLIER_LOAN_SORT_FIELDS)[number]
+  | `-${(typeof SUPPLIER_LOAN_SORT_FIELDS)[number]}` {
+  return buildSortParam(
+    sortModel,
+    SUPPLIER_LOAN_SORT_FIELDS,
+    "received_from_supplier",
+  );
 }

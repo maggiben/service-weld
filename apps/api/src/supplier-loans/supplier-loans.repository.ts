@@ -6,6 +6,7 @@ import type {
   SupplierLoan,
   SupplierLoanListQuery,
 } from "@weld/schemas";
+import { sql, type SqlBool } from "kysely";
 import { ApiErrors } from "../common/errors/api-error";
 import {
   buildPageMeta,
@@ -21,6 +22,54 @@ import type {
 } from "../database/schema.types";
 import { resolveDb } from "../database/transaction.context";
 import { SettingsRepository } from "../settings/settings.repository";
+
+const LOAN_LIST_SORT_FIELDS = [
+  "received_from_supplier",
+  "returned_by_client",
+  "client_name",
+  "cylinder_serial",
+  "supplier_name",
+  "stage",
+] as const;
+
+type LoanListSortField = (typeof LOAN_LIST_SORT_FIELDS)[number];
+
+/** Text-key sorts share coalesce('') + id tie-break (nullable names / dates). */
+const LOAN_TEXT_SORT_KEYS: Record<
+  Exclude<LoanListSortField, "received_from_supplier">,
+  ReturnType<typeof sql>
+> = {
+  returned_by_client: sql`coalesce(supplier_loan_cycle.returned_by_client::text, '')`,
+  client_name: sql`coalesce(client_party.display_name, '')`,
+  cylinder_serial: sql`coalesce(cylinder.serial_number, '')`,
+  supplier_name: sql`coalesce(supplier.display_name, '')`,
+  stage: sql`coalesce(supplier_loan_cycle.stage::text, '')`,
+};
+
+function loanListCursorPayload(
+  sortField: LoanListSortField,
+  last: LoanRow,
+): Record<string, string | number | null> {
+  const id = Number(last.id);
+  switch (sortField) {
+    case "returned_by_client":
+      return { returned_by_client: isoDate(last.returned_by_client), id };
+    case "client_name":
+      return { client_name: last.client_name ?? "", id };
+    case "cylinder_serial":
+      return { cylinder_serial: last.cylinder_serial, id };
+    case "supplier_name":
+      return { supplier_name: last.supplier_name, id };
+    case "stage":
+      return { stage: last.stage, id };
+    case "received_from_supplier":
+    default:
+      return {
+        received_from_supplier: isoDate(last.received_from_supplier),
+        id,
+      };
+  }
+}
 
 interface LoanRow {
   id: number;
@@ -114,12 +163,13 @@ export class SupplierLoansRepository {
   }> {
     const db = resolveDb(this.db);
     const limit = query.limit;
-    const sort = parseSort(query.sort, ["received_from_supplier"]);
+    const sort = parseSort(query.sort, LOAN_LIST_SORT_FIELDS);
     const overdueDays = await this.settings.getSupplierLoanOverdueDays();
     const asOf = businessTodayIso(
       new Date(),
       await this.settings.getBusinessTimezone(),
     );
+    const asc = sort.direction === "asc";
 
     let qb = db
       .selectFrom("supplier_loan_cycle")
@@ -159,18 +209,31 @@ export class SupplierLoansRepository {
         .where("supplier_loan_cycle.received_from_supplier", "<=", cutoff);
     }
 
+    const sortField = sort.field as LoanListSortField;
+
     if (query.cursor) {
       const cursor = decodeCursor(query.cursor);
-      const rawDate = cursor.received_from_supplier;
-      const cursorDate =
-        rawDate == null || rawDate === "" ? null : String(rawDate);
       const cursorId = Number(cursor.id ?? 0);
 
-      // received_from_supplier is nullable. ASC uses NULLS LAST (PG default);
-      // a cursor whose date is null must only walk remaining null rows by id.
-      // A non-null cursor must also eventually include null-dated rows.
-      qb =
-        sort.direction === "asc"
+      if (sortField !== "received_from_supplier") {
+        const sortKey = LOAN_TEXT_SORT_KEYS[sortField];
+        const cursorValue = String(cursor[sortField] ?? "");
+        qb = asc
+          ? qb.where(
+              sql<SqlBool>`(${sortKey} > ${cursorValue} or (${sortKey} = ${cursorValue} and supplier_loan_cycle.id > ${cursorId}))`,
+            )
+          : qb.where(
+              sql<SqlBool>`(${sortKey} < ${cursorValue} or (${sortKey} = ${cursorValue} and supplier_loan_cycle.id < ${cursorId}))`,
+            );
+      } else {
+        const rawDate = cursor.received_from_supplier;
+        const cursorDate =
+          rawDate == null || rawDate === "" ? null : String(rawDate);
+
+        // received_from_supplier is nullable. ASC uses NULLS LAST (PG default);
+        // a cursor whose date is null must only walk remaining null rows by id.
+        // A non-null cursor must also eventually include null-dated rows.
+        qb = asc
           ? cursorDate == null
             ? qb.where((eb) =>
                 eb.and([
@@ -231,17 +294,21 @@ export class SupplierLoansRepository {
                   ]),
                 ]),
               );
+      }
     }
 
-    const rows = (await qb
-      .orderBy("supplier_loan_cycle.received_from_supplier", (ob) =>
-        sort.direction === "asc"
-          ? ob.asc().nullsLast()
-          : ob.desc().nullsFirst(),
-      )
-      .orderBy("supplier_loan_cycle.id", sort.direction)
-      .limit(limit + 1)
-      .execute()) as LoanRow[];
+    const ordered =
+      sortField !== "received_from_supplier"
+        ? qb
+            .orderBy(LOAN_TEXT_SORT_KEYS[sortField], sort.direction)
+            .orderBy("supplier_loan_cycle.id", sort.direction)
+        : qb
+            .orderBy("supplier_loan_cycle.received_from_supplier", (ob) =>
+              asc ? ob.asc().nullsLast() : ob.desc().nullsFirst(),
+            )
+            .orderBy("supplier_loan_cycle.id", sort.direction);
+
+    const rows = (await ordered.limit(limit + 1).execute()) as LoanRow[];
 
     const hasMore = rows.length > limit;
     const pageRows = hasMore ? rows.slice(0, limit) : rows;
@@ -254,10 +321,7 @@ export class SupplierLoansRepository {
         hasMore,
         nextCursor:
           hasMore && last
-            ? encodeCursor({
-                received_from_supplier: isoDate(last.received_from_supplier),
-                id: Number(last.id),
-              })
+            ? encodeCursor(loanListCursorPayload(sortField, last))
             : null,
       }),
     };

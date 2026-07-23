@@ -44,7 +44,20 @@ export type AdvanceSupplierLoanInput = zod.infer<
 
 export const SupplierLoanListQuery = PaginationQuery.extend({
   sort: zod
-    .enum(["received_from_supplier", "-received_from_supplier"])
+    .enum([
+      "received_from_supplier",
+      "-received_from_supplier",
+      "returned_by_client",
+      "-returned_by_client",
+      "client_name",
+      "-client_name",
+      "cylinder_serial",
+      "-cylinder_serial",
+      "supplier_name",
+      "-supplier_name",
+      "stage",
+      "-stage",
+    ])
     .default("received_from_supplier"),
   "filter[supplier_party_id]": zod.coerce.number().int().optional(),
   "filter[stage]": LoanStage.optional(),

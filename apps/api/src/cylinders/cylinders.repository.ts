@@ -8,7 +8,7 @@ import type {
   CylinderListQuery,
   UpdateCylinderInput,
 } from "@weld/schemas";
-import { sql } from "kysely";
+import { sql, type SqlBool } from "kysely";
 import { ApiErrors } from "../common/errors/api-error";
 import {
   buildPageMeta,
@@ -53,7 +53,7 @@ interface CylinderRow {
 }
 
 /** Client locality/territory when out; home depot name when in stock. */
-const currentLocationNameSelect = sql<string | null>`
+const CURRENT_LOCATION_NAME_SQL = sql<string | null>`
   coalesce(
     (
       select coalesce(loc_locality.name, loc_territory.name)
@@ -77,7 +77,38 @@ const currentLocationNameSelect = sql<string | null>`
       limit 1
     )
   )
-`.as("current_location_name");
+`;
+
+const currentLocationNameSelect = CURRENT_LOCATION_NAME_SQL.as(
+  "current_location_name",
+);
+
+const CURRENT_HOLDER_NAME_SQL = sql<string | null>`
+  (
+    select holder.display_name
+    from movement_event as open_move
+    inner join party as holder
+      on holder.id = open_move.holder_party_id
+    where open_move.cylinder_id = cylinder.id
+      and open_move.state = 'OPEN'
+      and open_move.return_date is null
+    limit 1
+  )
+`;
+
+const CYLINDER_LIST_SORT_FIELDS = [
+  "serial_number",
+  "updated_at",
+  "state",
+  "current_location_name",
+  "gas_code",
+  "capacity_m3",
+  "ownership_basis",
+  "owner_name",
+  "current_holder_name",
+  "condition",
+  "home_territory_id",
+] as const;
 
 function toIsoDate(value: string | Date | null): string | null {
   if (value == null) return null;
@@ -124,6 +155,56 @@ function isUniqueViolation(error: unknown): boolean {
   );
 }
 
+function cylinderListCursorPayload(
+  sortField: (typeof CYLINDER_LIST_SORT_FIELDS)[number],
+  last: CylinderRow,
+): Record<string, string | number | null> {
+  const id = Number(last.id);
+  switch (sortField) {
+    case "updated_at":
+      return {
+        updated_at: last.updated_at.toISOString(),
+        id,
+      };
+    case "state":
+      return { state: last.state, id };
+    case "current_location_name":
+      return {
+        current_location_name: last.current_location_name ?? "",
+        id,
+      };
+    case "gas_code":
+      return { gas_code: last.gas_code ?? "", id };
+    case "capacity_m3":
+      return {
+        capacity_m3: last.capacity_m3 == null ? null : Number(last.capacity_m3),
+        id,
+      };
+    case "ownership_basis":
+      return { ownership_basis: last.ownership_basis, id };
+    case "owner_name":
+      return { owner_name: last.owner_name, id };
+    case "current_holder_name":
+      return {
+        current_holder_name: last.current_holder_name ?? "",
+        id,
+      };
+    case "condition":
+      return { condition: last.condition, id };
+    case "home_territory_id":
+      return {
+        home_territory_id:
+          last.home_territory_id == null
+            ? null
+            : Number(last.home_territory_id),
+        id,
+      };
+    case "serial_number":
+    default:
+      return { serial_number: last.serial_number, id };
+  }
+}
+
 @Injectable()
 export class CylindersRepository {
   constructor(@Inject(KYSELY) private readonly db: DB) {}
@@ -134,11 +215,7 @@ export class CylindersRepository {
   }> {
     const db = resolveDb(this.db);
     const limit = query.limit;
-    const sort = parseSort(query.sort, [
-      "serial_number",
-      "updated_at",
-      "state",
-    ]);
+    const sort = parseSort(query.sort, CYLINDER_LIST_SORT_FIELDS);
 
     let qb = db
       .selectFrom("cylinder")
@@ -308,12 +385,14 @@ export class CylindersRepository {
         );
     }
 
-    if (query.cursor && sort.field === "serial_number") {
+    if (query.cursor) {
       const cursor = decodeCursor(query.cursor);
-      const cursorSerial = String(cursor.serial_number ?? "");
       const cursorId = Number(cursor.id ?? 0);
-      qb =
-        sort.direction === "asc"
+      const asc = sort.direction === "asc";
+
+      if (sort.field === "serial_number") {
+        const cursorSerial = String(cursor.serial_number ?? "");
+        qb = asc
           ? qb.where((eb) =>
               eb.or([
                 eb("cylinder.serial_number", ">", cursorSerial),
@@ -332,20 +411,187 @@ export class CylindersRepository {
                 ]),
               ]),
             );
+      } else if (sort.field === "updated_at") {
+        const cursorUpdated = String(cursor.updated_at ?? "");
+        qb = asc
+          ? qb.where((eb) =>
+              eb.or([
+                eb("cylinder.updated_at", ">", new Date(cursorUpdated)),
+                eb.and([
+                  eb("cylinder.updated_at", "=", new Date(cursorUpdated)),
+                  eb("cylinder.id", ">", cursorId),
+                ]),
+              ]),
+            )
+          : qb.where((eb) =>
+              eb.or([
+                eb("cylinder.updated_at", "<", new Date(cursorUpdated)),
+                eb.and([
+                  eb("cylinder.updated_at", "=", new Date(cursorUpdated)),
+                  eb("cylinder.id", "<", cursorId),
+                ]),
+              ]),
+            );
+      } else if (sort.field === "state") {
+        const cursorState = String(cursor.state ?? "");
+        qb = asc
+          ? qb.where(
+              sql<SqlBool>`(cylinder.state::text > ${cursorState} or (cylinder.state::text = ${cursorState} and cylinder.id > ${cursorId}))`,
+            )
+          : qb.where(
+              sql<SqlBool>`(cylinder.state::text < ${cursorState} or (cylinder.state::text = ${cursorState} and cylinder.id < ${cursorId}))`,
+            );
+      } else if (sort.field === "gas_code") {
+        const cursorGas = String(cursor.gas_code ?? "");
+        qb = asc
+          ? qb.where(
+              sql<SqlBool>`(coalesce(cylinder.gas_code, '') > ${cursorGas} or (coalesce(cylinder.gas_code, '') = ${cursorGas} and cylinder.id > ${cursorId}))`,
+            )
+          : qb.where(
+              sql<SqlBool>`(coalesce(cylinder.gas_code, '') < ${cursorGas} or (coalesce(cylinder.gas_code, '') = ${cursorGas} and cylinder.id < ${cursorId}))`,
+            );
+      } else if (sort.field === "capacity_m3") {
+        const cursorCapacity =
+          cursor.capacity_m3 == null || cursor.capacity_m3 === ""
+            ? null
+            : Number(cursor.capacity_m3);
+        const capacityKey = sql`coalesce(cylinder.capacity_m3, -1)`;
+        const cursorKey = cursorCapacity == null ? -1 : cursorCapacity;
+        qb = asc
+          ? qb.where(
+              sql<SqlBool>`(${capacityKey} > ${cursorKey} or (${capacityKey} = ${cursorKey} and cylinder.id > ${cursorId}))`,
+            )
+          : qb.where(
+              sql<SqlBool>`(${capacityKey} < ${cursorKey} or (${capacityKey} = ${cursorKey} and cylinder.id < ${cursorId}))`,
+            );
+      } else if (sort.field === "ownership_basis") {
+        const cursorBasis = String(cursor.ownership_basis ?? "");
+        qb = asc
+          ? qb.where(
+              sql<SqlBool>`(cylinder.ownership_basis::text > ${cursorBasis} or (cylinder.ownership_basis::text = ${cursorBasis} and cylinder.id > ${cursorId}))`,
+            )
+          : qb.where(
+              sql<SqlBool>`(cylinder.ownership_basis::text < ${cursorBasis} or (cylinder.ownership_basis::text = ${cursorBasis} and cylinder.id < ${cursorId}))`,
+            );
+      } else if (sort.field === "owner_name") {
+        const cursorOwner = String(cursor.owner_name ?? "");
+        qb = asc
+          ? qb.where(
+              sql<SqlBool>`(party.display_name > ${cursorOwner} or (party.display_name = ${cursorOwner} and cylinder.id > ${cursorId}))`,
+            )
+          : qb.where(
+              sql<SqlBool>`(party.display_name < ${cursorOwner} or (party.display_name = ${cursorOwner} and cylinder.id < ${cursorId}))`,
+            );
+      } else if (sort.field === "current_holder_name") {
+        const cursorHolder = String(cursor.current_holder_name ?? "");
+        const holderKey = sql`coalesce(${CURRENT_HOLDER_NAME_SQL}, '')`;
+        qb = asc
+          ? qb.where(
+              sql<SqlBool>`(${holderKey} > ${cursorHolder} or (${holderKey} = ${cursorHolder} and cylinder.id > ${cursorId}))`,
+            )
+          : qb.where(
+              sql<SqlBool>`(${holderKey} < ${cursorHolder} or (${holderKey} = ${cursorHolder} and cylinder.id < ${cursorId}))`,
+            );
+      } else if (sort.field === "condition") {
+        const cursorCondition = String(cursor.condition ?? "");
+        qb = asc
+          ? qb.where(
+              sql<SqlBool>`(cylinder.condition::text > ${cursorCondition} or (cylinder.condition::text = ${cursorCondition} and cylinder.id > ${cursorId}))`,
+            )
+          : qb.where(
+              sql<SqlBool>`(cylinder.condition::text < ${cursorCondition} or (cylinder.condition::text = ${cursorCondition} and cylinder.id < ${cursorId}))`,
+            );
+      } else if (sort.field === "home_territory_id") {
+        const cursorTerritory =
+          cursor.home_territory_id == null || cursor.home_territory_id === ""
+            ? -1
+            : Number(cursor.home_territory_id);
+        const territoryKey = sql`coalesce(cylinder.home_territory_id, -1)`;
+        qb = asc
+          ? qb.where(
+              sql<SqlBool>`(${territoryKey} > ${cursorTerritory} or (${territoryKey} = ${cursorTerritory} and cylinder.id > ${cursorId}))`,
+            )
+          : qb.where(
+              sql<SqlBool>`(${territoryKey} < ${cursorTerritory} or (${territoryKey} = ${cursorTerritory} and cylinder.id < ${cursorId}))`,
+            );
+      } else if (sort.field === "current_location_name") {
+        const cursorLocation = String(cursor.current_location_name ?? "");
+        const locationKey = sql`coalesce(${CURRENT_LOCATION_NAME_SQL}, '')`;
+        qb = asc
+          ? qb.where(
+              sql<SqlBool>`(${locationKey} > ${cursorLocation} or (${locationKey} = ${cursorLocation} and cylinder.id > ${cursorId}))`,
+            )
+          : qb.where(
+              sql<SqlBool>`(${locationKey} < ${cursorLocation} or (${locationKey} = ${cursorLocation} and cylinder.id < ${cursorId}))`,
+            );
+      }
     }
 
-    const sortColumn =
-      sort.field === "updated_at"
-        ? "cylinder.updated_at"
-        : sort.field === "state"
-          ? "cylinder.state"
-          : "cylinder.serial_number";
+    const ordered =
+      sort.field === "current_location_name"
+        ? qb
+            .orderBy(
+              sql`coalesce(${CURRENT_LOCATION_NAME_SQL}, '')`,
+              sort.direction,
+            )
+            .orderBy("cylinder.id", sort.direction)
+        : sort.field === "current_holder_name"
+          ? qb
+              .orderBy(
+                sql`coalesce(${CURRENT_HOLDER_NAME_SQL}, '')`,
+                sort.direction,
+              )
+              .orderBy("cylinder.id", sort.direction)
+          : sort.field === "owner_name"
+            ? qb
+                .orderBy("party.display_name", sort.direction)
+                .orderBy("cylinder.id", sort.direction)
+            : sort.field === "gas_code"
+              ? qb
+                  .orderBy(sql`coalesce(cylinder.gas_code, '')`, sort.direction)
+                  .orderBy("cylinder.id", sort.direction)
+              : sort.field === "capacity_m3"
+                ? qb
+                    .orderBy(
+                      sql`coalesce(cylinder.capacity_m3, -1)`,
+                      sort.direction,
+                    )
+                    .orderBy("cylinder.id", sort.direction)
+                : sort.field === "home_territory_id"
+                  ? qb
+                      .orderBy(
+                        sql`coalesce(cylinder.home_territory_id, -1)`,
+                        sort.direction,
+                      )
+                      .orderBy("cylinder.id", sort.direction)
+                  : sort.field === "state"
+                    ? qb
+                        .orderBy(sql`cylinder.state::text`, sort.direction)
+                        .orderBy("cylinder.id", sort.direction)
+                    : sort.field === "ownership_basis"
+                      ? qb
+                          .orderBy(
+                            sql`cylinder.ownership_basis::text`,
+                            sort.direction,
+                          )
+                          .orderBy("cylinder.id", sort.direction)
+                      : sort.field === "condition"
+                        ? qb
+                            .orderBy(
+                              sql`cylinder.condition::text`,
+                              sort.direction,
+                            )
+                            .orderBy("cylinder.id", sort.direction)
+                        : qb
+                            .orderBy(
+                              sort.field === "updated_at"
+                                ? "cylinder.updated_at"
+                                : "cylinder.serial_number",
+                              sort.direction,
+                            )
+                            .orderBy("cylinder.id", sort.direction);
 
-    const rows = (await qb
-      .orderBy(sortColumn, sort.direction)
-      .orderBy("cylinder.id", sort.direction)
-      .limit(limit + 1)
-      .execute()) as CylinderRow[];
+    const rows = (await ordered.limit(limit + 1).execute()) as CylinderRow[];
 
     const hasMore = rows.length > limit;
     const pageRows = hasMore ? rows.slice(0, limit) : rows;
@@ -358,10 +604,12 @@ export class CylindersRepository {
         hasMore,
         nextCursor:
           hasMore && last
-            ? encodeCursor({
-                serial_number: last.serial_number,
-                id: Number(last.id),
-              })
+            ? encodeCursor(
+                cylinderListCursorPayload(
+                  sort.field as (typeof CYLINDER_LIST_SORT_FIELDS)[number],
+                  last,
+                ),
+              )
             : null,
       }),
     };

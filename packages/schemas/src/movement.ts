@@ -58,7 +58,26 @@ export const MovementListQuery = PaginationQuery.extend({
   /** Partial match on cylinder serial number. */
   q: zod.string().optional(),
   sort: zod
-    .enum(["delivery_date", "-delivery_date", "rental_days", "-rental_days"])
+    .enum([
+      "delivery_date",
+      "-delivery_date",
+      "return_date",
+      "-return_date",
+      "cylinder_serial",
+      "-cylinder_serial",
+      "holder_name",
+      "-holder_name",
+      "property_basis",
+      "-property_basis",
+      "movement_kind",
+      "-movement_kind",
+      "gas_code",
+      "-gas_code",
+      "rental_days",
+      "-rental_days",
+      "state",
+      "-state",
+    ])
     .default("-delivery_date"),
   open: zod
     .enum(["true", "false"])
