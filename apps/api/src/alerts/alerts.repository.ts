@@ -351,6 +351,69 @@ export class AlertsRepository {
       created += 1;
     }
 
+    // Drop open alerts that no longer meet the configured thresholds
+    // (e.g. threshold raised in Configuración, or movement/loan closed).
+    const openLongAlerts = await db
+      .selectFrom("alert")
+      .leftJoin("movement_event", "movement_event.id", "alert.entity_id")
+      .select([
+        "alert.id",
+        "movement_event.delivery_date",
+        "movement_event.state",
+        "movement_event.return_date",
+      ])
+      .where("alert.alert_type", "=", "LONG_OUTSTANDING")
+      .where("alert.entity_table", "=", "movement_event")
+      .where("alert.resolved_at", "is", null)
+      .execute();
+
+    for (const row of openLongAlerts) {
+      const delivery = toIsoDate(row.delivery_date);
+      const stillOpen =
+        row.state === "OPEN" && row.return_date == null && delivery != null;
+      const meetsThreshold =
+        stillOpen &&
+        calendarDaysBetween(delivery!, asOf) >= longOutstandingDays;
+      if (meetsThreshold) continue;
+      await db
+        .updateTable("alert")
+        .set({ resolved_at: new Date() })
+        .where("id", "=", Number(row.id))
+        .where("resolved_at", "is", null)
+        .execute();
+    }
+
+    const openLoanAlerts = await db
+      .selectFrom("alert")
+      .leftJoin(
+        "supplier_loan_cycle",
+        "supplier_loan_cycle.id",
+        "alert.entity_id",
+      )
+      .select([
+        "alert.id",
+        "supplier_loan_cycle.received_from_supplier",
+        "supplier_loan_cycle.returned_to_supplier",
+      ])
+      .where("alert.alert_type", "=", "SUPPLIER_LOAN_OVERDUE")
+      .where("alert.entity_table", "=", "supplier_loan_cycle")
+      .where("alert.resolved_at", "is", null)
+      .execute();
+
+    for (const row of openLoanAlerts) {
+      const received = toIsoDate(row.received_from_supplier);
+      const stillOpen = row.returned_to_supplier == null && received != null;
+      const meetsThreshold =
+        stillOpen && calendarDaysBetween(received!, asOf) >= overdueDays;
+      if (meetsThreshold) continue;
+      await db
+        .updateTable("alert")
+        .set({ resolved_at: new Date() })
+        .where("id", "=", Number(row.id))
+        .where("resolved_at", "is", null)
+        .execute();
+    }
+
     const open_count = await this.openCount();
 
     return {

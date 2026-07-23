@@ -36,6 +36,9 @@ function OperationalSettings() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const setLocale = useUiStore((s) => s.setLocale);
+  const canRefreshAlerts = useSessionStore((s) =>
+    s.hasCapability("alerts:write"),
+  );
   const [overdueDays, setOverdueDays] = useState("120");
   const [longOutstandingDays, setLongOutstandingDays] = useState("90");
   const [timezone, setTimezone] = useState<string>(
@@ -91,6 +94,14 @@ function OperationalSettings() {
     },
     onSuccess: async (data) => {
       await queryClient.invalidateQueries({ queryKey: ["settings"] });
+      if (canRefreshAlerts) {
+        try {
+          await api.refreshAlerts();
+        } catch {
+          // Settings saved; alert recompute is best-effort.
+        }
+        await queryClient.invalidateQueries({ queryKey: ["alerts"] });
+      }
       setLocale(data.primary_language as Locale);
       setError(null);
       setSaved(true);
