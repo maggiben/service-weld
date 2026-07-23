@@ -8,6 +8,12 @@ import { z } from "zod";
 /** Days after which an open supplier loan loop is overdue (US-21). */
 export const SupplierLoanOverdueDays = z.number().int().min(1).max(3650);
 
+/**
+ * Days after which an OPEN movement raises a LONG_OUTSTANDING alert.
+ * Default 90 (product default); editable via Configuración.
+ */
+export const LongOutstandingDays = z.number().int().min(1).max(3650);
+
 /** IANA timezone used for business "today" / aging (D-13). */
 export const BusinessTimezone = z
   .string()
@@ -37,6 +43,7 @@ export type PrimaryLanguage = z.infer<typeof PrimaryLanguage>;
 
 export const SystemSettings = z.object({
   supplier_loan_overdue_days: SupplierLoanOverdueDays,
+  long_outstanding_days: LongOutstandingDays,
   business_timezone: BusinessTimezone,
   rental_min_days: RentalMinDays,
   primary_language: PrimaryLanguage,
@@ -49,6 +56,7 @@ export type SystemSettings = z.infer<typeof SystemSettings>;
 export const UpdateSystemSettingsInput = z
   .object({
     supplier_loan_overdue_days: SupplierLoanOverdueDays.optional(),
+    long_outstanding_days: LongOutstandingDays.optional(),
     business_timezone: BusinessTimezone.optional(),
     rental_min_days: RentalMinDays.optional(),
     primary_language: PrimaryLanguage.optional(),
@@ -56,6 +64,7 @@ export const UpdateSystemSettingsInput = z
   .refine(
     (value) =>
       value.supplier_loan_overdue_days != null ||
+      value.long_outstanding_days != null ||
       value.business_timezone != null ||
       value.rental_min_days != null ||
       value.primary_language != null,

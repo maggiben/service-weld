@@ -14,7 +14,7 @@ Provision and evolve the PostgreSQL schema that stores all domain data and enfor
 - R4. Provide the generic **audit** trigger (JSONB before/after, actor from session GUC), **SCD-2 history** triggers for `client`/`cylinder`, and **optimistic-lock touch** triggers (bump `version`, set `updated_at`).
 - R5. Provide the index set from `database.md` §9.2, especially partial indexes on open movements and trigram indexes for search.
 - R6. Manage schema changes via versioned additive migrations under `db/migrations/*.up.sql` (applied by `pnpm db:migrate` / CI `psql` loop; pair with local-only `*.down.sql`). See `011` for data migration; DDL stays additive (`C4`).
-- R7. Seed and document **`system_setting`** keys used by ops/billing UI (D-13 / D-14 / D-17 / US-21): `supplier_loan_overdue_days`, `business_timezone`, `rental_min_days`, `primary_language`.
+- R7. Seed and document **`system_setting`** keys used by ops/billing UI (D-13 / D-14 / D-17 / US-21): `supplier_loan_overdue_days`, `long_outstanding_days`, `business_timezone`, `rental_min_days`, `primary_language`.
 
 ## Constraints
 

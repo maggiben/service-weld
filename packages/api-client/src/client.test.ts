@@ -215,6 +215,7 @@ describe("WeldApiClient", () => {
     await api.getSettings();
     await api.updateSettings({
       supplier_loan_overdue_days: 90,
+      long_outstanding_days: 60,
       business_timezone: "America/Argentina/Buenos_Aires",
       rental_min_days: 0,
       primary_language: "es",

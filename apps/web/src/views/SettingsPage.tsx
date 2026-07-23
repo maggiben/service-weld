@@ -37,6 +37,7 @@ function OperationalSettings() {
   const queryClient = useQueryClient();
   const setLocale = useUiStore((s) => s.setLocale);
   const [overdueDays, setOverdueDays] = useState("120");
+  const [longOutstandingDays, setLongOutstandingDays] = useState("90");
   const [timezone, setTimezone] = useState<string>(
     "America/Argentina/Buenos_Aires",
   );
@@ -53,6 +54,7 @@ function OperationalSettings() {
   useEffect(() => {
     if (!settingsQuery.data) return;
     setOverdueDays(String(settingsQuery.data.supplier_loan_overdue_days));
+    setLongOutstandingDays(String(settingsQuery.data.long_outstanding_days));
     setTimezone(settingsQuery.data.business_timezone);
     setMinDays(String(settingsQuery.data.rental_min_days));
     setPrimaryLanguage(settingsQuery.data.primary_language);
@@ -61,9 +63,17 @@ function OperationalSettings() {
   const saveMutation = useMutation({
     mutationFn: () => {
       const overdue = Number(overdueDays);
+      const longOutstanding = Number(longOutstandingDays);
       const rentalMin = Number(minDays);
       if (!Number.isFinite(overdue) || overdue < 1 || overdue > 3650) {
         throw new Error("invalid_overdue");
+      }
+      if (
+        !Number.isFinite(longOutstanding) ||
+        longOutstanding < 1 ||
+        longOutstanding > 3650
+      ) {
+        throw new Error("invalid_long_outstanding");
       }
       if (!Number.isFinite(rentalMin) || rentalMin < 0 || rentalMin > 365) {
         throw new Error("invalid_min_days");
@@ -71,6 +81,7 @@ function OperationalSettings() {
       return api.updateSettings(
         {
           supplier_loan_overdue_days: overdue,
+          long_outstanding_days: longOutstanding,
           business_timezone: timezone,
           rental_min_days: rentalMin,
           primary_language: primaryLanguage,
@@ -188,6 +199,19 @@ function OperationalSettings() {
             setSaved(false);
           }}
           helperText={t("settings.supplier_loan_overdue_days_help")}
+          slotProps={{ htmlInput: { min: 1, max: 3650 } }}
+          disabled={settingsQuery.isLoading}
+        />
+
+        <TextField
+          label={t("settings.long_outstanding_days")}
+          type="number"
+          value={longOutstandingDays}
+          onChange={(e) => {
+            setLongOutstandingDays(e.target.value);
+            setSaved(false);
+          }}
+          helperText={t("settings.long_outstanding_days_help")}
           slotProps={{ htmlInput: { min: 1, max: 3650 } }}
           disabled={settingsQuery.isLoading}
         />

@@ -16,8 +16,6 @@ import { KYSELY, type DB } from "../database/database.module";
 import { resolveDb } from "../database/transaction.context";
 import { SettingsRepository } from "../settings/settings.repository";
 
-const LONG_OUTSTANDING_DAYS = 90;
-
 type AlertRow = {
   id: number | string | bigint;
   alert_type: string;
@@ -280,6 +278,7 @@ export class AlertsRepository {
       await this.settings.getBusinessTimezone(),
     );
     const overdueDays = await this.settings.getSupplierLoanOverdueDays();
+    const longOutstandingDays = await this.settings.getLongOutstandingDays();
     let created = 0;
 
     const openLoans = await db
@@ -327,7 +326,7 @@ export class AlertsRepository {
     for (const move of openMoves) {
       const delivery = toIsoDate(move.delivery_date);
       if (!delivery) continue;
-      if (calendarDaysBetween(delivery, asOf) < LONG_OUTSTANDING_DAYS) {
+      if (calendarDaysBetween(delivery, asOf) < longOutstandingDays) {
         continue;
       }
       const exists = await db

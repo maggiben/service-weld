@@ -608,9 +608,9 @@ All reports: filterable, exportable (CSV/PDF), and dashboard-summarized for R6.
 
 Event-driven alerts (channels: in-app, email, SMS/push):
 
-- **Long-outstanding cylinder** (>90 days OPEN) → Inventory Controller. `» observed` need
+- **Long-outstanding cylinder** (OPEN longer than `long_outstanding_days`, default 90) → Inventory Controller. `» observed` need
 - **Medical supply-gap due** → Driver/Clerk (patient replenishment). `» observed`
-- **Supplier asset overdue** (open loop >120 days) → Clerk. `» observed`
+- **Supplier asset overdue** (open loop > `supplier_loan_overdue_days`, default 120) → Clerk. `» observed`
 - **Pending owner return** unactioned (>30 days) → Inventory Controller. `» observed`
 - **Single-custody conflict** on sync → Clerk (field/back-office collision).
 - **Loss recorded** → Manager + supplier-liability alert if IG. `» observed`

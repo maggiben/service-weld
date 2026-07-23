@@ -300,7 +300,7 @@ Scenario: Guard against impossible dates
   Then the system warns "Date outside plausible range" and requires confirmation
 
 Scenario: No open-ended silent rentals
-  Given a rental movement has been OPEN for more than 90 days
+  Given a rental movement has been OPEN longer than the configured long_outstanding_days (default 90)
   Then it appears on the "Long-outstanding cylinders" report
 ```
 

@@ -893,6 +893,8 @@
     },
     "supplier_loan_overdue_days": "Préstamo proveedor vencido (días)",
     "supplier_loan_overdue_days_help": "Los ciclos abiertos más antiguos que esto se marcan como vencidos",
+    "long_outstanding_days": "Cilindro largo pendiente (días)",
+    "long_outstanding_days_help": "Los movimientos OPEN más antiguos que esto generan alarma de largo pendiente",
     "themes": {
       "title": "Apariencia",
       "subtitle": "Elegí un tema claro u oscuro. El botón de la barra alterna entre tu último claro y oscuro.",

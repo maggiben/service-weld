@@ -50,6 +50,7 @@ export {
   previousDateForAdvance,
   isLoanOverdue,
 } from "./supplier-loan";
+export { LONG_OUTSTANDING_DAYS } from "./alerts";
 export {
   assertDistinctTransferParties,
   assertTransferReturnOrder,

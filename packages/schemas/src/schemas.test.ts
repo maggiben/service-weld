@@ -57,6 +57,7 @@ describe("settings", () => {
   it("accepts full system settings", () => {
     const parsed = SystemSettings.parse({
       supplier_loan_overdue_days: 120,
+      long_outstanding_days: 90,
       business_timezone: "America/Argentina/Buenos_Aires",
       rental_min_days: 0,
       primary_language: "es",
@@ -64,6 +65,7 @@ describe("settings", () => {
     });
     assert.equal(parsed.primary_language, "es");
     assert.equal(parsed.rental_min_days, 0);
+    assert.equal(parsed.long_outstanding_days, 90);
   });
 
   it("allows partial updates", () => {

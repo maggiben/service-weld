@@ -20,7 +20,7 @@
     "format:check": "prettier --check .",
     "prepare": "husky",
     "db:up": "docker compose -f docker-compose.dev.yml up -d db",
-    "db:load": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f schema.sql",
+    "db:load": "node scripts/db-load.mjs",
     "db:migrate": "node scripts/db-migrate.mjs",
     "db:invariants": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f db/tests/invariants.sql",
     "migrate:xls": "PYTHONPATH=migration python3 -m weld_migration",

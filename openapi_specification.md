@@ -800,12 +800,13 @@ All report endpoints: **Auth** Bearer; **Response** tabular JSON `{ "data": [...
 - **Permissions:** GET `supplier_loans:read`; PATCH `supplier_loans:write`. Web Configuración form gated to `admin:write`.
 - **Response / body fields** (`@weld/schemas` `SystemSettings`):
   - `supplier_loan_overdue_days` — int 1–3650 (default 120)
+  - `long_outstanding_days` — int 1–3650 (default 90; LONG_OUTSTANDING alert threshold)
   - `business_timezone` — IANA timezone string (default `America/Argentina/Buenos_Aires`)
   - `rental_min_days` — int 0–365 (default 0 = exact calendar days)
   - `primary_language` — `es` | `en` (default `es`)
   - `version` — aggregate optimistic-concurrency token (`max` of row versions)
 - **PATCH:** partial body allowed (at least one field). Send `If-Match: {version}` → `409 VERSION_CONFLICT` on stale write.
-- **Validation:** Zod (`BusinessTimezone`, `RentalMinDays`, `PrimaryLanguage`, `SupplierLoanOverdueDays`). **Errors:** `409 VERSION_CONFLICT`, `422 VALIDATION_FAILED`.
+- **Validation:** Zod (`BusinessTimezone`, `RentalMinDays`, `PrimaryLanguage`, `SupplierLoanOverdueDays`, `LongOutstandingDays`). **Errors:** `409 VERSION_CONFLICT`, `422 VALIDATION_FAILED`.
 
 ---
 

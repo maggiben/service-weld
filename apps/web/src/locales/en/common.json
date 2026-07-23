@@ -893,6 +893,8 @@
     },
     "supplier_loan_overdue_days": "Supplier loan overdue (days)",
     "supplier_loan_overdue_days_help": "Open supplier loan loops older than this are marked overdue",
+    "long_outstanding_days": "Long-outstanding cylinder (days)",
+    "long_outstanding_days_help": "OPEN movements older than this raise a long-outstanding alert",
     "themes": {
       "title": "Appearance",
       "subtitle": "Choose a light or dark theme. The toolbar button switches between your last light and dark picks.",

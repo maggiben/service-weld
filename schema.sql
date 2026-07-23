@@ -474,7 +474,7 @@ CREATE TABLE alert (
 CREATE INDEX ix_alert_open ON alert (alert_type) WHERE resolved_at IS NULL;
 
 -- Operational system settings (D-13 / D-14 / D-17 / US-21). Editable via GET/PATCH /settings.
--- Keys: supplier_loan_overdue_days, business_timezone, rental_min_days, primary_language.
+-- Keys: supplier_loan_overdue_days, long_outstanding_days, business_timezone, rental_min_days, primary_language.
 CREATE TABLE system_setting (
     key         text PRIMARY KEY,
     value       text NOT NULL,
@@ -483,6 +483,7 @@ CREATE TABLE system_setting (
 );
 -- Defaults match env boot fallbacks / product decisions.
 INSERT INTO system_setting (key, value) VALUES ('supplier_loan_overdue_days', '120');
+INSERT INTO system_setting (key, value) VALUES ('long_outstanding_days', '90');
 INSERT INTO system_setting (key, value) VALUES ('business_timezone', 'America/Argentina/Buenos_Aires');
 INSERT INTO system_setting (key, value) VALUES ('rental_min_days', '0');          -- D-14: exact calendar days
 INSERT INTO system_setting (key, value) VALUES ('primary_language', 'es');       -- D-17 / 000 C1

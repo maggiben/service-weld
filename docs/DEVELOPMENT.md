@@ -94,8 +94,10 @@ runtime **`system_setting`** via Configuración / `GET|PATCH /settings` (D-13 / 
 env `BUSINESS_TIMEZONE` / `RENTAL_MIN_DAYS` are boot defaults only.
 
 `pnpm db:migrate` loads repo-root `.env` (`DATABASE_URL`) and applies
-`db/migrations/*.up.sql` in order (same as CI). Do **not** point raw
-`node-pg-migrate` at that folder — `.down.sql` files would be treated as ups.
+`db/migrations/*.up.sql` in order (same as CI). `pnpm db:load` applies
+baseline `schema.sql` the same way (Node `pg`; no local `psql` required).
+Do **not** point raw `node-pg-migrate` at that folder — `.down.sql` files
+would be treated as ups.
 
 ## Database is authoritative
 
