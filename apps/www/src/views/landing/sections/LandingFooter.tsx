@@ -1,5 +1,7 @@
 "use client";
 
+import FacebookIcon from "@mui/icons-material/Facebook";
+import InstagramIcon from "@mui/icons-material/Instagram";
 import Box from "@mui/material/Box";
 import Container from "@mui/material/Container";
 import Link from "@mui/material/Link";
@@ -41,22 +43,64 @@ export function LandingFooter() {
               {translate("footer.tagline")}
             </Typography>
             <Typography
+              variant="body2"
+              sx={{ mt: 1.5, opacity: 0.85 }}
+              component="div"
+            >
+              <Link
+                href={`tel:${COMPANY.phone.tel}`}
+                color="inherit"
+                underline="hover"
+              >
+                {COMPANY.phone.display}
+              </Link>
+              {" · "}
+              <Link
+                href={`mailto:${COMPANY.email}`}
+                color="inherit"
+                underline="hover"
+              >
+                {COMPANY.email}
+              </Link>
+            </Typography>
+            <Typography
               variant="caption"
               sx={{ display: "block", mt: 2, opacity: 0.7 }}
             >
               © {year} {COMPANY.legalName}. {translate("footer.rights")}
             </Typography>
           </Box>
-          <Stack spacing={1} component="nav" aria-label="Social">
-            {/* Only verified official profiles (013 C2 / C3). */}
+          <Stack spacing={1.25} component="nav" aria-label="Social">
+            <Link
+              href={COMPANY.social.facebook}
+              target="_blank"
+              rel="noopener noreferrer"
+              color="inherit"
+              underline="hover"
+              sx={{
+                opacity: 0.9,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 1,
+              }}
+            >
+              <FacebookIcon fontSize="small" aria-hidden />
+              {translate("footer.facebook")}
+            </Link>
             <Link
               href={COMPANY.social.instagram}
               target="_blank"
               rel="noopener noreferrer"
               color="inherit"
               underline="hover"
-              sx={{ opacity: 0.9 }}
+              sx={{
+                opacity: 0.9,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 1,
+              }}
             >
+              <InstagramIcon fontSize="small" aria-hidden />
               {translate("footer.instagram")}
             </Link>
             <Link

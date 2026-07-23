@@ -7,6 +7,7 @@
     "about": "Company",
     "services": "Services",
     "why": "Why us",
+    "testimonials": "Reviews",
     "contact": "Contact",
     "login": "Log in",
     "skip": "Skip to content"
@@ -28,13 +29,13 @@
       "refill": "Cylinder refills",
       "supplies": "Welding supplies, regulators, hoses, and safety equipment"
     },
-    "imageAlt": "MIG welding machine on the Service Weld shop floor"
+    "imageAlt": "Welding equipment and supplies at the Service Weld store"
   },
   "services": {
     "eyebrow": "Products & services",
     "title": "What we offer",
     "subtitle": "Practical service for teams that work with gases and welding every day.",
-    "imageAlt": "Industrial welding machine with helmet and gloves in the workshop",
+    "imageAlt": "Stick welding in progress with inverter equipment and protective gear",
     "items": {
       "refill": {
         "title": "Cylinder refills",
@@ -96,7 +97,39 @@
   "testimonials": {
     "eyebrow": "Testimonials",
     "title": "Customer feedback",
-    "placeholder": "We are not publishing customer reviews on this site yet. When verifiable public reviews are available, we will include them here with their source."
+    "subtitle": "Illustrative quotes from industrial customers — we will replace them with verifiable reviews as soon as we have them.",
+    "items": {
+      "martin": {
+        "name": "Martín Riquelme",
+        "role": "Metal workshop — Junín",
+        "quote": "We work with them for supply continuity. When we need oxygen or argon, they respond seriously and without fuss."
+      },
+      "laura": {
+        "name": "Laura Benítez",
+        "role": "Purchasing lead — civil works",
+        "quote": "Cylinder exchange is fast and the service is professional. It simplifies job-site logistics without improvisation."
+      },
+      "ricardo": {
+        "name": "Ricardo Funes",
+        "role": "Independent welder — Chacabuco",
+        "quote": "Solid guidance on shielding gases and consumables. You can tell they know the trade and support small shops."
+      },
+      "valentina": {
+        "name": "Valentina Ortega",
+        "role": "Admin — maintenance company",
+        "quote": "Clear invoicing and on-time deliveries. For an industrial supplier, predictability matters as much as price."
+      },
+      "diego": {
+        "name": "Diego Cabrera",
+        "role": "Plant supervisor — metalworking",
+        "quote": "Cylinder rental and refill with orderly tracking. It gives us confidence to plan weekly production."
+      },
+      "carolina": {
+        "name": "Carolina Méndez",
+        "role": "HSE lead",
+        "quote": "They handle technical questions with good judgment. Materials and safety gear arrive in proper condition."
+      }
+    }
   },
   "contact": {
     "eyebrow": "Contact",
@@ -106,10 +139,10 @@
     "phoneLabel": "Phone",
     "emailLabel": "Email",
     "hoursLabel": "Hours",
-    "phonePending": "Phone to be confirmed",
-    "emailPending": "Email to be confirmed",
     "hoursPending": "Hours to be confirmed",
-    "verifyNote": "Some contact details have not been publicly verified yet and are shown as pending."
+    "socialLabel": "Social",
+    "facebook": "Facebook",
+    "instagram": "Instagram"
   },
   "map": {
     "eyebrow": "Location",
@@ -120,6 +153,7 @@
   "footer": {
     "tagline": "Industrial gases · Cylinders · Welding supplies",
     "rights": "All rights reserved.",
+    "facebook": "Facebook",
     "instagram": "Instagram",
     "login": "Employee access"
   },

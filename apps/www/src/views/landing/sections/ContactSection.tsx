@@ -4,7 +4,10 @@ import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined";
 import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined";
 import ScheduleOutlinedIcon from "@mui/icons-material/ScheduleOutlined";
 import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
+import FacebookIcon from "@mui/icons-material/Facebook";
+import InstagramIcon from "@mui/icons-material/Instagram";
 import Box from "@mui/material/Box";
+import Link from "@mui/material/Link";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import type { SvgIconComponent } from "@mui/icons-material";
@@ -16,10 +19,24 @@ type RowProps = {
   Icon: SvgIconComponent;
   label: string;
   value: string;
+  href?: string;
   pending?: boolean;
 };
 
-function ContactRow({ Icon, label, value, pending }: RowProps) {
+function ContactRow({ Icon, label, value, href, pending }: RowProps) {
+  const valueNode = href ? (
+    <Link
+      href={href}
+      underline="hover"
+      color="inherit"
+      sx={{ fontWeight: 500 }}
+    >
+      {value}
+    </Link>
+  ) : (
+    value
+  );
+
   return (
     <Stack direction="row" spacing={2} alignItems="flex-start">
       <Icon color="primary" sx={{ mt: 0.25 }} aria-hidden />
@@ -33,6 +50,7 @@ function ContactRow({ Icon, label, value, pending }: RowProps) {
         </Typography>
         <Typography
           variant="body1"
+          component="div"
           sx={{
             fontWeight: 500,
             fontStyle: pending ? "italic" : "normal",
@@ -40,7 +58,7 @@ function ContactRow({ Icon, label, value, pending }: RowProps) {
             whiteSpace: "pre-line",
           }}
         >
-          {value}
+          {valueNode}
         </Typography>
       </Box>
     </Stack>
@@ -65,30 +83,68 @@ export function ContactSection() {
           label={translate("contact.addressLabel")}
           value={address}
         />
-        {/* TODO(013): publish phone once verified against an official source */}
         <ContactRow
           Icon={PhoneOutlinedIcon}
           label={translate("contact.phoneLabel")}
-          value={translate("contact.phonePending")}
-          pending
+          value={COMPANY.phone.display}
+          href={`tel:${COMPANY.phone.tel}`}
         />
-        {/* TODO(013): publish email once verified */}
         <ContactRow
           Icon={EmailOutlinedIcon}
           label={translate("contact.emailLabel")}
-          value={translate("contact.emailPending")}
-          pending
+          value={COMPANY.email}
+          href={`mailto:${COMPANY.email}`}
         />
-        {/* TODO(013): publish business hours once verified */}
+        {/* TODO(013): publish business hours once confirmed */}
         <ContactRow
           Icon={ScheduleOutlinedIcon}
           label={translate("contact.hoursLabel")}
           value={translate("contact.hoursPending")}
           pending
         />
-        <Typography variant="caption" color="text.secondary">
-          {translate("contact.verifyNote")}
-        </Typography>
+        <Box>
+          <Typography
+            variant="overline"
+            color="text.secondary"
+            sx={{ lineHeight: 1.2, display: "block", mb: 1.25 }}
+          >
+            {translate("contact.socialLabel")}
+          </Typography>
+          <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
+            <Link
+              href={COMPANY.social.facebook}
+              target="_blank"
+              rel="noopener noreferrer"
+              underline="hover"
+              color="inherit"
+              sx={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 0.75,
+                fontWeight: 500,
+              }}
+            >
+              <FacebookIcon color="primary" fontSize="small" aria-hidden />
+              {translate("contact.facebook")}
+            </Link>
+            <Link
+              href={COMPANY.social.instagram}
+              target="_blank"
+              rel="noopener noreferrer"
+              underline="hover"
+              color="inherit"
+              sx={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 0.75,
+                fontWeight: 500,
+              }}
+            >
+              <InstagramIcon color="primary" fontSize="small" aria-hidden />
+              {translate("contact.instagram")}
+            </Link>
+          </Stack>
+        </Box>
       </Stack>
     </LandingSection>
   );

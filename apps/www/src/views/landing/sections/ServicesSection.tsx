@@ -45,7 +45,7 @@ export function ServicesSection() {
                 ? "0 8px 28px rgba(0,0,0,0.08)"
                 : "0 8px 28px rgba(0,0,0,0.45)",
             aspectRatio: { xs: "4 / 3", md: "21 / 9" },
-            maxHeight: { md: 360 },
+            maxHeight: { md: 380 },
           }}
         >
           <Box
@@ -53,14 +53,14 @@ export function ServicesSection() {
             src={COMPANY.images.services}
             alt={translate("services.imageAlt")}
             width={900}
-            height={900}
+            height={1200}
             loading="lazy"
             decoding="async"
             sx={{
               width: "100%",
               height: "100%",
               objectFit: "cover",
-              objectPosition: "center",
+              objectPosition: "center 35%",
               display: "block",
             }}
           />

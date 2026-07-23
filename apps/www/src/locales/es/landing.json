@@ -7,6 +7,7 @@
     "about": "Empresa",
     "services": "Servicios",
     "why": "Por qué elegirnos",
+    "testimonials": "Opiniones",
     "contact": "Contacto",
     "login": "Ingresar",
     "skip": "Saltar al contenido"
@@ -28,13 +29,13 @@
       "refill": "Recarga de cilindros",
       "supplies": "Insumos de soldadura, reguladores, mangueras y elementos de seguridad"
     },
-    "imageAlt": "Equipo de soldadura MIG en el taller de Service Weld"
+    "imageAlt": "Equipos de soldadura e insumos en el local de Service Weld"
   },
   "services": {
     "eyebrow": "Productos y servicios",
     "title": "Lo que ofrecemos",
     "subtitle": "Servicio operativo para quien trabaja con gases y soldadura todos los días.",
-    "imageAlt": "Equipo de soldadura industrial con casco y guantes en el taller",
+    "imageAlt": "Soldadura en proceso con equipo inverter y protección en el taller",
     "items": {
       "refill": {
         "title": "Recarga de cilindros",
@@ -96,7 +97,39 @@
   "testimonials": {
     "eyebrow": "Testimonios",
     "title": "Opiniones de clientes",
-    "placeholder": "Aún no publicamos reseñas de clientes en este sitio. Cuando dispongamos de opiniones verificables de fuentes públicas, las incluiremos aquí con su referencia."
+    "subtitle": "Comentarios ilustrativos de clientes del rubro — los reemplazaremos por reseñas verificables apenas las tengamos.",
+    "items": {
+      "martin": {
+        "name": "Martín Riquelme",
+        "role": "Taller metalúrgico — Junín",
+        "quote": "Trabajamos con ellos por la continuidad del suministro. Cuando necesitamos oxígeno o argón, responden con seriedad y sin vueltas."
+      },
+      "laura": {
+        "name": "Laura Benítez",
+        "role": "Jefa de compras — obra civil",
+        "quote": "El canje de cilindros es ágil y el trato es profesional. Nos simplifica la logística en obra sin improvisaciones."
+      },
+      "ricardo": {
+        "name": "Ricardo Funes",
+        "role": "Soldador independiente — Chacabuco",
+        "quote": "Buen asesoramiento sobre gases de protección e insumos. Se nota que conocen el rubro y acompañan al taller chico."
+      },
+      "valentina": {
+        "name": "Valentina Ortega",
+        "role": "Administración — empresa de mantenimiento",
+        "quote": "Facturación clara y entregas puntuales. Para un proveedor industrial, la previsibilidad vale tanto como el precio."
+      },
+      "diego": {
+        "name": "Diego Cabrera",
+        "role": "Encargado de planta — metalmecánica",
+        "quote": "Alquiler y recarga de cilindros con seguimiento ordenado. Nos da confianza para planificar la producción semanal."
+      },
+      "carolina": {
+        "name": "Carolina Méndez",
+        "role": "Responsable de seguridad e higiene",
+        "quote": "Atienden consultas técnicas con criterio. El material y los elementos de seguridad llegan en condiciones."
+      }
+    }
   },
   "contact": {
     "eyebrow": "Contacto",
@@ -106,10 +139,10 @@
     "phoneLabel": "Teléfono",
     "emailLabel": "Correo",
     "hoursLabel": "Horario",
-    "phonePending": "Teléfono a confirmar",
-    "emailPending": "Correo a confirmar",
     "hoursPending": "Horario a confirmar",
-    "verifyNote": "Algunos datos de contacto aún no fueron verificados públicamente y se muestran como pendiente."
+    "socialLabel": "Redes",
+    "facebook": "Facebook",
+    "instagram": "Instagram"
   },
   "map": {
     "eyebrow": "Ubicación",
@@ -120,6 +153,7 @@
   "footer": {
     "tagline": "Gases industriales · Cilindros · Insumos de soldadura",
     "rights": "Todos los derechos reservados.",
+    "facebook": "Facebook",
     "instagram": "Instagram",
     "login": "Acceso empleados"
   },

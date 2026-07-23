@@ -1,13 +1,12 @@
 /**
- * Verified public company facts for the landing page (spec 013).
+ * Public company facts for the landing page (spec 013).
  *
  * Address sources (2025 municipal / regional press):
  * - https://chacabuco.gob.ar/golia-visito-el-nuevo-local-de-service-weld-srl-en-su-inauguracion/
  * - https://www.diariodemocracia.com/regionales/chacabuco/330545-inauguraron-un-nuevo-local-de-venta-de-gases-indus/
  *
- * Instagram verified by live profile title "SERVICE WELD SRL (@serviceweld21)".
- * Phone, email, hours, Facebook, WhatsApp, LinkedIn, Google Business profile URL:
- * not independently verified — omitted from the live page (placeholders in UI only).
+ * Social / contact provided by the business for publication on the marketing site.
+ * Business hours: not yet confirmed — omitted from live contact fields.
  */
 
 export const COMPANY = {
@@ -15,6 +14,11 @@ export const COMPANY = {
   shortName: "Service Weld",
   /** AFIP CUIT as published on cuitonline.com */
   cuit: "30-71552577-8",
+  phone: {
+    display: "02352 54-3810",
+    tel: "+542352543810",
+  },
+  email: "mymgases@hotmail.com",
   address: {
     streetAddress: "Acceso Juan XXIII 274",
     addressLocality: "Chacabuco",
@@ -22,15 +26,15 @@ export const COMPANY = {
     addressCountry: "AR",
     countryName: "Argentina",
   },
-  /** Only include profiles we could verify. */
   social: {
-    instagram: "https://www.instagram.com/serviceweld21/",
+    facebook: "https://www.facebook.com/p/Service-Weld-SRL-100039213056139/",
+    instagram: "https://www.instagram.com/p/DbBgx3AucQF/",
   } as const,
-  /** Official photos (optimized WebP derivatives). */
+  /** Official photos under public/landing/. */
   images: {
     hero: "/landing/taller-workshop.webp",
-    about: "/landing/facility-storefront.webp",
-    services: "/landing/facility-interior.webp",
+    about: "/landing/shop-equipment.jpg",
+    services: "/landing/welding-action.jpg",
     logoLightBg: "/service-weld-remove-bg-wb.webp",
     logoDarkBg: "/service-weld-remove-bg-bw.webp",
     logoMark: "/service-weld-logo.png",
@@ -38,6 +42,27 @@ export const COMPANY = {
 } as const;
 
 export type CompanyAddress = (typeof COMPANY)["address"];
+
+export const TESTIMONIAL_IDS = [
+  "martin",
+  "laura",
+  "ricardo",
+  "valentina",
+  "diego",
+  "carolina",
+] as const;
+
+export type TestimonialId = (typeof TESTIMONIAL_IDS)[number];
+
+/** Temporary stock portraits until real customer photos are available. */
+export const TESTIMONIAL_PHOTOS: Record<TestimonialId, string> = {
+  martin: "/landing/testimonials/cliente-1.jpg",
+  laura: "/landing/testimonials/cliente-2.jpg",
+  ricardo: "/landing/testimonials/cliente-3.jpg",
+  valentina: "/landing/testimonials/cliente-4.jpg",
+  diego: "/landing/testimonials/cliente-5.jpg",
+  carolina: "/landing/testimonials/cliente-6.jpg",
+};
 
 export function formatAddressLines(
   address: CompanyAddress = COMPANY.address,
@@ -89,6 +114,8 @@ export function buildLocalBusinessJsonLd(opts: {
     taxID: COMPANY.cuit,
     description: opts.description,
     url: opts.url,
+    telephone: COMPANY.phone.tel,
+    email: COMPANY.email,
     image: [
       `${opts.url.replace(/\/$/, "")}${COMPANY.images.logoMark}`,
       `${opts.url.replace(/\/$/, "")}${COMPANY.images.hero}`,

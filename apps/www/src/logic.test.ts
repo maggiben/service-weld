@@ -22,9 +22,15 @@ describe("landing company helpers", () => {
     assert.match(buildMapsEmbedUrl(), /output=embed/);
     assert.match(buildDirectionsUrl(), /maps\/dir/);
     assert.equal(
-      COMPANY.social.instagram,
-      "https://www.instagram.com/serviceweld21/",
+      COMPANY.social.facebook,
+      "https://www.facebook.com/p/Service-Weld-SRL-100039213056139/",
     );
+    assert.equal(
+      COMPANY.social.instagram,
+      "https://www.instagram.com/p/DbBgx3AucQF/",
+    );
+    assert.equal(COMPANY.phone.display, "02352 54-3810");
+    assert.equal(COMPANY.email, "mymgases@hotmail.com");
   });
 
   it("builds LocalBusiness JSON-LD", () => {
@@ -35,7 +41,10 @@ describe("landing company helpers", () => {
     assert.equal(ld["@type"], "LocalBusiness");
     assert.equal(ld.name, COMPANY.legalName);
     assert.equal(ld.taxID, COMPANY.cuit);
+    assert.equal(ld.telephone, COMPANY.phone.tel);
+    assert.equal(ld.email, COMPANY.email);
     assert.ok(Array.isArray(ld.sameAs));
+    assert.equal((ld.sameAs as string[]).length, 2);
   });
 });
 
