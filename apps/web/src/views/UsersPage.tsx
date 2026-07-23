@@ -45,8 +45,10 @@ import {
   paginationAfterChange,
 } from "../lib/cursorPagination";
 import {
+  allTerritoriesSelected,
   emptyUserDraft,
   findExistingTerritory,
+  nextTerritorySelection,
   type UserDraft,
 } from "../features/users/userFormLogic";
 import { useSessionStore } from "../store/sessionStore";
@@ -69,11 +71,12 @@ type TerritoryOption = {
   name: string;
   /** When set, selecting this option creates a new territory with this name. */
   inputValue?: string;
-  /** Fixed dropdown action that opens the create-territory dialog. */
-  action?: "prompt";
+  /** Fixed dropdown actions (not real territories). */
+  action?: "prompt" | "select_all";
 };
 
 const CREATE_PROMPT_ID = -2;
+const SELECT_ALL_ID = -3;
 
 const filterTerritoryOptions = createFilterOptions<TerritoryOption>();
 
@@ -565,6 +568,7 @@ function UsersPageInner() {
           </FormControl>
           <Autocomplete
             multiple
+            disableCloseOnSelect
             options={territoryOptions}
             value={selectedTerritories}
             loading={createTerritoryMutation.isPending}
@@ -573,6 +577,14 @@ function UsersPageInner() {
             getOptionLabel={(option) => {
               if (option.action === "prompt") {
                 return t("users.form.create_territory_option");
+              }
+              if (option.action === "select_all") {
+                return allTerritoriesSelected(
+                  draft.territory_ids,
+                  territoryOptions.map((tr) => tr.id),
+                )
+                  ? t("users.form.clear_all_territories")
+                  : t("users.form.select_all_territories");
               }
               return option.name;
             }}
@@ -593,6 +605,13 @@ function UsersPageInner() {
                   });
                 }
               }
+              if (territoryOptions.length > 0 && !normalized) {
+                filtered.unshift({
+                  id: SELECT_ALL_ID,
+                  name: t("users.form.select_all_territories"),
+                  action: "select_all",
+                });
+              }
               filtered.push({
                 id: CREATE_PROMPT_ID,
                 name: t("users.form.create_territory_option"),
@@ -601,6 +620,17 @@ function UsersPageInner() {
               return filtered;
             }}
             onChange={(_event, next) => {
+              const selectAll = next.find((opt) => opt.action === "select_all");
+              if (selectAll) {
+                setDraft((d) => ({
+                  ...d,
+                  territory_ids: nextTerritorySelection(
+                    d.territory_ids,
+                    territoryOptions.map((tr) => tr.id),
+                  ),
+                }));
+                return;
+              }
               const prompt = next.find((opt) => opt.action === "prompt");
               const pendingCreate = next.find((opt) => opt.inputValue);
               const kept = next.filter(
@@ -634,7 +664,7 @@ function UsersPageInner() {
                 createTerritoryMutation.mutate(pendingCreate.inputValue);
               }
             }}
-            renderOption={(props, option) => {
+            renderOption={(props, option, { selected }) => {
               const { key, ...rest } = props;
               if (option.action === "prompt") {
                 return (
@@ -644,11 +674,44 @@ function UsersPageInner() {
                   </li>
                 );
               }
+              if (option.action === "select_all") {
+                const allSelected = allTerritoriesSelected(
+                  draft.territory_ids,
+                  territoryOptions.map((tr) => tr.id),
+                );
+                return (
+                  <li key={key} {...rest}>
+                    <Checkbox
+                      size="small"
+                      checked={allSelected}
+                      indeterminate={
+                        draft.territory_ids.length > 0 && !allSelected
+                      }
+                      sx={{ mr: 1, p: 0.5 }}
+                    />
+                    {allSelected
+                      ? t("users.form.clear_all_territories")
+                      : t("users.form.select_all_territories")}
+                  </li>
+                );
+              }
               return (
                 <li key={key} {...rest}>
-                  {option.inputValue
-                    ? t("users.form.create_territory", { name: option.name })
-                    : option.name}
+                  {option.inputValue ? (
+                    <>
+                      <AddIcon fontSize="small" sx={{ mr: 1, opacity: 0.8 }} />
+                      {t("users.form.create_territory", { name: option.name })}
+                    </>
+                  ) : (
+                    <>
+                      <Checkbox
+                        size="small"
+                        checked={selected}
+                        sx={{ mr: 1, p: 0.5 }}
+                      />
+                      {option.name}
+                    </>
+                  )}
                 </li>
               );
             }}

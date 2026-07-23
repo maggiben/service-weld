@@ -31,3 +31,25 @@ export function findExistingTerritory<T extends { name: string }>(
   if (!key) return undefined;
   return options.find((tr) => territoryMatchKey(tr.name) === key);
 }
+
+/** True when every listed territory id is already assigned. */
+export function allTerritoriesSelected(
+  selectedIds: number[],
+  availableIds: number[],
+): boolean {
+  if (availableIds.length === 0) return false;
+  const selected = new Set(selectedIds);
+  return availableIds.every((id) => selected.has(id));
+}
+
+/**
+ * Toggle between assigning every available territory and clearing the selection.
+ */
+export function nextTerritorySelection(
+  selectedIds: number[],
+  availableIds: number[],
+): number[] {
+  return allTerritoriesSelected(selectedIds, availableIds)
+    ? []
+    : [...availableIds];
+}

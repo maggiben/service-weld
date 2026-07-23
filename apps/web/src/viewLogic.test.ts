@@ -45,8 +45,10 @@ import {
 import { toClientFormValues } from "./features/clients/clientFormLogic";
 import { clientCustodyLabel } from "./features/clients/clientLedgerLogic";
 import {
+  allTerritoriesSelected,
   emptyUserDraft,
   findExistingTerritory,
+  nextTerritorySelection,
 } from "./features/users/userFormLogic";
 
 describe("cursorPagination", () => {
@@ -378,5 +380,15 @@ describe("userFormLogic", () => {
       findExistingTerritory("  ", [{ id: 1, name: "a" }]),
       undefined,
     );
+  });
+
+  it("toggles selecting every territory", () => {
+    const available = [1, 2, 3];
+    assert.equal(allTerritoriesSelected([], available), false);
+    assert.equal(allTerritoriesSelected([1, 2], available), false);
+    assert.equal(allTerritoriesSelected([1, 2, 3], available), true);
+    assert.equal(allTerritoriesSelected([], []), false);
+    assert.deepEqual(nextTerritorySelection([1], available), [1, 2, 3]);
+    assert.deepEqual(nextTerritorySelection([1, 2, 3], available), []);
   });
 });
