@@ -48,6 +48,12 @@ export const BillingRun = z.object({
   total: z.number().optional(),
   /** Sum of billable days across all invoices in the run. */
   total_days: z.number().optional(),
+  /**
+   * Movements with billable days in scope that were dropped because no
+   * rental_rate (and no client daily_rate_default) resolved. Only set on
+   * freshly created drafts — not persisted.
+   */
+  skipped_no_rate: z.number().int().nonnegative().optional(),
 });
 export type BillingRun = z.infer<typeof BillingRun>;
 

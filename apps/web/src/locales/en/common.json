@@ -758,6 +758,7 @@
       "capacity_hint": "Leave as Any size to apply to all capacities",
       "effective_from": "Effective from",
       "effective_to": "Effective to",
+      "effective_from_hint": "To bill long-open rentals, use a date on or before the period start (not only today).",
       "effective_to_hint": "Empty = no end date",
       "precedence_hint": "Most specific wins: client+gas+size → client+gas → client → gas → size → global (BR-19)."
     }
@@ -773,6 +774,8 @@
     "run_summary": "Draft #{{id}} ({{status}}): {{invoices}} invoices · {{lines}} cylinders · {{days}} cylinder-days · total {{total}} ARS · period {{from}} → {{to}}",
     "run_summary_history": "History #{{id}} ({{status}}): {{invoices}} invoices · {{lines}} cylinders · {{days}} cylinder-days · total {{total}} ARS · from oldest delivery {{from}} → {{to}} (date filter not used)",
     "days_hint": "Cylinder-days = sum of each cylinder’s days in the period (e.g. 22 cylinders × 30 d = 660), not calendar days in the month.",
+    "skipped_no_rate": "{{count}} rentals were skipped — no matching rate (and no client daily default). Configure rates, then regenerate the draft.",
+    "configure_rates": "Go to Rates",
     "export_ready": "Export ready: {{count}} invoices · {{at}}",
     "filters": {
       "client": "Client (optional)",

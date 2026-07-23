@@ -22,6 +22,7 @@ import {
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import dayjs, { type Dayjs } from "dayjs";
+import NextLink from "next/link";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type {
@@ -509,6 +510,14 @@ export default function BillingPage() {
               },
             )}
           </Typography>
+          {(run.skipped_no_rate ?? 0) > 0 && (
+            <Typography variant="body2" component="div" sx={{ mt: 0.75 }}>
+              {t("billing.skipped_no_rate", { count: run.skipped_no_rate })}{" "}
+              <Link component={NextLink} href="/rates" underline="hover">
+                {t("billing.configure_rates")}
+              </Link>
+            </Typography>
+          )}
           <Typography
             variant="caption"
             color="text.secondary"

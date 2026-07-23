@@ -369,7 +369,12 @@ export default function RatesPage() {
             onChange={(v: Dayjs | null) => {
               if (v) setEffectiveFrom(v.format("YYYY-MM-DD"));
             }}
-            slotProps={{ textField: { fullWidth: true } }}
+            slotProps={{
+              textField: {
+                fullWidth: true,
+                helperText: t("rates.form.effective_from_hint"),
+              },
+            }}
           />
           <DatePicker
             label={t("rates.form.effective_to")}

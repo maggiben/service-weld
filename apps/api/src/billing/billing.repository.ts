@@ -346,6 +346,8 @@ export class BillingRepository {
       }
     >();
 
+    let skippedNoRate = 0;
+
     for (const movement of movements) {
       const holderId = Number(movement.holder_party_id);
       if (lockedClientIds.has(holderId)) continue;
@@ -381,7 +383,10 @@ export class BillingRepository {
             ? null
             : Number(movement.daily_rate_default),
       });
-      if (!unit) continue;
+      if (!unit) {
+        skippedNoRate += 1;
+        continue;
+      }
 
       const amount = rentalChargeAmount(days, unit);
       const bucket = byClient.get(holderId) ?? {
@@ -515,6 +520,7 @@ export class BillingRepository {
       invoice_count: invoices.length,
       total: Math.round(runTotal * 100) / 100,
       total_days: runTotalDays,
+      skipped_no_rate: skippedNoRate > 0 ? skippedNoRate : undefined,
       invoices,
     };
   }

@@ -758,6 +758,7 @@
       "capacity_hint": "Dejá en Cualquier tamaño para aplicar a todas las capacidades",
       "effective_from": "Vigente desde",
       "effective_to": "Vigente hasta",
+      "effective_from_hint": "Para facturar alquileres abiertos antiguos, usá una fecha anterior o igual al inicio del período (no solo hoy).",
       "effective_to_hint": "Vacío = sin fecha de fin",
       "precedence_hint": "Gana la más específica: cliente+gas+tamaño → cliente+gas → cliente → gas → tamaño → global (BR-19)."
     }
@@ -773,6 +774,8 @@
     "run_summary": "Borrador #{{id}} ({{status}}): {{invoices}} facturas · {{lines}} cilindros · {{days}} días-cilindro · total {{total}} ARS · período {{from}} → {{to}}",
     "run_summary_history": "Histórico #{{id}} ({{status}}): {{invoices}} facturas · {{lines}} cilindros · {{days}} días-cilindro · total {{total}} ARS · desde entrega más antigua {{from}} → {{to}} (no usa el filtro de fechas)",
     "days_hint": "Días-cilindro = suma de días de cada cilindro en el período (ej. 22 cilindros × 30 d = 660), no los días calendario del mes.",
+    "skipped_no_rate": "Se omitieron {{count}} alquileres — no hay tarifa coincidente (ni default diario del cliente). Configurá tarifas y volvé a generar el borrador.",
+    "configure_rates": "Ir a Tarifas",
     "export_ready": "Export listo: {{count}} facturas · {{at}}",
     "filters": {
       "client": "Cliente (opcional)",
