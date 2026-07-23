@@ -214,6 +214,44 @@ export class ReconciliationRepository {
       }
     }
 
+    const holderIds = [
+      ...new Set(
+        rows
+          .filter(
+            (r) =>
+              r.cylinder_id != null &&
+              (r.system_state === "AT_CLIENT" ||
+                r.system_state === "AT_SUPPLIER"),
+          )
+          .map((r) => r.cylinder_id!),
+      ),
+    ];
+    if (holderIds.length > 0) {
+      const holders = await db
+        .selectFrom("movement_event")
+        .innerJoin("party", "party.id", "movement_event.holder_party_id")
+        .select([
+          "movement_event.cylinder_id",
+          "party.display_name as holder_name",
+        ])
+        .where("movement_event.state", "=", "OPEN")
+        .where("movement_event.return_date", "is", null)
+        .where("movement_event.cylinder_id", "in", holderIds)
+        .execute();
+      const holderByCylinder = new Map<number, string>();
+      for (const h of holders) {
+        const id = Number(h.cylinder_id);
+        if (!holderByCylinder.has(id)) {
+          holderByCylinder.set(id, h.holder_name);
+        }
+      }
+      for (const row of rows) {
+        if (row.cylinder_id == null) continue;
+        const name = holderByCylinder.get(row.cylinder_id);
+        if (name) row.holder_name = name;
+      }
+    }
+
     const matched = rows.filter((r) => r.kind === "MATCHED").length;
     const present_elsewhere = rows.filter(
       (r) => r.kind === "PRESENT_ELSEWHERE",

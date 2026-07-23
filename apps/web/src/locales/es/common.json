@@ -600,14 +600,22 @@
   },
   "reconciliation": {
     "title": "Conciliación de inventario",
+    "subtitle": "Dos herramientas distintas: ver qué tubos están fuera (en clientes) y, por separado, auditar el stock físico de la planta contra el sistema.",
+    "held_by": "En poder de {{name}}",
     "to_verify": "Revisar",
+    "pills": {
+      "outstanding": "En circulación → tubos entregados sin devolución",
+      "count": "Conteo físico → auditar depósito (no es la lista de clientes)"
+    },
     "tabs": {
       "outstanding": "En circulación",
       "count": "Conteo físico"
     },
     "outstanding": {
+      "help": "Lista automática de tubos con movimiento abierto: siguen en poder del cliente. Sirve para reclamar devoluciones y ver días de alquiler. No es un conteo de planta.",
       "columns": {
         "client": "Cliente",
+        "held_by": "Custodia",
         "serial": "Serial",
         "gas": "Gas",
         "delivery": "Entrega",
@@ -616,6 +624,7 @@
       }
     },
     "count": {
+      "help": "No es lo mismo que «En circulación». Acá cargás los seriales que contaste en la planta y el sistema compara contra su registro: si un tubo aparece en planta pero el sistema lo tiene en un cliente/proveedor, te lo marca (y muestra en poder de quién).",
       "date": "Fecha del conteo",
       "serials": "Seriales contados",
       "serials_hint": "Uno por línea o separados por coma. Por defecto solo se clasifican estos seriales (coincide / en otro lado / desconocido).",
@@ -627,6 +636,7 @@
         "kind": "Tipo",
         "serial": "Serial",
         "state": "Estado sistema",
+        "held_by": "Custodia",
         "action": "Acción sugerida"
       }
     }

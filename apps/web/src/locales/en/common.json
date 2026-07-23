@@ -600,14 +600,22 @@
   },
   "reconciliation": {
     "title": "Inventory reconciliation",
+    "subtitle": "Two different tools: see which cylinders are out with clients, and separately audit plant stock against the system.",
+    "held_by": "Held by {{name}}",
     "to_verify": "To verify",
+    "pills": {
+      "outstanding": "Outstanding → delivered tubes with no return",
+      "count": "Physical count → audit plant stock (not the client list)"
+    },
     "tabs": {
       "outstanding": "Outstanding",
       "count": "Physical count"
     },
     "outstanding": {
+      "help": "Automatic list of cylinders with an open movement — still held by the client. Use it to chase returns and see rental days. This is not a plant stock count.",
       "columns": {
         "client": "Client",
+        "held_by": "Custody",
         "serial": "Serial",
         "gas": "Gas",
         "delivery": "Delivery",
@@ -616,6 +624,7 @@
       }
     },
     "count": {
+      "help": "Not the same as Outstanding. Enter serials you counted at the plant; the system compares them to its records. If a tube is here but the system shows it at a client/supplier, it flags that (and shows who holds it).",
       "date": "Count date",
       "serials": "Counted serials",
       "serials_hint": "One per line or comma-separated. By default only these serials are classified (matched / elsewhere / unknown).",
@@ -627,6 +636,7 @@
         "kind": "Kind",
         "serial": "Serial",
         "state": "System state",
+        "held_by": "Custody",
         "action": "Suggested action"
       }
     }

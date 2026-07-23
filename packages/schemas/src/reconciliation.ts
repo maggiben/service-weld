@@ -44,6 +44,8 @@ export const ReconciliationVarianceRow = z.object({
   cylinder_id: z.number().int().nullable(),
   serial_number: z.string(),
   system_state: z.string().nullable(),
+  /** Current custody party when the system shows AT_CLIENT / AT_SUPPLIER. */
+  holder_name: z.string().nullable().optional(),
   suggested_action: z.enum(["NONE", "LOSS", "TRANSFER", "VERIFY"]).optional(),
 });
 export type ReconciliationVarianceRow = z.infer<

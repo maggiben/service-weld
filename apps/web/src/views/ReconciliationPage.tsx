@@ -102,15 +102,23 @@ export default function ReconciliationPage() {
   const outstandingColumns = useMemo<GridColDef<OutstandingRow>[]>(
     () => [
       {
-        field: "client_name",
-        headerName: t("reconciliation.outstanding.columns.client"),
-        flex: 1,
-        minWidth: 140,
-      },
-      {
         field: "serial_number",
         headerName: t("reconciliation.outstanding.columns.serial"),
         width: 120,
+      },
+      {
+        field: "client_name",
+        headerName: t("reconciliation.outstanding.columns.held_by"),
+        flex: 1.2,
+        minWidth: 180,
+        renderCell: (p) => (
+          <Chip
+            size="small"
+            color="info"
+            variant="outlined"
+            label={t("reconciliation.held_by", { name: p.value })}
+          />
+        ),
       },
       {
         field: "gas_code",
@@ -162,9 +170,26 @@ export default function ReconciliationPage() {
       {
         field: "system_state",
         headerName: t("reconciliation.count.columns.state"),
-        width: 140,
+        width: 150,
         valueFormatter: (v: string | null) =>
           v ? t(`enums.cylinder_state.${v}`, { defaultValue: v }) : "—",
+      },
+      {
+        field: "holder_name",
+        headerName: t("reconciliation.count.columns.held_by"),
+        flex: 1,
+        minWidth: 160,
+        renderCell: (p) =>
+          p.value ? (
+            <Chip
+              size="small"
+              color="info"
+              variant="outlined"
+              label={t("reconciliation.held_by", { name: p.value })}
+            />
+          ) : (
+            "—"
+          ),
       },
       {
         field: "suggested_action",
@@ -181,14 +206,41 @@ export default function ReconciliationPage() {
     <Box
       sx={{ display: "flex", flexDirection: "column", gap: 2, height: "100%" }}
     >
-      <Typography variant="h5">{t("reconciliation.title")}</Typography>
+      <Box>
+        <Typography variant="h5">{t("reconciliation.title")}</Typography>
+        <Typography color="text.secondary" sx={{ mt: 0.5, maxWidth: 720 }}>
+          {t("reconciliation.subtitle")}
+        </Typography>
+        <Stack
+          direction="row"
+          spacing={1}
+          useFlexGap
+          flexWrap="wrap"
+          sx={{ mt: 1.5 }}
+        >
+          <Chip
+            size="small"
+            color={tab === 0 ? "primary" : "default"}
+            label={t("reconciliation.pills.outstanding")}
+            onClick={() => setTab(0)}
+          />
+          <Chip
+            size="small"
+            color={tab === 1 ? "primary" : "default"}
+            label={t("reconciliation.pills.count")}
+            onClick={() => setTab(1)}
+          />
+        </Stack>
+      </Box>
+
       <Tabs value={tab} onChange={(_, v) => setTab(v)}>
         <Tab label={t("reconciliation.tabs.outstanding")} />
         <Tab label={t("reconciliation.tabs.count")} />
       </Tabs>
 
       {tab === 0 && (
-        <>
+        <Stack spacing={2} sx={{ flex: 1, minHeight: 0 }}>
+          <Alert severity="info">{t("reconciliation.outstanding.help")}</Alert>
           {outstandingQuery.isError && (
             <Alert severity="error">{t("errors.load_failed")}</Alert>
           )}
@@ -212,11 +264,12 @@ export default function ReconciliationPage() {
               sx={{ [`& .${gridClasses.cell}`]: { outline: "none" } }}
             />
           </Box>
-        </>
+        </Stack>
       )}
 
       {tab === 1 && (
         <Stack spacing={2}>
+          <Alert severity="info">{t("reconciliation.count.help")}</Alert>
           {!canWrite && (
             <Alert severity="info">{t("reconciliation.count.read_only")}</Alert>
           )}

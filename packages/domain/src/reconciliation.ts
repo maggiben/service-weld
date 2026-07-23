@@ -22,6 +22,7 @@ export function classifyPhysicalCountRow(params: {
   cylinder_id: number | null;
   serial_number: string;
   system_state: string | null;
+  holder_name: string | null;
   suggested_action: SuggestedAction;
 } {
   if (!params.system) {
@@ -30,6 +31,7 @@ export function classifyPhysicalCountRow(params: {
       cylinder_id: null,
       serial_number: params.serial,
       system_state: null,
+      holder_name: null,
       suggested_action: "VERIFY",
     };
   }
@@ -39,6 +41,7 @@ export function classifyPhysicalCountRow(params: {
       cylinder_id: params.system.cylinderId,
       serial_number: params.serial,
       system_state: params.system.state,
+      holder_name: null,
       suggested_action: "NONE",
     };
   }
@@ -47,6 +50,7 @@ export function classifyPhysicalCountRow(params: {
     cylinder_id: params.system.cylinderId,
     serial_number: params.serial,
     system_state: params.system.state,
+    holder_name: null,
     suggested_action: "TRANSFER",
   };
 }
@@ -65,6 +69,7 @@ export function absentHereRow(params: {
   cylinder_id: number;
   serial_number: string;
   system_state: string;
+  holder_name: string | null;
   suggested_action: SuggestedAction;
 } {
   return {
@@ -72,6 +77,7 @@ export function absentHereRow(params: {
     cylinder_id: params.cylinderId,
     serial_number: params.serial,
     system_state: params.state,
+    holder_name: null,
     suggested_action: "LOSS",
   };
 }
