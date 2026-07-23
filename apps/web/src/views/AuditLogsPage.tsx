@@ -86,7 +86,11 @@ function AuditLogsPageInner() {
   const logsQuery = useQuery({
     queryKey: ["audit-logs", queryParams],
     queryFn: () => api.listAuditLogs(queryParams),
+    enabled: paginationModel.page === 0 || cursor != null,
   });
+
+  const rows = logsQuery.data?.data ?? [];
+  const pageMeta = logsQuery.data?.page;
 
   useEffect(() => {
     const next = logsQuery.data?.page.next_cursor;
@@ -97,6 +101,15 @@ function AuditLogsPageInner() {
       return copy;
     });
   }, [logsQuery.data?.page.next_cursor, paginationModel.page]);
+
+  const handlePaginationModelChange = (model: GridPaginationModel) => {
+    if (model.pageSize !== paginationModel.pageSize) {
+      setCursors([undefined]);
+      setPaginationModel({ page: 0, pageSize: model.pageSize });
+      return;
+    }
+    setPaginationModel(model);
+  };
 
   const resetPaging = () => {
     setCursors([undefined]);
@@ -246,25 +259,19 @@ function AuditLogsPageInner() {
 
       <Box sx={{ height: 560, width: "100%" }}>
         <DataGrid
-          rows={logsQuery.data?.data ?? []}
+          rows={rows}
           columns={columns}
           getRowId={(row) => `${row.id}-${row.occurred_at}`}
           loading={logsQuery.isLoading}
           paginationMode="server"
           sortingMode="server"
-          rowCount={-1}
-          paginationMeta={{
-            hasNextPage: Boolean(logsQuery.data?.page.has_more),
-          }}
+          rowCount={
+            paginationModel.page * paginationModel.pageSize +
+            rows.length +
+            (pageMeta?.has_more ? 1 : 0)
+          }
           paginationModel={paginationModel}
-          onPaginationModelChange={(model) => {
-            if (model.pageSize !== paginationModel.pageSize) {
-              setCursors([undefined]);
-              setPaginationModel({ page: 0, pageSize: model.pageSize });
-              return;
-            }
-            setPaginationModel(model);
-          }}
+          onPaginationModelChange={handlePaginationModelChange}
           pageSizeOptions={[25, 50, 100]}
           disableRowSelectionOnClick
           slots={{

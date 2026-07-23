@@ -98,7 +98,11 @@ export default function TransfersPage() {
   const transfersQuery = useQuery({
     queryKey: ["transfers", queryParams],
     queryFn: () => api.listTransfers(queryParams),
+    enabled: paginationModel.page === 0 || cursor != null,
   });
+
+  const rows = transfersQuery.data?.data ?? [];
+  const pageMeta = transfersQuery.data?.page;
 
   const cylindersSearch = useQuery({
     queryKey: ["cylinders", "transfer-picker", cylinderQuery],
@@ -173,6 +177,15 @@ export default function TransfersPage() {
       return copy;
     });
   }, [transfersQuery.data?.page.next_cursor, paginationModel.page]);
+
+  const handlePaginationModelChange = (model: GridPaginationModel) => {
+    if (model.pageSize !== paginationModel.pageSize) {
+      setCursors([undefined]);
+      setPaginationModel({ page: 0, pageSize: model.pageSize });
+      return;
+    }
+    setPaginationModel(model);
+  };
 
   const resetForm = () => {
     setCylinderQuery("");
@@ -382,21 +395,19 @@ export default function TransfersPage() {
 
       <Box sx={{ flex: 1, minHeight: 360 }}>
         <DataGrid
-          rows={transfersQuery.data?.data ?? []}
+          rows={rows}
           columns={columns}
           getRowId={(row) => row.id}
           loading={transfersQuery.isLoading || transfersQuery.isFetching}
           paginationMode="server"
           paginationModel={paginationModel}
-          onPaginationModelChange={(model) => {
-            setPaginationModel(model);
-            if (model.page === 0) setCursors([undefined]);
-          }}
+          onPaginationModelChange={handlePaginationModelChange}
           pageSizeOptions={[25, 50, 100]}
-          rowCount={transfersQuery.data?.page.total_estimate ?? -1}
-          paginationMeta={{
-            hasNextPage: transfersQuery.data?.page.has_more ?? false,
-          }}
+          rowCount={
+            paginationModel.page * paginationModel.pageSize +
+            rows.length +
+            (pageMeta?.has_more ? 1 : 0)
+          }
           disableRowSelectionOnClick
           getRowHeight={() => "auto"}
           sx={{

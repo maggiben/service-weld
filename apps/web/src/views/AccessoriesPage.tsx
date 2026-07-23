@@ -67,7 +67,7 @@ export default function AccessoriesPage() {
         cursor,
         sort: "-updated_at",
       }),
-    enabled: tab === 0,
+    enabled: tab === 0 && (paginationModel.page === 0 || cursor != null),
   });
 
   const rentalsQuery = useQuery({
@@ -79,8 +79,13 @@ export default function AccessoriesPage() {
         sort: "-start_date",
         open: true,
       }),
-    enabled: tab === 1,
+    enabled: tab === 1 && (paginationModel.page === 0 || cursor != null),
   });
+
+  const accessoryRows = accessoriesQuery.data?.data ?? [];
+  const accessoryPageMeta = accessoriesQuery.data?.page;
+  const rentalRows = rentalsQuery.data?.data ?? [];
+  const rentalPageMeta = rentalsQuery.data?.page;
 
   const clientsQuery = useQuery({
     queryKey: ["clients", "accessory-rent"],
@@ -105,6 +110,15 @@ export default function AccessoriesPage() {
     rentalsQuery.data?.page.next_cursor,
     paginationModel.page,
   ]);
+
+  const handlePaginationModelChange = (model: GridPaginationModel) => {
+    if (model.pageSize !== paginationModel.pageSize) {
+      setCursors([undefined]);
+      setPaginationModel({ page: 0, pageSize: model.pageSize });
+      return;
+    }
+    setPaginationModel(model);
+  };
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -299,35 +313,37 @@ export default function AccessoriesPage() {
       <Box sx={{ flex: 1, minHeight: 360 }}>
         {tab === 0 ? (
           <DataGrid
-            rows={accessoriesQuery.data?.data ?? []}
+            rows={accessoryRows}
             columns={accessoryColumns}
             getRowId={(row) => row.id}
             loading={accessoriesQuery.isLoading || accessoriesQuery.isFetching}
             paginationMode="server"
             paginationModel={paginationModel}
-            onPaginationModelChange={setPaginationModel}
+            onPaginationModelChange={handlePaginationModelChange}
             pageSizeOptions={[25, 50]}
-            rowCount={accessoriesQuery.data?.page.total_estimate ?? -1}
-            paginationMeta={{
-              hasNextPage: accessoriesQuery.data?.page.has_more ?? false,
-            }}
+            rowCount={
+              paginationModel.page * paginationModel.pageSize +
+              accessoryRows.length +
+              (accessoryPageMeta?.has_more ? 1 : 0)
+            }
             disableRowSelectionOnClick
             sx={{ [`& .${gridClasses.cell}`]: { outline: "none" } }}
           />
         ) : (
           <DataGrid
-            rows={rentalsQuery.data?.data ?? []}
+            rows={rentalRows}
             columns={rentalColumns}
             getRowId={(row) => row.id}
             loading={rentalsQuery.isLoading || rentalsQuery.isFetching}
             paginationMode="server"
             paginationModel={paginationModel}
-            onPaginationModelChange={setPaginationModel}
+            onPaginationModelChange={handlePaginationModelChange}
             pageSizeOptions={[25, 50]}
-            rowCount={rentalsQuery.data?.page.total_estimate ?? -1}
-            paginationMeta={{
-              hasNextPage: rentalsQuery.data?.page.has_more ?? false,
-            }}
+            rowCount={
+              paginationModel.page * paginationModel.pageSize +
+              rentalRows.length +
+              (rentalPageMeta?.has_more ? 1 : 0)
+            }
             disableRowSelectionOnClick
             sx={{ [`& .${gridClasses.cell}`]: { outline: "none" } }}
           />

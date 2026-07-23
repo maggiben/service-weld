@@ -54,7 +54,11 @@ export default function BatteriesPage() {
   const batteriesQuery = useQuery({
     queryKey: ["batteries", queryParams],
     queryFn: () => api.listBatteries(queryParams),
+    enabled: paginationModel.page === 0 || cursor != null,
   });
+
+  const rows = batteriesQuery.data?.data ?? [];
+  const pageMeta = batteriesQuery.data?.page;
 
   const ownersQuery = useQuery({
     queryKey: ["cylinders", "owners-hint"],
@@ -71,6 +75,15 @@ export default function BatteriesPage() {
       return copy;
     });
   }, [batteriesQuery.data?.page.next_cursor, paginationModel.page]);
+
+  const handlePaginationModelChange = (model: GridPaginationModel) => {
+    if (model.pageSize !== paginationModel.pageSize) {
+      setCursors([undefined]);
+      setPaginationModel({ page: 0, pageSize: model.pageSize });
+      return;
+    }
+    setPaginationModel(model);
+  };
 
   const ownerOptions = useMemo(() => {
     const map = new Map<number, string>();
@@ -180,18 +193,19 @@ export default function BatteriesPage() {
 
       <Box sx={{ flex: 1, minHeight: 400 }}>
         <DataGrid
-          rows={batteriesQuery.data?.data ?? []}
+          rows={rows}
           columns={columns}
           getRowId={(row) => row.id}
           loading={batteriesQuery.isLoading || batteriesQuery.isFetching}
           paginationMode="server"
           paginationModel={paginationModel}
-          onPaginationModelChange={setPaginationModel}
+          onPaginationModelChange={handlePaginationModelChange}
           pageSizeOptions={[25, 50]}
-          rowCount={batteriesQuery.data?.page.total_estimate ?? -1}
-          paginationMeta={{
-            hasNextPage: batteriesQuery.data?.page.has_more ?? false,
-          }}
+          rowCount={
+            paginationModel.page * paginationModel.pageSize +
+            rows.length +
+            (pageMeta?.has_more ? 1 : 0)
+          }
           disableRowSelectionOnClick
           sx={{ [`& .${gridClasses.cell}`]: { outline: "none" } }}
         />

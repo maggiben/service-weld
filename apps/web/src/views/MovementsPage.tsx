@@ -484,10 +484,11 @@ export default function MovementsPage() {
           paginationModel={paginationModel}
           onPaginationModelChange={handlePaginationModelChange}
           pageSizeOptions={PAGE_SIZE_OPTIONS}
-          rowCount={pageMeta?.total_estimate ?? -1}
-          paginationMeta={{
-            hasNextPage: pageMeta?.has_more ?? false,
-          }}
+          rowCount={
+            paginationModel.page * paginationModel.pageSize +
+            rows.length +
+            (pageMeta?.has_more ? 1 : 0)
+          }
           disableRowSelectionOnClick
           localeText={
             locale === "es"

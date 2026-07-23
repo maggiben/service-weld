@@ -81,7 +81,11 @@ export default function RatesPage() {
   const ratesQuery = useQuery({
     queryKey: ["rental-rates", queryParams],
     queryFn: () => api.listRentalRates(queryParams),
+    enabled: paginationModel.page === 0 || cursor != null,
   });
+
+  const rows = ratesQuery.data?.data ?? [];
+  const pageMeta = ratesQuery.data?.page;
 
   useEffect(() => {
     const next = ratesQuery.data?.page.next_cursor;
@@ -92,6 +96,15 @@ export default function RatesPage() {
       return copy;
     });
   }, [ratesQuery.data?.page.next_cursor, paginationModel.page]);
+
+  const handlePaginationModelChange = (model: GridPaginationModel) => {
+    if (model.pageSize !== paginationModel.pageSize) {
+      setCursors([undefined]);
+      setPaginationModel({ page: 0, pageSize: model.pageSize });
+      return;
+    }
+    setPaginationModel(model);
+  };
 
   const resetForm = (rate?: RentalRate) => {
     setError(null);
@@ -245,18 +258,19 @@ export default function RatesPage() {
 
       <Box sx={{ flex: 1, minHeight: 400 }}>
         <DataGrid
-          rows={ratesQuery.data?.data ?? []}
+          rows={rows}
           columns={columns}
           getRowId={(row) => row.id}
           loading={ratesQuery.isLoading || ratesQuery.isFetching}
           paginationMode="server"
           paginationModel={paginationModel}
-          onPaginationModelChange={setPaginationModel}
+          onPaginationModelChange={handlePaginationModelChange}
           pageSizeOptions={[25, 50]}
-          rowCount={ratesQuery.data?.page.total_estimate ?? -1}
-          paginationMeta={{
-            hasNextPage: ratesQuery.data?.page.has_more ?? false,
-          }}
+          rowCount={
+            paginationModel.page * paginationModel.pageSize +
+            rows.length +
+            (pageMeta?.has_more ? 1 : 0)
+          }
           disableRowSelectionOnClick
           onRowClick={(params) => openEdit(params.row as RentalRate)}
           sx={{

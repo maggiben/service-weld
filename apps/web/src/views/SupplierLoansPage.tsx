@@ -96,7 +96,11 @@ export default function SupplierLoansPage() {
   const loansQuery = useQuery({
     queryKey: ["supplier-loans", queryParams],
     queryFn: () => api.listSupplierLoans(queryParams),
+    enabled: paginationModel.page === 0 || cursor != null,
   });
+
+  const rows = loansQuery.data?.data ?? [];
+  const pageMeta = loansQuery.data?.page;
 
   const clientsQuery = useQuery({
     queryKey: ["clients", "loan-advance"],
@@ -113,6 +117,15 @@ export default function SupplierLoansPage() {
       return copy;
     });
   }, [loansQuery.data?.page.next_cursor, paginationModel.page]);
+
+  const handlePaginationModelChange = (model: GridPaginationModel) => {
+    if (model.pageSize !== paginationModel.pageSize) {
+      setCursors([undefined]);
+      setPaginationModel({ page: 0, pageSize: model.pageSize });
+      return;
+    }
+    setPaginationModel(model);
+  };
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -373,21 +386,19 @@ export default function SupplierLoansPage() {
 
       <Box sx={{ flex: 1, minHeight: 360 }}>
         <DataGrid
-          rows={loansQuery.data?.data ?? []}
+          rows={rows}
           columns={columns}
           getRowId={(row) => row.id}
           loading={loansQuery.isLoading || loansQuery.isFetching}
           paginationMode="server"
           paginationModel={paginationModel}
-          onPaginationModelChange={(model) => {
-            setPaginationModel(model);
-            if (model.page === 0) setCursors([undefined]);
-          }}
+          onPaginationModelChange={handlePaginationModelChange}
           pageSizeOptions={[25, 50, 100]}
-          rowCount={loansQuery.data?.page.total_estimate ?? -1}
-          paginationMeta={{
-            hasNextPage: loansQuery.data?.page.has_more ?? false,
-          }}
+          rowCount={
+            paginationModel.page * paginationModel.pageSize +
+            rows.length +
+            (pageMeta?.has_more ? 1 : 0)
+          }
           disableRowSelectionOnClick
           sx={{ [`& .${gridClasses.cell}`]: { outline: "none" } }}
         />

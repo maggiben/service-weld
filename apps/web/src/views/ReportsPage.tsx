@@ -167,7 +167,7 @@ export default function ReportsPage() {
           ? { "filter[territory_id]": territoryFilter }
           : {}),
       }),
-    enabled: tab === "float",
+    enabled: tab === "float" && (paginationModel.page === 0 || cursor != null),
   });
 
   const rentalClientId = rentalClient?.id;
@@ -214,7 +214,8 @@ export default function ReportsPage() {
         cursor,
         sort: "-days_open",
       }),
-    enabled: tab === "supplier",
+    enabled:
+      tab === "supplier" && (paginationModel.page === 0 || cursor != null),
   });
 
   const qualityQuery = useQuery({
@@ -225,7 +226,8 @@ export default function ReportsPage() {
         cursor,
         sort: "-created_at",
       }),
-    enabled: tab === "quality",
+    enabled:
+      tab === "quality" && (paginationModel.page === 0 || cursor != null),
   });
 
   const medicalQuery = useQuery({
@@ -260,6 +262,15 @@ export default function ReportsPage() {
     qualityQuery.data?.page.next_cursor,
     paginationModel.page,
   ]);
+
+  const handlePaginationModelChange = (model: GridPaginationModel) => {
+    if (model.pageSize !== paginationModel.pageSize) {
+      setCursors([undefined]);
+      setPaginationModel({ page: 0, pageSize: model.pageSize });
+      return;
+    }
+    setPaginationModel(model);
+  };
 
   const fleetColumns = useMemo<GridColDef<FleetRow>[]>(
     () => [
@@ -625,6 +636,15 @@ export default function ReportsPage() {
 
   const paginated = tab === "float" || tab === "supplier" || tab === "quality";
 
+  const pageMeta =
+    tab === "float"
+      ? floatQuery.data?.page
+      : tab === "supplier"
+        ? supplierQuery.data?.page
+        : tab === "quality"
+          ? qualityQuery.data?.page
+          : undefined;
+
   return (
     <Stack spacing={2}>
       <Box>
@@ -829,11 +849,11 @@ export default function ReportsPage() {
             paginated
               ? paginationModel.page * paginationModel.pageSize +
                 rows.length +
-                (cursors[paginationModel.page + 1] ? 1 : 0)
+                (pageMeta?.has_more ? 1 : 0)
               : undefined
           }
           paginationModel={paginationModel}
-          onPaginationModelChange={setPaginationModel}
+          onPaginationModelChange={handlePaginationModelChange}
           pageSizeOptions={[25, 50, 100]}
           sx={{ [`& .${gridClasses.cell}`]: { outline: "none" } }}
           localeText={{

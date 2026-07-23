@@ -132,7 +132,11 @@ function UsersPageInner() {
   const usersQuery = useQuery({
     queryKey: ["admin-users", queryParams],
     queryFn: () => api.listAdminUsers(queryParams),
+    enabled: paginationModel.page === 0 || cursor != null,
   });
+
+  const rows = usersQuery.data?.data ?? [];
+  const pageMeta = usersQuery.data?.page;
 
   useEffect(() => {
     const next = usersQuery.data?.page.next_cursor;
@@ -143,6 +147,15 @@ function UsersPageInner() {
       return copy;
     });
   }, [usersQuery.data?.page.next_cursor, paginationModel.page]);
+
+  const handlePaginationModelChange = (model: GridPaginationModel) => {
+    if (model.pageSize !== paginationModel.pageSize) {
+      setCursors([undefined]);
+      setPaginationModel({ page: 0, pageSize: model.pageSize });
+      return;
+    }
+    setPaginationModel(model);
+  };
 
   const territoryOptions = useMemo(() => {
     const byId = new Map<number, TerritoryOption>();
@@ -473,25 +486,19 @@ function UsersPageInner() {
 
       <Box sx={{ height: 560, width: "100%" }}>
         <DataGrid
-          rows={usersQuery.data?.data ?? []}
+          rows={rows}
           columns={columns}
           getRowId={(row) => row.id}
           loading={usersQuery.isLoading}
           paginationMode="server"
           sortingMode="server"
-          rowCount={-1}
-          paginationMeta={{
-            hasNextPage: Boolean(usersQuery.data?.page.has_more),
-          }}
+          rowCount={
+            paginationModel.page * paginationModel.pageSize +
+            rows.length +
+            (pageMeta?.has_more ? 1 : 0)
+          }
           paginationModel={paginationModel}
-          onPaginationModelChange={(model) => {
-            if (model.pageSize !== paginationModel.pageSize) {
-              setCursors([undefined]);
-              setPaginationModel({ page: 0, pageSize: model.pageSize });
-              return;
-            }
-            setPaginationModel(model);
-          }}
+          onPaginationModelChange={handlePaginationModelChange}
           pageSizeOptions={[25, 50, 100]}
           disableRowSelectionOnClick
           getRowHeight={() => "auto"}

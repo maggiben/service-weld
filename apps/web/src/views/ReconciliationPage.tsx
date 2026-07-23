@@ -105,8 +105,11 @@ export default function ReconciliationPage() {
   const outstandingQuery = useQuery({
     queryKey: ["outstanding", queryParams],
     queryFn: () => api.listOutstanding(queryParams),
-    enabled: tab === 0,
+    enabled: tab === 0 && (paginationModel.page === 0 || cursor != null),
   });
+
+  const rows = outstandingQuery.data?.data ?? [];
+  const pageMeta = outstandingQuery.data?.page;
 
   useEffect(() => {
     const next = outstandingQuery.data?.page.next_cursor;
@@ -117,6 +120,15 @@ export default function ReconciliationPage() {
       return copy;
     });
   }, [outstandingQuery.data?.page.next_cursor, paginationModel.page]);
+
+  const handlePaginationModelChange = (model: GridPaginationModel) => {
+    if (model.pageSize !== paginationModel.pageSize) {
+      setCursors([undefined]);
+      setPaginationModel({ page: 0, pageSize: model.pageSize });
+      return;
+    }
+    setPaginationModel(model);
+  };
 
   const countMutation = useMutation({
     mutationFn: () =>
@@ -318,7 +330,7 @@ export default function ReconciliationPage() {
           )}
           <Box sx={{ flex: 1, minHeight: 360 }}>
             <DataGrid
-              rows={outstandingQuery.data?.data ?? []}
+              rows={rows}
               columns={outstandingColumns}
               getRowId={(row) => row.movement_id}
               loading={
@@ -326,12 +338,13 @@ export default function ReconciliationPage() {
               }
               paginationMode="server"
               paginationModel={paginationModel}
-              onPaginationModelChange={setPaginationModel}
+              onPaginationModelChange={handlePaginationModelChange}
               pageSizeOptions={[25, 50, 100]}
-              rowCount={outstandingQuery.data?.page.total_estimate ?? -1}
-              paginationMeta={{
-                hasNextPage: outstandingQuery.data?.page.has_more ?? false,
-              }}
+              rowCount={
+                paginationModel.page * paginationModel.pageSize +
+                rows.length +
+                (pageMeta?.has_more ? 1 : 0)
+              }
               disableRowSelectionOnClick
               sx={{ [`& .${gridClasses.cell}`]: { outline: "none" } }}
             />
