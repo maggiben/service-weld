@@ -7,6 +7,7 @@ import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
+import Link from "@mui/material/Link";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import Stack from "@mui/material/Stack";
@@ -18,9 +19,11 @@ import {
   DataGrid,
   type GridColDef,
   type GridPaginationModel,
+  type GridRenderCellParams,
   gridClasses,
 } from "@mui/x-data-grid";
 import { useQuery } from "@tanstack/react-query";
+import NextLink from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type {
@@ -35,6 +38,7 @@ import type {
   SupplierReturnsRow,
 } from "@weld/schemas";
 import { api } from "../api/client";
+import { ClientLedgerDrawer } from "../features/clients/ClientLedgerDrawer";
 import { useTerritories } from "../hooks/useTerritories";
 import { useSessionStore } from "../store/sessionStore";
 
@@ -61,6 +65,33 @@ function monthStartIso() {
 type ReportTab =
   "fleet" | "float" | "rental" | "loss" | "supplier" | "quality" | "medical";
 
+type LedgerClient = { id: number; name?: string };
+
+function ClientLedgerLink({
+  clientPartyId,
+  label,
+  onOpen,
+}: {
+  clientPartyId: number;
+  label: string;
+  onOpen: (client: LedgerClient) => void;
+}) {
+  return (
+    <Link
+      component="button"
+      type="button"
+      underline="hover"
+      onClick={(e) => {
+        e.stopPropagation();
+        onOpen({ id: clientPartyId, name: label });
+      }}
+      sx={{ textAlign: "left" }}
+    >
+      {label}
+    </Link>
+  );
+}
+
 export default function ReportsPage() {
   const { t } = useTranslation();
   const canMedical = useSessionStore((s) => s.hasCapability("medical:read"));
@@ -79,6 +110,7 @@ export default function ReportsPage() {
   const [rentalCylinder, setRentalCylinder] = useState<Cylinder | null>(null);
   const [clientQuery, setClientQuery] = useState("");
   const [cylinderQuery, setCylinderQuery] = useState("");
+  const [ledgerClient, setLedgerClient] = useState<LedgerClient | null>(null);
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
     page: 0,
     pageSize: 50,
@@ -91,6 +123,11 @@ export default function ReportsPage() {
   }, [tab, bucket, territoryFilter]);
 
   const cursor = cursors[paginationModel.page];
+  const showClientLedgerHint =
+    tab === "float" ||
+    tab === "rental" ||
+    tab === "medical" ||
+    (tab === "fleet" && groupBy === "client");
 
   const clientsSearch = useQuery({
     queryKey: ["clients", "picker", "reports-rental", clientQuery],
@@ -259,6 +296,22 @@ export default function ReportsPage() {
           }
           return row.owner_name ?? row.group_key;
         },
+        renderCell:
+          groupBy === "client"
+            ? (params: GridRenderCellParams<FleetRow>) => {
+                const id = params.row.client_party_id;
+                const name =
+                  params.row.client_name ?? params.row.group_key ?? "—";
+                if (id == null) return name;
+                return (
+                  <ClientLedgerLink
+                    clientPartyId={id}
+                    label={name}
+                    onOpen={setLedgerClient}
+                  />
+                );
+              }
+            : undefined,
       },
       {
         field: "count",
@@ -276,11 +329,28 @@ export default function ReportsPage() {
         headerName: t("reports.columns.client"),
         flex: 1,
         minWidth: 140,
+        renderCell: (params) => (
+          <ClientLedgerLink
+            clientPartyId={params.row.client_party_id}
+            label={params.value ?? String(params.row.client_party_id)}
+            onOpen={setLedgerClient}
+          />
+        ),
       },
       {
         field: "serial_number",
         headerName: t("reports.columns.serial"),
         width: 120,
+        renderCell: (params) => (
+          <Link
+            component={NextLink}
+            href={`/cylinders/${params.row.cylinder_id}`}
+            underline="hover"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {params.value}
+          </Link>
+        ),
       },
       {
         field: "delivery_date",
@@ -290,12 +360,12 @@ export default function ReportsPage() {
       {
         field: "days_out",
         headerName: t("reports.columns.days_out"),
-        width: 100,
+        width: 110,
       },
       {
         field: "bucket",
         headerName: t("reports.columns.bucket"),
-        width: 90,
+        width: 110,
       },
     ],
     [t],
@@ -308,11 +378,20 @@ export default function ReportsPage() {
         headerName: t("reports.columns.client"),
         flex: 1,
         minWidth: 140,
+        renderCell: (params) => (
+          <ClientLedgerLink
+            clientPartyId={params.row.client_party_id}
+            label={params.value ?? String(params.row.client_party_id)}
+            onOpen={setLedgerClient}
+          />
+        ),
       },
       {
         field: "gas_code",
         headerName: t("reports.columns.gas"),
-        width: 90,
+        width: 110,
+        valueFormatter: (value: string | null) =>
+          value ? t(`enums.gas.${value}`, { defaultValue: value }) : "—",
       },
       {
         field: "rental_days",
@@ -323,6 +402,11 @@ export default function ReportsPage() {
         field: "revenue",
         headerName: t("reports.columns.revenue"),
         width: 120,
+        valueFormatter: (value: number) =>
+          new Intl.NumberFormat(undefined, {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2,
+          }).format(value),
       },
       {
         field: "movement_count",
@@ -381,6 +465,19 @@ export default function ReportsPage() {
         field: "serial_number",
         headerName: t("reports.columns.serial"),
         width: 120,
+        renderCell: (params) =>
+          params.row.cylinder_id != null && params.value ? (
+            <Link
+              component={NextLink}
+              href={`/cylinders/${params.row.cylinder_id}`}
+              underline="hover"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {params.value}
+            </Link>
+          ) : (
+            (params.value ?? "—")
+          ),
       },
       {
         field: "stage",
@@ -442,6 +539,13 @@ export default function ReportsPage() {
         headerName: t("reports.columns.client"),
         flex: 1,
         minWidth: 140,
+        renderCell: (params) => (
+          <ClientLedgerLink
+            clientPartyId={params.row.client_party_id}
+            label={params.value ?? String(params.row.client_party_id)}
+            onOpen={setLedgerClient}
+          />
+        ),
       },
       {
         field: "deliveries",
@@ -523,10 +627,17 @@ export default function ReportsPage() {
 
   return (
     <Stack spacing={2}>
-      <Typography variant="h5">{t("reports.title")}</Typography>
-      <Typography variant="body2" color="text.secondary">
-        {t("reports.subtitle")}
-      </Typography>
+      <Box>
+        <Typography variant="h5">{t("reports.title")}</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+          {t("reports.subtitle")}
+        </Typography>
+        {showClientLedgerHint ? (
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            {t("reports.hint_client_ledger")}
+          </Typography>
+        ) : null}
+      </Box>
 
       <Tabs
         value={tab}
@@ -730,6 +841,13 @@ export default function ReportsPage() {
           }}
         />
       </Box>
+
+      <ClientLedgerDrawer
+        open={ledgerClient != null}
+        clientPartyId={ledgerClient?.id ?? null}
+        clientName={ledgerClient?.name}
+        onClose={() => setLedgerClient(null)}
+      />
     </Stack>
   );
 }

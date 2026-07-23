@@ -809,14 +809,15 @@
   },
   "reports": {
     "title": "Reportes",
-    "subtitle": "Flota, flotante, alquileres, pérdidas, devoluciones a proveedor, calidad de datos y liquidación médica.",
+    "subtitle": "Dónde están los cilindros, hace cuánto y el movimiento de cada cliente.",
+    "hint_client_ledger": "Tocá el nombre de un cliente para ver su ledger: alquileres, recargas e historial.",
     "empty": "Sin datos para estos parámetros",
     "error": "No se pudo cargar el reporte",
     "refresh": "Actualizar",
     "tabs": {
       "fleet": "Flota",
-      "float": "Flotante / aging",
-      "rental": "Alquiler",
+      "float": "En la calle",
+      "rental": "Ingresos alquiler",
       "loss": "Pérdidas",
       "supplier": "Devoluciones proveedor",
       "quality": "Calidad de datos",
@@ -824,7 +825,7 @@
     },
     "filters": {
       "group_by": "Agrupar por",
-      "bucket": "Bucket",
+      "bucket": "Antigüedad",
       "period_start": "Desde",
       "period_end": "Hasta",
       "client": "Cliente",
@@ -840,7 +841,7 @@
       "unassigned_locality": "Sin localidad"
     },
     "bucket": {
-      "all": "Todos"
+      "all": "Todas"
     },
     "columns": {
       "group": "Grupo",
@@ -848,8 +849,8 @@
       "client": "Cliente",
       "serial": "Serie",
       "delivery": "Entrega",
-      "days_out": "Días",
-      "bucket": "Bucket",
+      "days_out": "Días afuera",
+      "bucket": "Antigüedad",
       "gas": "Gas",
       "rental_days": "Días alquiler",
       "revenue": "Ingresos",
