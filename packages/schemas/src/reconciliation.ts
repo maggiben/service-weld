@@ -55,6 +55,12 @@ export const PhysicalCountInput = z
     counted_on: IsoDate,
     serial_numbers: z.array(z.string().min(1)).default([]),
     cylinder_ids: z.array(z.number().int()).default([]),
+    /**
+     * When true, every in-stock cylinder not in the counted list is reported
+     * as ABSENT_HERE (suggested LOSS). Default false so a partial list only
+     * classifies the serials provided (matched / elsewhere / unknown).
+     */
+    full_plant_count: z.boolean().default(false),
   })
   .refine((v) => v.serial_numbers.length > 0 || v.cylinder_ids.length > 0, {
     message: "Provide at least one serial or cylinder id",

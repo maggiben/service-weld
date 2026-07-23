@@ -618,7 +618,9 @@
     "count": {
       "date": "Fecha del conteo",
       "serials": "Seriales contados",
-      "serials_hint": "Uno por línea o separados por coma",
+      "serials_hint": "Uno por línea o separados por coma. Por defecto solo se clasifican estos seriales (coincide / en otro lado / desconocido).",
+      "full_plant": "Conteo completo de planta (reportar ausentes del stock como posible pérdida)",
+      "full_plant_warning": "Todo tubo en stock que no esté en la lista aparecerá como ausente / pérdida. Usalo solo si contaste el inventario completo.",
       "read_only": "Necesitás permiso de escritura en cilindros para correr el conteo",
       "summary": "Coincide {{matched}} · En otro lado {{elsewhere}} · Ausentes {{absent}} · Desconocidos {{unknown}}",
       "columns": {

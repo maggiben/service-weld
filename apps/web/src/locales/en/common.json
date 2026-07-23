@@ -618,7 +618,9 @@
     "count": {
       "date": "Count date",
       "serials": "Counted serials",
-      "serials_hint": "One per line or comma-separated",
+      "serials_hint": "One per line or comma-separated. By default only these serials are classified (matched / elsewhere / unknown).",
+      "full_plant": "Full plant count (report unscanned in-stock cylinders as possible loss)",
+      "full_plant_warning": "Every in-stock cylinder not in the list will appear as absent / loss. Use only when you counted the entire plant inventory.",
       "read_only": "Cylinder write permission is required to run a count",
       "summary": "Matched {{matched}} · Elsewhere {{elsewhere}} · Absent {{absent}} · Unknown {{unknown}}",
       "columns": {

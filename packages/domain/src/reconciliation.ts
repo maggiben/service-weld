@@ -51,7 +51,11 @@ export function classifyPhysicalCountRow(params: {
   };
 }
 
-/** System in-stock cylinders not present in the physical count. */
+/**
+ * System in-stock cylinders not present in a full plant count.
+ * Only emit when `full_plant_count` is true — a partial list must not
+ * treat every unscanned in-stock cylinder as a loss.
+ */
 export function absentHereRow(params: {
   cylinderId: number;
   serial: string;

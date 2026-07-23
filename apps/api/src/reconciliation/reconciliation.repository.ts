@@ -189,25 +189,29 @@ export class ReconciliationRepository {
       rows.push(classified);
     }
 
-    const inStock = await db
-      .selectFrom("cylinder")
-      .select(["id", "serial_number", "state"])
-      .where("state", "in", ["IN_STOCK_EMPTY", "IN_STOCK_FULL"])
-      .where("deleted_at", "is", null)
-      .execute();
+    // Only when the operator asserts a complete plant inventory: every
+    // in-stock cylinder missing from the list is a potential loss.
+    if (input.full_plant_count) {
+      const inStock = await db
+        .selectFrom("cylinder")
+        .select(["id", "serial_number", "state"])
+        .where("state", "in", ["IN_STOCK_EMPTY", "IN_STOCK_FULL"])
+        .where("deleted_at", "is", null)
+        .execute();
 
-    for (const cyl of inStock) {
-      const id = Number(cyl.id);
-      if (countedIds.has(id)) continue;
-      // Also skip if serial was counted (matched via serial list)
-      if (uniqueSerials.includes(cyl.serial_number)) continue;
-      rows.push(
-        absentHereRow({
-          cylinderId: id,
-          serial: cyl.serial_number,
-          state: cyl.state,
-        }),
-      );
+      for (const cyl of inStock) {
+        const id = Number(cyl.id);
+        if (countedIds.has(id)) continue;
+        // Also skip if serial was counted (matched via serial list)
+        if (uniqueSerials.includes(cyl.serial_number)) continue;
+        rows.push(
+          absentHereRow({
+            cylinderId: id,
+            serial: cyl.serial_number,
+            state: cyl.state,
+          }),
+        );
+      }
     }
 
     const matched = rows.filter((r) => r.kind === "MATCHED").length;

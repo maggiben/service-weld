@@ -3,7 +3,9 @@
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import Checkbox from "@mui/material/Checkbox";
 import Chip from "@mui/material/Chip";
+import FormControlLabel from "@mui/material/FormControlLabel";
 import Stack from "@mui/material/Stack";
 import Tab from "@mui/material/Tab";
 import Tabs from "@mui/material/Tabs";
@@ -40,6 +42,7 @@ export default function ReconciliationPage() {
   const [cursors, setCursors] = useState<(string | undefined)[]>([undefined]);
   const [serials, setSerials] = useState("");
   const [countedOn, setCountedOn] = useState(todayIso());
+  const [fullPlantCount, setFullPlantCount] = useState(false);
   const [varianceRows, setVarianceRows] = useState<ReconciliationVarianceRow[]>(
     [],
   );
@@ -80,6 +83,7 @@ export default function ReconciliationPage() {
           .map((s) => s.trim())
           .filter(Boolean),
         cylinder_ids: [],
+        full_plant_count: fullPlantCount,
       }),
     onSuccess: (result) => {
       setVarianceRows(result.rows);
@@ -232,6 +236,21 @@ export default function ReconciliationPage() {
             minRows={4}
             helperText={t("reconciliation.count.serials_hint")}
           />
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={fullPlantCount}
+                onChange={(e) => setFullPlantCount(e.target.checked)}
+                disabled={!canWrite}
+              />
+            }
+            label={t("reconciliation.count.full_plant")}
+          />
+          {fullPlantCount && (
+            <Alert severity="warning">
+              {t("reconciliation.count.full_plant_warning")}
+            </Alert>
+          )}
           <Button
             variant="contained"
             disabled={!canWrite || countMutation.isPending || !serials.trim()}
