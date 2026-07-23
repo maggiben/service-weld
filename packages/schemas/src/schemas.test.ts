@@ -32,7 +32,15 @@ import {
   MigrationUploadedFile,
   MigrationWorkbookSlot,
 } from "./migration-data";
-import { MovementListQuery } from "./movement";
+import {
+  CreateMovementInput,
+  MovementEvent,
+  MovementListQuery,
+  MovementListResponse,
+  ReturnMovementInput,
+  SwapMovementInput,
+  VoidMovementInput,
+} from "./movement";
 
 /** Known-valid CUITs covering check-digit branches (mod 11→0, mod 10→9, normal). */
 const VALID = ["20-12345678-6", "00-00000000-0", "00-00000001-9"] as const;
@@ -277,13 +285,78 @@ describe("migration-data schemas", () => {
 });
 
 describe("movement schemas", () => {
+  const event = {
+    id: 1,
+    request_id: "11111111-1111-4111-8111-111111111111",
+    cylinder_id: 10,
+    holder_party_id: 20,
+    holder_name: "Acme",
+    movement_kind: "RENTAL",
+    property_basis: "OURS",
+    gas_code: "O2",
+    delivery_date: "2026-07-01",
+    return_date: null,
+    rental_days: null,
+    origin_party_id: null,
+    swap_with_cyl_id: null,
+    remito_id: null,
+    state: "OPEN",
+    note: null,
+    version: 1,
+    created_at: "2026-07-01T12:00:00.000Z",
+    cylinder_serial: "323214",
+  };
+
+  it("parses movement event and write inputs", () => {
+    assert.equal(MovementEvent.parse(event).cylinder_serial, "323214");
+    assert.equal(
+      CreateMovementInput.parse({
+        cylinder_id: 10,
+        holder_party_id: 20,
+        movement_kind: "RENTAL",
+        delivery_date: "2026-07-01",
+      }).movement_kind,
+      "RENTAL",
+    );
+    assert.equal(
+      ReturnMovementInput.parse({ return_date: "2026-07-10" }).return_date,
+      "2026-07-10",
+    );
+    assert.equal(
+      SwapMovementInput.parse({
+        returned_cylinder_id: 11,
+        return_date: "2026-07-10",
+      }).returned_cylinder_id,
+      11,
+    );
+    assert.equal(VoidMovementInput.parse({ reason: "dup" }).reason, "dup");
+    assert.throws(() => VoidMovementInput.parse({ reason: "" }));
+  });
+
   it("accepts serial search on MovementListQuery", () => {
     const query = MovementListQuery.parse({
       limit: 50,
       q: "3232",
       open: "true",
+      "filter[state]": "OPEN",
+      "filter[movement_kind]": "RENTAL",
+      "filter[gas_code]": "O2",
     });
     assert.equal(query.q, "3232");
     assert.equal(query.open, true);
+    assert.equal(query["filter[state]"], "OPEN");
+  });
+
+  it("parses MovementListResponse", () => {
+    const list = MovementListResponse.parse({
+      data: [event],
+      page: {
+        limit: 50,
+        has_more: false,
+        next_cursor: null,
+        total_estimate: 1,
+      },
+    });
+    assert.equal(list.data[0]?.id, 1);
   });
 });
