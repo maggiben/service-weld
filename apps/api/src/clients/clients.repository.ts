@@ -75,6 +75,7 @@ interface AccountMovementRow {
   origin_party_id: number | null;
   swap_with_cyl_id: number | null;
   remito_id: number | null;
+  remito_number: string | null;
   state: MovementState;
   note: string | null;
   version: number;
@@ -106,6 +107,7 @@ function mapAccountMovement(row: AccountMovementRow): MovementEvent {
     swap_with_cyl_id:
       row.swap_with_cyl_id == null ? null : Number(row.swap_with_cyl_id),
     remito_id: row.remito_id == null ? null : Number(row.remito_id),
+    remito_number: row.remito_number,
     state: row.state,
     note: row.note,
     version: row.version,
@@ -528,6 +530,7 @@ export class ClientsRepository {
       .selectFrom("movement_event")
       .innerJoin("party", "party.id", "movement_event.holder_party_id")
       .innerJoin("cylinder", "cylinder.id", "movement_event.cylinder_id")
+      .leftJoin("delivery_note", "delivery_note.id", "movement_event.remito_id")
       .select([
         "movement_event.id",
         "movement_event.request_id",
@@ -543,6 +546,7 @@ export class ClientsRepository {
         "movement_event.origin_party_id",
         "movement_event.swap_with_cyl_id",
         "movement_event.remito_id",
+        "delivery_note.remito_number",
         "movement_event.state",
         "movement_event.note",
         "movement_event.version",

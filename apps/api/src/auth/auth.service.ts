@@ -2,6 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import type { RoleCode } from "@weld/schemas";
+import { ApiErrors } from "../common/errors/api-error";
 import type { Env } from "../config/config.schema";
 import { KYSELY, type DB } from "../database/database.module";
 import { resolveDb } from "../database/transaction.context";
@@ -136,14 +137,19 @@ export class AuthService {
       .execute();
   }
 
-  me(principal: AuthPrincipal) {
+  async me(principal: AuthPrincipal) {
+    const fresh = await this.loadUserById(principal.id);
+    if (!fresh || !fresh.is_active) {
+      throw ApiErrors.unauthenticated();
+    }
+    const current = this.toPrincipal(fresh);
     return {
-      id: principal.id,
-      username: principal.username,
-      roles: principal.roles,
-      territories: principal.territories.map((territory) => territory.name),
-      territory_scopes: principal.territories,
-      capabilities: principal.capabilities,
+      id: current.id,
+      username: current.username,
+      roles: current.roles,
+      territories: current.territories.map((territory) => territory.name),
+      territory_scopes: current.territories,
+      capabilities: current.capabilities,
     };
   }
 

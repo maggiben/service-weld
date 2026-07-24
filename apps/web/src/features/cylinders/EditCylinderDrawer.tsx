@@ -17,9 +17,11 @@ import Stack from "@mui/material/Stack";
 import Switch from "@mui/material/Switch";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { isCylinderDataEditable } from "@weld/domain";
+import dayjs, { type Dayjs } from "dayjs";
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -411,21 +413,20 @@ export function EditCylinderDrawer({ open, cylinder, onClose }: Props) {
             name="acquisition_date"
             control={control}
             render={({ field }) => (
-              <TextField
-                {...field}
-                value={field.value ?? ""}
-                onChange={(event) =>
-                  field.onChange(
-                    event.target.value === "" ? null : event.target.value,
-                  )
-                }
-                type="date"
+              <DatePicker
                 label={translate("cylinders.form.acquisition_date")}
-                fullWidth
+                value={field.value ? dayjs(field.value) : null}
+                onChange={(value: Dayjs | null) => {
+                  field.onChange(value ? value.format("YYYY-MM-DD") : null);
+                }}
                 disabled={!dataEditable}
-                InputLabelProps={{ shrink: true }}
-                error={Boolean(errors.acquisition_date)}
-                helperText={errors.acquisition_date?.message}
+                slotProps={{
+                  textField: {
+                    fullWidth: true,
+                    error: Boolean(errors.acquisition_date),
+                    helperText: errors.acquisition_date?.message,
+                  },
+                }}
               />
             )}
           />

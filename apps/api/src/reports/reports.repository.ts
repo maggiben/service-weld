@@ -842,7 +842,13 @@ export class ReportsRepository {
     page: ReturnType<typeof buildPageMeta>;
   }> {
     const db = resolveDb(this.db);
-    const asOf = query.as_of ?? businessTodayIso();
+    const periodMode =
+      Boolean(query.period_start) &&
+      Boolean(query.period_end) &&
+      query.period_start! <= query.period_end!;
+    const asOf = periodMode
+      ? query.period_end!
+      : (query.as_of ?? businessTodayIso());
     const limit = query.limit;
     const sort = parseSort(query.sort, ["days_open"]);
 
@@ -858,8 +864,30 @@ export class ReportsRepository {
         "party.display_name as supplier_name",
         "supplier_loan_cycle.stage",
         "supplier_loan_cycle.received_from_supplier",
-      ])
-      .where("supplier_loan_cycle.returned_to_supplier", "is", null);
+        "supplier_loan_cycle.returned_to_supplier",
+      ]);
+
+    if (periodMode) {
+      qb = qb
+        .where("supplier_loan_cycle.received_from_supplier", "is not", null)
+        .where(
+          "supplier_loan_cycle.received_from_supplier",
+          "<=",
+          query.period_end!,
+        )
+        .where((eb) =>
+          eb.or([
+            eb("supplier_loan_cycle.returned_to_supplier", "is", null),
+            eb(
+              "supplier_loan_cycle.returned_to_supplier",
+              ">=",
+              query.period_start!,
+            ),
+          ]),
+        );
+    } else {
+      qb = qb.where("supplier_loan_cycle.returned_to_supplier", "is", null);
+    }
 
     if (query["filter[supplier_party_id]"] != null) {
       qb = qb.where(
@@ -872,7 +900,9 @@ export class ReportsRepository {
     const rows = await qb.execute();
     let mapped: SupplierReturnsRow[] = rows.map((row) => {
       const received = isoDate(row.received_from_supplier);
-      const days_open = received ? calendarDaysBetween(received, asOf) : 0;
+      const returned = isoDate(row.returned_to_supplier);
+      const ageUntil = returned && returned < asOf ? returned : asOf;
+      const days_open = received ? calendarDaysBetween(received, ageUntil) : 0;
       return {
         loan_id: Number(row.loan_id),
         cylinder_id: Number(row.cylinder_id),
@@ -884,6 +914,20 @@ export class ReportsRepository {
         days_open,
       };
     });
+
+    // Migration can leave duplicate open cycles per cylinder — keep the oldest.
+    const byCylinder = new Map<number, SupplierReturnsRow>();
+    for (const row of mapped) {
+      const prev = byCylinder.get(row.cylinder_id);
+      if (
+        !prev ||
+        row.days_open > prev.days_open ||
+        (row.days_open === prev.days_open && row.loan_id < prev.loan_id)
+      ) {
+        byCylinder.set(row.cylinder_id, row);
+      }
+    }
+    mapped = [...byCylinder.values()];
 
     if (query.min_days != null) {
       mapped = mapped.filter((row) => row.days_open >= query.min_days!);

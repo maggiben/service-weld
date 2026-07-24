@@ -40,13 +40,20 @@ describe("CapabilitiesGuard", () => {
 
     expect(() =>
       guard.canActivate(
-        httpContext(principal({ capabilities: ["clients:read"] })) as never,
+        httpContext(
+          principal({ roles: ["MEDICAL"], capabilities: ["clients:read"] }),
+        ) as never,
       ),
     ).toThrow(ApiError);
 
     expect(
       guard.canActivate(
-        httpContext(principal({ capabilities: ["clients:write"] })) as never,
+        httpContext(
+          principal({
+            roles: ["CLERK"],
+            capabilities: [], // stale JWT snapshot must not block
+          }),
+        ) as never,
       ),
     ).toBe(true);
   });

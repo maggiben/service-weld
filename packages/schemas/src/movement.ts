@@ -23,6 +23,8 @@ export const MovementEvent = zod.object({
   origin_party_id: zod.number().int().nullable(),
   swap_with_cyl_id: zod.number().int().nullable(),
   remito_id: zod.number().int().nullable(),
+  /** Denormalized from delivery_note when remito_id is set. */
+  remito_number: zod.string().nullable().optional(),
   state: MovementState,
   note: zod.string().nullable(),
   version: zod.number().int(),
@@ -108,6 +110,7 @@ export const MovementListQuery = PaginationQuery.extend({
   "filter[state]": MovementState.optional(),
   "filter[movement_kind]": MovementKind.optional(),
   "filter[gas_code]": GasCode.optional(),
+  "filter[remito_id]": zod.coerce.number().int().optional(),
 });
 export type MovementListQuery = zod.infer<typeof MovementListQuery>;
 

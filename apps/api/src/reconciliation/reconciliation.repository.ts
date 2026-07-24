@@ -93,18 +93,23 @@ export class ReconciliationRepository {
 
     mapped.sort((left, right) => {
       const dir = sort.direction === "asc" ? 1 : -1;
-      if (sort.field === "delivery_date") {
-        return left.delivery_date.localeCompare(right.delivery_date) * dir;
+      let compared =
+        sort.field === "delivery_date"
+          ? left.delivery_date.localeCompare(right.delivery_date) * dir
+          : (left.accrued_days - right.accrued_days) * dir;
+      if (compared === 0) {
+        compared = left.movement_id - right.movement_id;
       }
-      return (left.accrued_days - right.accrued_days) * dir;
+      return compared;
     });
 
     let start = 0;
     if (query.cursor) {
       const cursor = decodeCursor(query.cursor);
       const cursorId = Number(cursor.movement_id ?? 0);
-      start = mapped.findIndex((row) => row.movement_id === cursorId) + 1;
-      if (start < 0) start = 0;
+      const index = mapped.findIndex((row) => row.movement_id === cursorId);
+      // Unknown cursor → empty page (not a silent restart at offset 0).
+      start = index >= 0 ? index + 1 : mapped.length;
     }
 
     const pageRows = mapped.slice(start, start + limit + 1);

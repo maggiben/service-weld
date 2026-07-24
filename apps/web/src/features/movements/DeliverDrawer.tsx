@@ -221,6 +221,7 @@ export function DeliverDrawer({
         queryClient.invalidateQueries({ queryKey: ["movements"] }),
         queryClient.invalidateQueries({ queryKey: ["refills"] }),
         queryClient.invalidateQueries({ queryKey: ["cylinders"] }),
+        queryClient.invalidateQueries({ queryKey: ["delivery-notes"] }),
       ]);
       onClose();
     },
@@ -498,6 +499,21 @@ export function DeliverDrawer({
                     helperText: errors.delivery_date?.message,
                   },
                 }}
+              />
+            )}
+          />
+
+          <Controller
+            name="remito_number"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                value={field.value ?? ""}
+                onChange={(event) => field.onChange(event.target.value || null)}
+                label={translate("movements.form.remito_number")}
+                fullWidth
+                helperText={translate("movements.form.remito_hint")}
               />
             )}
           />

@@ -18,9 +18,13 @@ import {
   type GridPaginationModel,
   gridClasses,
 } from "@mui/x-data-grid";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import dayjs, { type Dayjs } from "dayjs";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import NextLink from "next/link";
+import { useSearchParams } from "next/navigation";
 import type {
   Accessory,
   AccessoryRental,
@@ -45,11 +49,31 @@ const TYPES: AccessoryType[] = ["REGULATOR", "ADAPTER", "PORTABLE_O2_BACKPACK"];
 
 export default function AccessoriesPage() {
   const { t: translate } = useTranslation();
+  const searchParams = useSearchParams();
+  const remitoFilterParam = searchParams.get("remito_id");
+  const remitoFilterId =
+    remitoFilterParam != null && remitoFilterParam !== ""
+      ? Number(remitoFilterParam)
+      : null;
+  const remitoFilter =
+    remitoFilterId != null && Number.isFinite(remitoFilterId)
+      ? remitoFilterId
+      : null;
+
+  const remitoNoteQuery = useQuery({
+    queryKey: ["delivery-notes", "detail", remitoFilter],
+    queryFn: () => api.getDeliveryNote(remitoFilter!),
+    enabled: remitoFilter != null,
+  });
+  const remitoLabel =
+    remitoNoteQuery.data?.remito_number ??
+    (remitoFilter != null ? String(remitoFilter) : "");
+
   const canWrite = useSessionStore((state) =>
     state.hasCapability("accessories:write"),
   );
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState(0);
+  const [tab, setTab] = useState(remitoFilter != null ? 1 : 0);
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
     page: 0,
     pageSize: 50,
@@ -63,6 +87,7 @@ export default function AccessoriesPage() {
   const [clientId, setClientId] = useState("");
   const [startDate, setStartDate] = useState(todayIso());
   const [basis, setBasis] = useState<ChargeBasis>("RENTAL");
+  const [remitoNumber, setRemitoNumber] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const cursor = cursors[paginationModel.page];
@@ -78,13 +103,20 @@ export default function AccessoriesPage() {
   });
 
   const rentalsQuery = useQuery({
-    queryKey: ["accessory-rentals", paginationModel.pageSize, cursor],
+    queryKey: [
+      "accessory-rentals",
+      paginationModel.pageSize,
+      cursor,
+      remitoFilter,
+    ],
     queryFn: () =>
       api.listAccessoryRentals({
         limit: paginationModel.pageSize,
         cursor,
         sort: "-start_date",
-        open: true,
+        ...(remitoFilter != null
+          ? { "filter[remito_id]": remitoFilter }
+          : { open: true }),
       }),
     enabled: tab === 1 && (paginationModel.page === 0 || cursor != null),
   });
@@ -152,13 +184,16 @@ export default function AccessoriesPage() {
         quantity: 1,
         start_date: startDate,
         charge_basis: basis,
+        remito_number: remitoNumber.trim() || null,
       }),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["accessories"] }),
         queryClient.invalidateQueries({ queryKey: ["accessory-rentals"] }),
+        queryClient.invalidateQueries({ queryKey: ["delivery-notes"] }),
       ]);
       setDrawer(null);
+      setRemitoNumber("");
       setError(null);
     },
     onError: (err) => {
@@ -311,6 +346,24 @@ export default function AccessoriesPage() {
         )}
       </Stack>
 
+      {remitoFilter != null && (
+        <Alert
+          severity="info"
+          action={
+            <Button
+              color="inherit"
+              size="small"
+              component={NextLink}
+              href="/accessories"
+            >
+              {translate("movements.filters.clear_remito")}
+            </Button>
+          }
+        >
+          {translate("movements.filters.remito_active", { id: remitoLabel })}
+        </Alert>
+      )}
+
       <Tabs
         value={tab}
         onChange={(_, value) => {
@@ -440,12 +493,12 @@ export default function AccessoriesPage() {
                   </MenuItem>
                 ))}
               </TextField>
-              <TextField
+              <DatePicker
                 label={translate("accessories.rent.start")}
-                type="date"
-                value={startDate}
-                onChange={(event) => setStartDate(event.target.value)}
-                InputLabelProps={{ shrink: true }}
+                value={dayjs(startDate)}
+                onChange={(value: Dayjs | null) => {
+                  if (value) setStartDate(value.format("YYYY-MM-DD"));
+                }}
               />
               <TextField
                 select
@@ -462,6 +515,12 @@ export default function AccessoriesPage() {
                   {translate("enums.charge_basis.FREE_LOAN")}
                 </MenuItem>
               </TextField>
+              <TextField
+                label={translate("accessories.rent.remito_number")}
+                value={remitoNumber}
+                onChange={(event) => setRemitoNumber(event.target.value)}
+                helperText={translate("accessories.rent.remito_hint")}
+              />
               <Button
                 variant="contained"
                 onClick={() => rentMutation.mutate()}

@@ -21,6 +21,7 @@ import type {
   MovementState,
   OwnershipBasis,
 } from "../database/schema.types";
+import { resolveDeliveryNote } from "../delivery-notes/resolve-delivery-note";
 
 interface MovementRow {
   id: number;
@@ -37,6 +38,7 @@ interface MovementRow {
   origin_party_id: number | null;
   swap_with_cyl_id: number | null;
   remito_id: number | null;
+  remito_number: string | null;
   state: MovementState;
   note: string | null;
   version: number;
@@ -176,6 +178,7 @@ function mapMovement(row: MovementRow): MovementEvent {
     swap_with_cyl_id:
       row.swap_with_cyl_id == null ? null : Number(row.swap_with_cyl_id),
     remito_id: row.remito_id == null ? null : Number(row.remito_id),
+    remito_number: row.remito_number,
     state: row.state,
     note: row.note,
     version: row.version,
@@ -216,6 +219,7 @@ export class MovementsRepository {
         "owner_party.id",
         "cylinder.owner_party_id",
       )
+      .leftJoin("delivery_note", "delivery_note.id", "movement_event.remito_id")
       .select([
         "movement_event.id",
         "movement_event.request_id",
@@ -231,6 +235,7 @@ export class MovementsRepository {
         "movement_event.origin_party_id",
         "movement_event.swap_with_cyl_id",
         "movement_event.remito_id",
+        "delivery_note.remito_number",
         "movement_event.state",
         "movement_event.note",
         "movement_event.version",
@@ -285,6 +290,13 @@ export class MovementsRepository {
     }
     if (query["filter[gas_code]"]) {
       qb = qb.where("movement_event.gas_code", "=", query["filter[gas_code]"]);
+    }
+    if (query["filter[remito_id]"] != null) {
+      qb = qb.where(
+        "movement_event.remito_id",
+        "=",
+        query["filter[remito_id]"],
+      );
     }
 
     if (query.cursor) {
@@ -598,6 +610,13 @@ export class MovementsRepository {
     if (query["filter[gas_code]"]) {
       qb = qb.where("movement_event.gas_code", "=", query["filter[gas_code]"]);
     }
+    if (query["filter[remito_id]"] != null) {
+      qb = qb.where(
+        "movement_event.remito_id",
+        "=",
+        query["filter[remito_id]"],
+      );
+    }
 
     const row = await qb.executeTakeFirst();
     return Number(row?.c ?? 0);
@@ -616,6 +635,7 @@ export class MovementsRepository {
         "owner_party.id",
         "cylinder.owner_party_id",
       )
+      .leftJoin("delivery_note", "delivery_note.id", "movement_event.remito_id")
       .select([
         "movement_event.id",
         "movement_event.request_id",
@@ -631,6 +651,7 @@ export class MovementsRepository {
         "movement_event.origin_party_id",
         "movement_event.swap_with_cyl_id",
         "movement_event.remito_id",
+        "delivery_note.remito_number",
         "movement_event.state",
         "movement_event.note",
         "movement_event.version",
@@ -708,6 +729,14 @@ export class MovementsRepository {
   ): Promise<MovementEvent> {
     const db = resolveDb(this.db);
 
+    const remitoId = input.remito_number
+      ? await resolveDeliveryNote(db, {
+          remito_number: input.remito_number,
+          issued_date: input.delivery_date,
+          client_party_id: input.holder_party_id,
+        })
+      : null;
+
     const inserted = await db
       .insertInto("movement_event")
       .values({
@@ -720,6 +749,7 @@ export class MovementsRepository {
         delivery_date: input.delivery_date,
         return_date: null,
         origin_party_id: input.origin_party_id ?? null,
+        remito_id: remitoId,
         note: input.note ?? null,
         state: "OPEN",
         created_by: actorUserId,

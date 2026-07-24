@@ -10,6 +10,7 @@
     "movements": "Movimientos",
     "supplier_loans": "Préstamos proveedor",
     "transfers": "Transferencias",
+    "delivery_notes": "Remitos",
     "reconciliation": "Conciliación",
     "reports": "Reportes",
     "accessories": "Accesorios",
@@ -310,6 +311,7 @@
       "gas": "Gas",
       "rental_days": "Días",
       "state": "Estado",
+      "remito": "Remito",
       "actions": "Acciones"
     },
     "filters": {
@@ -318,7 +320,9 @@
       "kind": "Tipo",
       "state": "Estado",
       "client": "Cliente",
-      "locality": "Localidad"
+      "locality": "Localidad",
+      "remito_active": "Filtrado por remito #{{id}}",
+      "clear_remito": "Quitar"
     },
     "form": {
       "title_deliver": "Nueva entrega / recarga",
@@ -338,6 +342,8 @@
       "gas_hint_empty": "Cilindro vacío: elegí el gas si corresponde (capacidad se muestra si se conoce).",
       "delivery_date": "Fecha de entrega",
       "refill_date": "Fecha de recarga",
+      "remito_number": "Nº remito",
+      "remito_hint": "Opcional. Crea o vincula el remito por número.",
       "note": "Nota",
       "hint_rental": "Alquiler: solo cilindros nuestros o de proveedor disponibles en planta (no los que ya tiene otro cliente).",
       "hint_refill": "Recarga (Su Propiedad): el cliente es el dueño del cilindro; no hace falta elegirlo aparte.",
@@ -452,6 +458,10 @@
       "RENTAL": "Alquiler",
       "REFILL": "Recarga",
       "SUPPLIER_LOAN": "Préstamo proveedor"
+    },
+    "delivery_note_kind": {
+      "DELIVERY": "Entrega",
+      "RETURN": "Devolución"
     },
     "movement_state": {
       "OPEN": "Abierto",
@@ -666,6 +676,50 @@
       "date": "Fecha"
     }
   },
+  "delivery_notes": {
+    "title": "Remitos",
+    "empty": "No hay remitos",
+    "columns": {
+      "number": "Nº remito",
+      "kind": "Tipo",
+      "issued": "Emisión",
+      "client": "Cliente",
+      "movements": "Movimientos",
+      "rentals": "Alquileres"
+    },
+    "filters": {
+      "q": "Buscar remito o cliente",
+      "kind": "Tipo",
+      "group_remitos": "Remitos",
+      "group_clients": "Clientes",
+      "no_client": "Sin cliente"
+    },
+    "actions": {
+      "new": "Nuevo remito"
+    },
+    "form": {
+      "title": "Registrar remito",
+      "number": "Nº remito",
+      "kind": "Tipo",
+      "issued": "Fecha de emisión",
+      "client": "Cliente"
+    },
+    "detail": {
+      "title": "Remito {{number}}",
+      "loading": "Cargando…",
+      "no_date": "Sin fecha de emisión",
+      "open_movements": "Ver en movimientos",
+      "open_rentals": "Ver en accesorios",
+      "movements": "Movimientos ({{count}})",
+      "rentals": "Alquileres de accesorios ({{count}})",
+      "no_movements": "Sin movimientos vinculados",
+      "no_rentals": "Sin alquileres vinculados",
+      "view": "Ver"
+    },
+    "errors": {
+      "duplicate": "Ya existe un remito con ese número"
+    }
+  },
   "transfers": {
     "title": "Transferencias de stock",
     "subtitle": "Movimientos entre nodos, préstamos a clientes o envíos a recarga. La píldora indica dónde está el cilindro.",
@@ -725,7 +779,7 @@
       "count": "Conteo físico"
     },
     "outstanding": {
-      "help": "Lista automática de tubos con movimiento abierto: siguen en poder del cliente. Sirve para reclamar devoluciones y ver días de alquiler. No es un conteo de planta.",
+      "help": "Lista automática de tubos con movimiento abierto (en préstamo / recarga). Podés devolver, canjear o anular desde acá, igual que en Movimientos. No es un conteo de planta.",
       "columns": {
         "client": "Cliente",
         "held_by": "Custodia",
@@ -734,6 +788,7 @@
         "gas": "Gas",
         "delivery": "Entrega",
         "days": "Días",
+        "actions": "Acciones",
         "verify": "Verificar"
       }
     },
@@ -778,7 +833,9 @@
       "accessory_id": "ID accesorio",
       "client": "Cliente",
       "start": "Inicio",
-      "basis": "Base de cobro"
+      "basis": "Base de cobro",
+      "remito_number": "Nº remito",
+      "remito_hint": "Opcional. Crea o vincula el remito por número."
     },
     "rentals": {
       "columns": {
@@ -1012,10 +1069,13 @@
     },
     "worklists": {
       "outstanding": "Flota antigua abierta",
+      "outstanding_hint": "Abiertos al {{date}} (Hasta). Mes/Tri/Sem no cambian si Hasta es hoy.",
       "outstanding_empty": "Nada pendiente en antigüedad",
       "supplier": "Devoluciones a proveedor",
+      "supplier_hint": "Préstamos con custodia {{from}} → {{to}}",
       "supplier_empty": "Sin préstamos proveedor abiertos",
       "alerts": "Alertas",
+      "alerts_hint": "Creadas {{from}} → {{to}} (siguen abiertas)",
       "alerts_empty": "Sin alertas abiertas",
       "alerts_forbidden": "Sin permiso para ver alertas"
     }

@@ -91,6 +91,7 @@ export const AccessoryRentalListQuery = PaginationQuery.extend({
   "filter[client_party_id]": zod.coerce.number().int().optional(),
   "filter[state]": AccessoryRentalState.optional(),
   "filter[accessory_type]": AccessoryType.optional(),
+  "filter[remito_id]": zod.coerce.number().int().optional(),
 });
 export type AccessoryRentalListQuery = zod.infer<
   typeof AccessoryRentalListQuery

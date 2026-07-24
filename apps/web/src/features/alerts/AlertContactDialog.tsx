@@ -8,7 +8,9 @@ import DialogTitle from "@mui/material/DialogTitle";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import dayjs, { type Dayjs } from "dayjs";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Alert } from "@weld/schemas";
@@ -73,13 +75,13 @@ export function AlertContactDialog({ alert, open, onClose }: Props) {
               {alert.client_phone ? ` · ${alert.client_phone}` : ""}
             </Typography>
           )}
-          <TextField
+          <DatePicker
             label={translate("alerts.contact.date")}
-            type="date"
-            value={contactDate}
-            onChange={(event) => setContactDate(event.target.value)}
-            InputLabelProps={{ shrink: true }}
-            fullWidth
+            value={dayjs(contactDate)}
+            onChange={(value: Dayjs | null) => {
+              if (value) setContactDate(value.format("YYYY-MM-DD"));
+            }}
+            slotProps={{ textField: { fullWidth: true } }}
           />
           <TextField
             label={translate("alerts.contact.note")}

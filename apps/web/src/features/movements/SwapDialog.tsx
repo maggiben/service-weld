@@ -110,6 +110,7 @@ export function SwapDialog({ open, movement, onClose }: Props) {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["movements"] }),
         queryClient.invalidateQueries({ queryKey: ["cylinders"] }),
+        queryClient.invalidateQueries({ queryKey: ["outstanding"] }),
       ]);
       onClose();
     },

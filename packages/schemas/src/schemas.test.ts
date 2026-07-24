@@ -41,6 +41,12 @@ import {
   SwapMovementInput,
   VoidMovementInput,
 } from "./movement";
+import {
+  CreateDeliveryNoteInput,
+  DeliveryNote,
+  DeliveryNoteDetail,
+  DeliveryNoteListQuery,
+} from "./delivery-note";
 
 /** Known-valid CUITs covering check-digit branches (mod 11→0, mod 10→9, normal). */
 const VALID = ["20-12345678-6", "00-00000000-0", "00-00000001-9"] as const;
@@ -358,5 +364,67 @@ describe("movement schemas", () => {
       },
     });
     assert.equal(list.data[0]?.id, 1);
+  });
+});
+
+describe("delivery-note schemas", () => {
+  it("parses DeliveryNote and create/list contracts", () => {
+    assert.equal(
+      DeliveryNote.parse({
+        id: 1,
+        remito_number: "1475",
+        kind: "DELIVERY",
+        issued_date: "2018-05-04",
+        client_party_id: 501,
+        client_name: "Acme",
+      }).remito_number,
+      "1475",
+    );
+    assert.equal(
+      CreateDeliveryNoteInput.parse({ remito_number: " 1475 " }).kind,
+      "DELIVERY",
+    );
+    assert.equal(
+      CreateDeliveryNoteInput.parse({
+        remito_number: "90",
+        kind: "RETURN",
+      }).kind,
+      "RETURN",
+    );
+    assert.throws(() => CreateDeliveryNoteInput.parse({ remito_number: "" }));
+    const query = DeliveryNoteListQuery.parse({
+      q: "1475",
+      "filter[client_party_id]": "501",
+      "filter[kind]": "RETURN",
+    });
+    assert.equal(query.sort, "-issued_date");
+    assert.equal(query["filter[client_party_id]"], 501);
+    assert.equal(query["filter[kind]"], "RETURN");
+    assert.equal(
+      DeliveryNoteDetail.parse({
+        id: 1,
+        remito_number: "1475",
+        kind: "DELIVERY",
+        issued_date: "2018-05-04",
+        client_party_id: 501,
+        movement_count: 1,
+        accessory_rental_count: 0,
+        movements: [
+          {
+            id: 9,
+            cylinder_id: 10,
+            cylinder_serial: "323214",
+            holder_party_id: 501,
+            holder_name: "Acme",
+            movement_kind: "RENTAL",
+            delivery_date: "2018-05-04",
+            return_date: null,
+            state: "OPEN",
+          },
+        ],
+        accessory_rentals: [],
+      }).movements[0]?.cylinder_serial,
+      "323214",
+    );
   });
 });

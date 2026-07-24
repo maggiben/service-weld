@@ -17,6 +17,10 @@ export function stashNextCursor(
 /**
  * DataGrid rowCount for cursor pages: current offset + rows + optional
  * "next page exists" sentinel when has_more.
+ *
+ * Prefer {@link cursorGridServerPagination} for live grids — this estimate
+ * alone collapses to `page * pageSize` while the next page is loading, which
+ * makes MUI clamp the controlled page back to 0.
  */
 export function cursorPageRowCount(
   page: number,
@@ -25,6 +29,38 @@ export function cursorPageRowCount(
   hasMore: boolean,
 ): number {
   return page * pageSize + rowCount + (hasMore ? 1 : 0);
+}
+
+/**
+ * DataGrid server-mode props for cursor APIs (specs/006): unknown `rowCount`
+ * plus `paginationMeta.hasNextPage` so the page does not snap back mid-fetch.
+ * Pair with TanStack `placeholderData: keepPreviousData` and skip
+ * {@link stashNextCursor} while `isPlaceholderData` is true.
+ */
+export function cursorGridServerPagination(input: {
+  page: number;
+  pageSize: number;
+  loadedCount: number;
+  hasMore: boolean | undefined;
+}): {
+  rowCount: -1;
+  estimatedRowCount: number | undefined;
+  paginationMeta: { hasNextPage: boolean };
+} {
+  const hasMore = input.hasMore === true;
+  return {
+    rowCount: -1,
+    estimatedRowCount:
+      input.hasMore == null
+        ? undefined
+        : cursorPageRowCount(
+            input.page,
+            input.pageSize,
+            input.loadedCount,
+            hasMore,
+          ),
+    paginationMeta: { hasNextPage: hasMore },
+  };
 }
 
 export function shouldResetCursors(

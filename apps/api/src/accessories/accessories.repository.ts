@@ -24,6 +24,7 @@ import type {
   ChargeBasis,
 } from "../database/schema.types";
 import { resolveDb } from "../database/transaction.context";
+import { resolveDeliveryNote } from "../delivery-notes/resolve-delivery-note";
 
 function isoDate(value: string | Date | null): string | null {
   if (value == null) return null;
@@ -276,6 +277,13 @@ export class AccessoriesRepository {
         query["filter[accessory_type]"],
       );
     }
+    if (query["filter[remito_id]"] != null) {
+      qb = qb.where(
+        "accessory_rental.remito_id",
+        "=",
+        query["filter[remito_id]"],
+      );
+    }
 
     if (query.cursor) {
       const cursor = decodeCursor(query.cursor);
@@ -362,28 +370,13 @@ export class AccessoriesRepository {
   ): Promise<AccessoryRental> {
     const db = resolveDb(this.db);
 
-    let remitoId: number | null = null;
-    if (input.remito_number) {
-      const existing = await db
-        .selectFrom("delivery_note")
-        .select("id")
-        .where("remito_number", "=", input.remito_number)
-        .executeTakeFirst();
-      if (existing) {
-        remitoId = Number(existing.id);
-      } else {
-        const inserted = await db
-          .insertInto("delivery_note")
-          .values({
-            remito_number: input.remito_number,
-            issued_date: input.start_date,
-            client_party_id: input.client_party_id,
-          })
-          .returning("id")
-          .executeTakeFirstOrThrow();
-        remitoId = Number(inserted.id);
-      }
-    }
+    const remitoId = input.remito_number
+      ? await resolveDeliveryNote(db, {
+          remito_number: input.remito_number,
+          issued_date: input.start_date,
+          client_party_id: input.client_party_id,
+        })
+      : null;
 
     const inserted = await db
       .insertInto("accessory_rental")

@@ -19,6 +19,7 @@ export * from "./billing";
 export * from "./battery";
 export * from "./supplier-loan";
 export * from "./transfer";
+export * from "./delivery-note";
 export * from "./reconciliation";
 export * from "./accessory";
 export * from "./alert";

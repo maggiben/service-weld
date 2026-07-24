@@ -10,6 +10,7 @@
     "movements": "Movements",
     "supplier_loans": "Supplier loans",
     "transfers": "Transfers",
+    "delivery_notes": "Delivery notes",
     "reconciliation": "Reconciliation",
     "reports": "Reports",
     "accessories": "Accessories",
@@ -310,6 +311,7 @@
       "gas": "Gas",
       "rental_days": "Days",
       "state": "State",
+      "remito": "Remito",
       "actions": "Actions"
     },
     "filters": {
@@ -318,7 +320,9 @@
       "kind": "Kind",
       "state": "State",
       "client": "Client",
-      "locality": "Locality"
+      "locality": "Locality",
+      "remito_active": "Filtered by remito #{{id}}",
+      "clear_remito": "Clear"
     },
     "form": {
       "title_deliver": "New delivery / refill",
@@ -338,6 +342,8 @@
       "gas_hint_empty": "Empty cylinder: pick gas if needed (capacity shown when known).",
       "delivery_date": "Delivery date",
       "refill_date": "Refill date",
+      "remito_number": "Remito #",
+      "remito_hint": "Optional. Creates or links the delivery note by number.",
       "note": "Note",
       "hint_rental": "Rental: only our or supplier cylinders available in plant stock (not ones already with another client).",
       "hint_refill": "Refill (customer-owned): the client is the cylinder owner — no separate picker.",
@@ -452,6 +458,10 @@
       "RENTAL": "Rental",
       "REFILL": "Refill",
       "SUPPLIER_LOAN": "Supplier loan"
+    },
+    "delivery_note_kind": {
+      "DELIVERY": "Delivery",
+      "RETURN": "Return"
     },
     "movement_state": {
       "OPEN": "Open",
@@ -666,6 +676,50 @@
       "date": "Date"
     }
   },
+  "delivery_notes": {
+    "title": "Delivery notes",
+    "empty": "No delivery notes yet",
+    "columns": {
+      "number": "Remito #",
+      "kind": "Kind",
+      "issued": "Issued",
+      "client": "Client",
+      "movements": "Movements",
+      "rentals": "Rentals"
+    },
+    "filters": {
+      "q": "Search remito or client",
+      "kind": "Kind",
+      "group_remitos": "Remitos",
+      "group_clients": "Clients",
+      "no_client": "No client"
+    },
+    "actions": {
+      "new": "New remito"
+    },
+    "form": {
+      "title": "Register remito",
+      "number": "Remito #",
+      "kind": "Kind",
+      "issued": "Issued date",
+      "client": "Client"
+    },
+    "detail": {
+      "title": "Remito {{number}}",
+      "loading": "Loading…",
+      "no_date": "No issued date",
+      "open_movements": "Open in movements",
+      "open_rentals": "Open in accessories",
+      "movements": "Movements ({{count}})",
+      "rentals": "Accessory rentals ({{count}})",
+      "no_movements": "No linked movements",
+      "no_rentals": "No linked accessory rentals",
+      "view": "View"
+    },
+    "errors": {
+      "duplicate": "A remito with this number already exists"
+    }
+  },
   "transfers": {
     "title": "Stock transfers",
     "subtitle": "Moves between nodes, loans to clients, or trips to refill. The pill shows where the cylinder is.",
@@ -725,7 +779,7 @@
       "count": "Physical count"
     },
     "outstanding": {
-      "help": "Automatic list of cylinders with an open movement — still held by the client. Use it to chase returns and see rental days. This is not a plant stock count.",
+      "help": "Automatic list of cylinders with an open movement (on loan / refill). You can return, swap, or void from here, same as Movements. This is not a plant stock count.",
       "columns": {
         "client": "Client",
         "held_by": "Custody",
@@ -734,6 +788,7 @@
         "gas": "Gas",
         "delivery": "Delivery",
         "days": "Days",
+        "actions": "Actions",
         "verify": "Verify"
       }
     },
@@ -778,7 +833,9 @@
       "accessory_id": "Accessory ID",
       "client": "Client",
       "start": "Start",
-      "basis": "Charge basis"
+      "basis": "Charge basis",
+      "remito_number": "Remito #",
+      "remito_hint": "Optional. Creates or links the delivery note by number."
     },
     "rentals": {
       "columns": {
@@ -1012,10 +1069,13 @@
     },
     "worklists": {
       "outstanding": "Long-outstanding float",
+      "outstanding_hint": "Open as of {{date}} (To). Month/quarter/semester stay the same if To is today.",
       "outstanding_empty": "Nothing aged outstanding",
       "supplier": "Supplier returns",
+      "supplier_hint": "Loans with custody {{from}} → {{to}}",
       "supplier_empty": "No open supplier loans",
       "alerts": "Alerts",
+      "alerts_hint": "Created {{from}} → {{to}} (still open)",
       "alerts_empty": "No open alerts",
       "alerts_forbidden": "No permission to view alerts"
     }

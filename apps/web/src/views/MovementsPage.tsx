@@ -35,6 +35,7 @@ import type {
 } from "@weld/schemas";
 import { useQuery } from "@tanstack/react-query";
 import NextLink from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
@@ -69,6 +70,26 @@ const PAGE_SIZE_OPTIONS = [25, 50, 100];
 export default function MovementsPage() {
   const { t: translate } = useTranslation();
   const locale = useUiStore((state) => state.locale);
+  const searchParams = useSearchParams();
+  const remitoFilterParam = searchParams.get("remito_id");
+  const remitoFilterId =
+    remitoFilterParam != null && remitoFilterParam !== ""
+      ? Number(remitoFilterParam)
+      : null;
+  const remitoFilter =
+    remitoFilterId != null && Number.isFinite(remitoFilterId)
+      ? remitoFilterId
+      : null;
+
+  const remitoNoteQuery = useQuery({
+    queryKey: ["delivery-notes", "detail", remitoFilter],
+    queryFn: () => api.getDeliveryNote(remitoFilter!),
+    enabled: remitoFilter != null,
+  });
+  const remitoLabel =
+    remitoNoteQuery.data?.remito_number ??
+    (remitoFilter != null ? String(remitoFilter) : "");
+
   const canWrite = useSessionStore((state) =>
     state.hasCapability("movements:write"),
   );
@@ -144,6 +165,7 @@ export default function MovementsPage() {
         : cityFilter !== ""
           ? { "filter[locality_id]": cityFilter }
           : {}),
+      ...(remitoFilter != null ? { "filter[remito_id]": remitoFilter } : {}),
     }),
     [
       paginationModel.pageSize,
@@ -155,6 +177,7 @@ export default function MovementsPage() {
       stateFilter,
       client,
       cityFilter,
+      remitoFilter,
     ],
   );
 
@@ -245,6 +268,12 @@ export default function MovementsPage() {
         field: "gas_code",
         headerName: translate("movements.columns.gas"),
         width: 100,
+      },
+      {
+        field: "remito_number",
+        headerName: translate("movements.columns.remito"),
+        width: 110,
+        valueGetter: (_value, row) => row.remito_number ?? "—",
       },
     ];
 
@@ -366,6 +395,25 @@ export default function MovementsPage() {
       <Alert severity="info" sx={{ py: 0.5 }}>
         {translate("movements.swap.list_hint")}
       </Alert>
+      {remitoFilter != null && (
+        <Alert
+          severity="info"
+          action={
+            <Button
+              color="inherit"
+              size="small"
+              component={NextLink}
+              href="/movements"
+            >
+              {translate("movements.filters.clear_remito")}
+            </Button>
+          }
+        >
+          {translate("movements.filters.remito_active", {
+            id: remitoLabel,
+          })}
+        </Alert>
+      )}
       <Stack
         direction={{ xs: "column", md: "row" }}
         spacing={2}

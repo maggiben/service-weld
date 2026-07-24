@@ -39,6 +39,9 @@ export const AlertListQuery = PaginationQuery.extend({
   "filter[alert_type]": zod.string().optional(),
   "filter[assigned_role]": zod.string().optional(),
   "filter[movement_kind]": MovementKind.optional(),
+  /** Still-open alerts created in the inclusive range (dashboard worklist). */
+  period_start: IsoDate.optional(),
+  period_end: IsoDate.optional(),
 });
 export type AlertListQuery = zod.infer<typeof AlertListQuery>;
 

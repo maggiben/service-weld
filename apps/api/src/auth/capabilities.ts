@@ -23,6 +23,7 @@ export const ROLE_CAPABILITIES: Record<RoleCode, readonly string[]> = {
     "alerts:write",
     "search:read",
     "delivery_notes:read",
+    "delivery_notes:write",
   ],
   DRIVER: [
     "clients:read",
@@ -31,6 +32,7 @@ export const ROLE_CAPABILITIES: Record<RoleCode, readonly string[]> = {
     "cylinders:read",
     "accessories:read",
     "accessories:write",
+    "delivery_notes:read",
     "delivery_notes:write",
   ],
   PLANT: [
@@ -68,6 +70,8 @@ export const ROLE_CAPABILITIES: Record<RoleCode, readonly string[]> = {
     "rates:read",
     "rates:write",
     "accessories:read",
+    "delivery_notes:read",
+    "delivery_notes:write",
     "medical:read",
   ],
   MANAGER: [
@@ -89,6 +93,7 @@ export const ROLE_CAPABILITIES: Record<RoleCode, readonly string[]> = {
     "alerts:read",
     "search:read",
     "audit:read",
+    "delivery_notes:read",
   ],
   SUBDIST: [
     "clients:read",
@@ -130,6 +135,8 @@ export const ROLE_CAPABILITIES: Record<RoleCode, readonly string[]> = {
     "admin:write",
     "audit:read",
     "medical:read",
+    "delivery_notes:read",
+    "delivery_notes:write",
   ],
   MEDICAL: [
     "clients:read",

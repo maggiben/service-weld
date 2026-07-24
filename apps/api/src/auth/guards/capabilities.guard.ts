@@ -2,7 +2,7 @@ import { CanActivate, ExecutionContext, Injectable } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { CAPABILITIES_KEY } from "../../common/decorators/require-capabilities.decorator";
 import { ApiErrors } from "../../common/errors/api-error";
-import { hasCapabilities } from "../capabilities";
+import { capabilitiesForRoles, hasCapabilities } from "../capabilities";
 import type { AuthPrincipal } from "../principal";
 
 @Injectable()
@@ -28,7 +28,10 @@ export class CapabilitiesGuard implements CanActivate {
       throw ApiErrors.unauthenticated();
     }
 
-    if (!hasCapabilities(user.capabilities, required)) {
+    // Derive from roles (not the JWT capability snapshot) so newly granted
+    // capabilities apply without forcing a re-login.
+    const granted = capabilitiesForRoles(user.roles);
+    if (!hasCapabilities(granted, required)) {
       throw ApiErrors.forbidden();
     }
 

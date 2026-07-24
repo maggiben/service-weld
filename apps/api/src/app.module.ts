@@ -12,6 +12,7 @@ import { RatesModule } from "./rates/rates.module";
 import { RefillRatesModule } from "./refill-rates/refill-rates.module";
 import { SupplierLoansModule } from "./supplier-loans/supplier-loans.module";
 import { TransfersModule } from "./transfers/transfers.module";
+import { DeliveryNotesModule } from "./delivery-notes/delivery-notes.module";
 import { ReconciliationModule } from "./reconciliation/reconciliation.module";
 import { AccessoriesModule } from "./accessories/accessories.module";
 import { AlertsModule } from "./alerts/alerts.module";
@@ -50,6 +51,7 @@ const envFiles = [
     BillingModule,
     SupplierLoansModule,
     TransfersModule,
+    DeliveryNotesModule,
     ReconciliationModule,
     AccessoriesModule,
     AlertsModule,

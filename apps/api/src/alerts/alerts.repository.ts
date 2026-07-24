@@ -153,6 +153,21 @@ export class AlertsRepository {
         );
     }
 
+    if (query.period_start) {
+      qb = qb.where(
+        "created_at",
+        ">=",
+        new Date(`${query.period_start}T00:00:00.000Z`),
+      );
+    }
+    if (query.period_end) {
+      qb = qb.where(
+        "created_at",
+        "<=",
+        new Date(`${query.period_end}T23:59:59.999Z`),
+      );
+    }
+
     if (query.cursor) {
       const cursor = decodeCursor(query.cursor);
       const cursorAt = String(cursor.created_at ?? "");

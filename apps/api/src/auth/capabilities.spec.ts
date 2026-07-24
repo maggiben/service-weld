@@ -16,8 +16,11 @@ describe("capabilities", () => {
   it("unions role capabilities", () => {
     const caps = capabilitiesForRoles(["DRIVER", "CLERK"]);
     expect(caps).toContain("movements:write");
+    expect(caps).toContain("delivery_notes:read");
+    expect(caps).toContain("delivery_notes:write");
     expect(caps).toEqual([...caps].sort());
     expect(ROLE_CAPABILITIES.ADMIN.length).toBeGreaterThan(10);
+    expect(ROLE_CAPABILITIES.BILLING).toContain("delivery_notes:write");
     expect(hasCapabilities(caps, ["clients:read"])).toBe(true);
     expect(hasCapabilities(caps, ["admin:write"])).toBe(false);
   });

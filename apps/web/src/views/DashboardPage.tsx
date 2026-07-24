@@ -11,7 +11,6 @@ import Link from "@mui/material/Link";
 import Paper from "@mui/material/Paper";
 import Skeleton from "@mui/material/Skeleton";
 import Stack from "@mui/material/Stack";
-import TextField from "@mui/material/TextField";
 import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import Typography from "@mui/material/Typography";
@@ -20,7 +19,9 @@ import { BarChart } from "@mui/x-charts/BarChart";
 import { Gauge, gaugeClasses } from "@mui/x-charts/Gauge";
 import { PieChart } from "@mui/x-charts/PieChart";
 import { blueberryTwilightPalette } from "@mui/x-charts/colorPalettes";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { useQuery } from "@tanstack/react-query";
+import dayjs, { type Dayjs } from "dayjs";
 import NextLink from "next/link";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
@@ -326,6 +327,7 @@ function FillSizedPieChart({
 
 function Worklist<T>({
   title,
+  hint,
   empty,
   viewAllHref,
   viewAllLabel,
@@ -335,6 +337,7 @@ function Worklist<T>({
   renderRow,
 }: {
   title: string;
+  hint?: string;
   empty: string;
   viewAllHref: string;
   viewAllLabel: string;
@@ -358,6 +361,16 @@ function Worklist<T>({
         </Button>
       }
     >
+      {hint ? (
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          display="block"
+          sx={{ mb: 1, flexShrink: 0 }}
+        >
+          {hint}
+        </Typography>
+      ) : null}
       {loading ? (
         <Stack spacing={1}>
           <Skeleton height={28} />
@@ -535,17 +548,19 @@ export default function DashboardPage() {
     enabled: periodEnabled,
   });
 
-  /** Live open float for worklists (not filtered by dashboard period). */
+  /** Open float aged as of period end (worklist). Same Hasta ⇒ same queue. */
   const floatQuery = useQuery({
-    queryKey: ["dashboard", "float", "open"],
-    queryFn: () =>
+    queryKey: ["dashboard", "float", "open", periodEnd],
+    queryFn: ({ queryKey }) =>
       collectFloatAgingPages((cursor) =>
         api.reportFloatAging({
           limit: 200,
           sort: "-days_out",
           cursor,
+          as_of: String(queryKey[3]),
         }),
       ),
+    enabled: Boolean(periodEnd),
   });
 
   /** Period-overlapping custody for the aging chart (accumulates with lookback). */
@@ -567,15 +582,28 @@ export default function DashboardPage() {
   });
 
   const supplierQuery = useQuery({
-    queryKey: ["dashboard", "supplier-returns"],
-    queryFn: () => api.reportSupplierReturns({ limit: 5, sort: "-days_open" }),
+    queryKey: ["dashboard", "supplier-returns", periodStart, periodEnd],
+    queryFn: ({ queryKey }) =>
+      api.reportSupplierReturns({
+        limit: 5,
+        sort: "-days_open",
+        period_start: String(queryKey[2]),
+        period_end: String(queryKey[3]),
+      }),
+    enabled: periodEnabled,
   });
 
   const alertsQuery = useQuery({
-    queryKey: ["dashboard", "alerts"],
-    queryFn: () =>
-      api.listAlerts({ open: true, limit: 5, sort: "-created_at" }),
-    enabled: canAlerts,
+    queryKey: ["dashboard", "alerts", periodStart, periodEnd],
+    queryFn: ({ queryKey }) =>
+      api.listAlerts({
+        open: true,
+        limit: 5,
+        sort: "-created_at",
+        period_start: String(queryKey[2]),
+        period_end: String(queryKey[3]),
+      }),
+    enabled: canAlerts && periodEnabled,
   });
 
   const alertsSummaryQuery = useQuery({
@@ -727,23 +755,31 @@ export default function DashboardPage() {
               {translate("dashboard.grain.semester")}
             </ToggleButton>
           </ToggleButtonGroup>
-          <TextField
-            size="small"
-            type="date"
+          <DatePicker
             label={translate("dashboard.period_start")}
-            value={periodStart}
-            onChange={(event) => setPeriodStart(event.target.value)}
-            InputLabelProps={{ shrink: true }}
-            sx={{ width: { xs: "100%", sm: 168 } }}
+            value={dayjs(periodStart)}
+            onChange={(value: Dayjs | null) => {
+              if (value) setPeriodStart(value.format("YYYY-MM-DD"));
+            }}
+            slotProps={{
+              textField: {
+                size: "small",
+                sx: { width: { xs: "100%", sm: 168 } },
+              },
+            }}
           />
-          <TextField
-            size="small"
-            type="date"
+          <DatePicker
             label={translate("dashboard.period_end")}
-            value={periodEnd}
-            onChange={(event) => setPeriodEnd(event.target.value)}
-            InputLabelProps={{ shrink: true }}
-            sx={{ width: { xs: "100%", sm: 168 } }}
+            value={dayjs(periodEnd)}
+            onChange={(value: Dayjs | null) => {
+              if (value) setPeriodEnd(value.format("YYYY-MM-DD"));
+            }}
+            slotProps={{
+              textField: {
+                size: "small",
+                sx: { width: { xs: "100%", sm: 168 } },
+              },
+            }}
           />
           <Button
             variant="outlined"
@@ -1347,6 +1383,9 @@ export default function DashboardPage() {
       >
         <Worklist
           title={translate("dashboard.worklists.outstanding")}
+          hint={translate("dashboard.worklists.outstanding_hint", {
+            date: formatDateDMY(periodEnd),
+          })}
           empty={translate("dashboard.worklists.outstanding_empty")}
           viewAllHref="/reports"
           viewAllLabel={translate("dashboard.view_all")}
@@ -1385,6 +1424,10 @@ export default function DashboardPage() {
 
         <Worklist
           title={translate("dashboard.worklists.supplier")}
+          hint={translate("dashboard.worklists.supplier_hint", {
+            from: formatDateDMY(periodStart),
+            to: formatDateDMY(periodEnd),
+          })}
           empty={translate("dashboard.worklists.supplier_empty")}
           viewAllHref="/supplier-loans"
           viewAllLabel={translate("dashboard.view_all")}
@@ -1415,6 +1458,14 @@ export default function DashboardPage() {
 
         <Worklist
           title={translate("dashboard.worklists.alerts")}
+          hint={
+            canAlerts
+              ? translate("dashboard.worklists.alerts_hint", {
+                  from: formatDateDMY(periodStart),
+                  to: formatDateDMY(periodEnd),
+                })
+              : undefined
+          }
           empty={
             canAlerts
               ? translate("dashboard.worklists.alerts_empty")

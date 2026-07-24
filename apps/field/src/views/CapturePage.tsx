@@ -7,6 +7,8 @@ import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import dayjs, { type Dayjs } from "dayjs";
 import { useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import type { GasCode, MovementKind } from "@weld/schemas";
@@ -31,6 +33,7 @@ export default function CapturePage() {
   const [kind, setKind] = useState<MovementKind>("RENTAL");
   const [date, setDate] = useState(todayIso());
   const [note, setNote] = useState("");
+  const [remitoNumber, setRemitoNumber] = useState("");
   const [saved, setSaved] = useState<string | null>(null);
 
   const onQueue = async () => {
@@ -51,6 +54,7 @@ export default function CapturePage() {
             movement_kind: kind,
             gas_code: gas,
             delivery_date: date,
+            remito_number: remitoNumber.trim() || null,
             note: note.trim() || null,
             request_id: id,
           },
@@ -136,6 +140,12 @@ export default function CapturePage() {
               multiline
               minRows={2}
             />
+            <TextField
+              label="Nº remito"
+              value={remitoNumber}
+              onChange={(event) => setRemitoNumber(event.target.value)}
+              helperText="Opcional. Crea o vincula el remito de entrega."
+            />
           </>
         ) : (
           <TextField
@@ -147,12 +157,13 @@ export default function CapturePage() {
           />
         )}
 
-        <TextField
+        <DatePicker
           label="Fecha"
-          type="date"
-          value={date}
-          onChange={(event) => setDate(event.target.value)}
-          InputLabelProps={{ shrink: true }}
+          value={dayjs(date)}
+          onChange={(value: Dayjs | null) => {
+            if (value) setDate(value.format("YYYY-MM-DD"));
+          }}
+          slotProps={{ textField: { fullWidth: true } }}
         />
 
         {saved && (

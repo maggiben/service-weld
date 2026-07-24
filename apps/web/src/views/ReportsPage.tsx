@@ -22,7 +22,9 @@ import {
   type GridRenderCellParams,
   gridClasses,
 } from "@mui/x-data-grid";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { useQuery } from "@tanstack/react-query";
+import dayjs, { type Dayjs } from "dayjs";
 import NextLink from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -826,21 +828,21 @@ export default function ReportsPage() {
         tab === "loss" ||
         tab === "medical" ? (
           <>
-            <TextField
-              size="small"
-              type="date"
+            <DatePicker
               label={translate("reports.filters.period_start")}
-              value={periodStart}
-              onChange={(event) => setPeriodStart(event.target.value)}
-              InputLabelProps={{ shrink: true }}
+              value={dayjs(periodStart)}
+              onChange={(value: Dayjs | null) => {
+                if (value) setPeriodStart(value.format("YYYY-MM-DD"));
+              }}
+              slotProps={{ textField: { size: "small" } }}
             />
-            <TextField
-              size="small"
-              type="date"
+            <DatePicker
               label={translate("reports.filters.period_end")}
-              value={periodEnd}
-              onChange={(event) => setPeriodEnd(event.target.value)}
-              InputLabelProps={{ shrink: true }}
+              value={dayjs(periodEnd)}
+              onChange={(value: Dayjs | null) => {
+                if (value) setPeriodEnd(value.format("YYYY-MM-DD"));
+              }}
+              slotProps={{ textField: { size: "small" } }}
             />
             {tab === "rental" ? (
               <>

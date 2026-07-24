@@ -19,9 +19,10 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
-  // Recover sessions that got tokens without /me (login race / corrupt storage).
+  // Refresh /me on mount so newly granted capabilities appear without logout
+  // (access JWT may still carry a stale capability set until the next refresh).
   useEffect(() => {
-    if (!hydrated || !pendingUser) return;
+    if (!hydrated || !accessToken) return;
     let cancelled = false;
     void api
       .me()
@@ -29,12 +30,14 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
         if (!cancelled) setUser(me);
       })
       .catch(() => {
-        if (!cancelled) clearSession();
+        // Only wipe the session when we never had a profile; transient /me
+        // failures must not kick out an already-authenticated user.
+        if (!cancelled && !useSessionStore.getState().user) clearSession();
       });
     return () => {
       cancelled = true;
     };
-  }, [hydrated, pendingUser, setUser, clearSession]);
+  }, [hydrated, accessToken, setUser, clearSession]);
 
   useEffect(() => {
     if (!hydrated || pendingUser) return;

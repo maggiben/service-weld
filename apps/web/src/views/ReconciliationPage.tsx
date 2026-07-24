@@ -1,5 +1,8 @@
 "use client";
 
+import AssignmentReturnIcon from "@mui/icons-material/AssignmentReturn";
+import CancelOutlinedIcon from "@mui/icons-material/CancelOutlined";
+import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
@@ -18,16 +21,35 @@ import {
   type GridPaginationModel,
   gridClasses,
 } from "@mui/x-data-grid";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import dayjs, { type Dayjs } from "dayjs";
 import NextLink from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { OutstandingRow, ReconciliationVarianceRow } from "@weld/schemas";
+import type {
+  MovementEvent,
+  OutstandingRow,
+  ReconciliationVarianceRow,
+} from "@weld/schemas";
 import { api } from "../api/client";
+import {
+  GridActionsCell,
+  gridActionsColumnWidth,
+  type GridActionItem,
+} from "../components/GridActionsCell";
+import { ReturnDialog } from "../features/movements/ReturnDialog";
+import { SwapDialog } from "../features/movements/SwapDialog";
+import { VoidDialog } from "../features/movements/VoidDialog";
 import { cylinderStateChipColor } from "../lib/chipColors";
 import {
   stashNextCursor,
-  cursorPageRowCount,
+  cursorGridServerPagination,
   paginationAfterChange,
 } from "../lib/cursorPagination";
 import { todayIso } from "../lib/dateFormat";
@@ -55,8 +77,14 @@ function SerialLink({
 
 export default function ReconciliationPage() {
   const { t: translate } = useTranslation();
-  const canWrite = useSessionStore((state) =>
+  const canWriteCylinders = useSessionStore((state) =>
     state.hasCapability("cylinders:write"),
+  );
+  const canWriteMovements = useSessionStore((state) =>
+    state.hasCapability("movements:write"),
+  );
+  const canVoid = useSessionStore((state) =>
+    state.hasCapability("movements:void"),
   );
   const queryClient = useQueryClient();
   const [tab, setTab] = useState(0);
@@ -72,6 +100,11 @@ export default function ReconciliationPage() {
     [],
   );
   const [summary, setSummary] = useState<string | null>(null);
+  const [returnTarget, setReturnTarget] = useState<MovementEvent | null>(null);
+  const [swapTarget, setSwapTarget] = useState<MovementEvent | null>(null);
+  const [voidTarget, setVoidTarget] = useState<MovementEvent | null>(null);
+  const [loadingActionId, setLoadingActionId] = useState<number | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const cursor = cursors[paginationModel.page];
   const queryParams = useMemo(
@@ -87,16 +120,31 @@ export default function ReconciliationPage() {
     queryKey: ["outstanding", queryParams],
     queryFn: () => api.listOutstanding(queryParams),
     enabled: tab === 0 && (paginationModel.page === 0 || cursor != null),
+    // Keep prior page meta while fetching so DataGrid does not clamp page→0.
+    placeholderData: keepPreviousData,
   });
 
   const rows = outstandingQuery.data?.data ?? [];
   const pageMeta = outstandingQuery.data?.page;
+  const gridPagination = cursorGridServerPagination({
+    page: paginationModel.page,
+    pageSize: paginationModel.pageSize,
+    loadedCount: rows.length,
+    hasMore: pageMeta?.has_more,
+  });
 
   useEffect(() => {
+    // Placeholder data still carries the previous page's next_cursor — do not
+    // stash it under the new page index or later pages repeat the same slice.
+    if (outstandingQuery.isPlaceholderData) return;
     const next = outstandingQuery.data?.page.next_cursor;
     if (!next) return;
     setCursors((prev) => stashNextCursor(prev, paginationModel.page, next));
-  }, [outstandingQuery.data?.page.next_cursor, paginationModel.page]);
+  }, [
+    outstandingQuery.data?.page.next_cursor,
+    outstandingQuery.isPlaceholderData,
+    paginationModel.page,
+  ]);
 
   const handlePaginationModelChange = (model: GridPaginationModel) => {
     const { pagination, resetCursors } = paginationAfterChange(
@@ -105,6 +153,22 @@ export default function ReconciliationPage() {
     );
     if (resetCursors) setCursors([undefined]);
     setPaginationModel(pagination);
+  };
+
+  const openMovementAction = async (
+    movementId: number,
+    setTarget: (movement: MovementEvent) => void,
+  ) => {
+    setActionError(null);
+    setLoadingActionId(movementId);
+    try {
+      const movement = await api.getMovement(movementId);
+      setTarget(movement);
+    } catch {
+      setActionError(translate("errors.load_failed"));
+    } finally {
+      setLoadingActionId(null);
+    }
   };
 
   const countMutation = useMutation({
@@ -137,9 +201,18 @@ export default function ReconciliationPage() {
       {
         field: "serial_number",
         headerName: translate("reconciliation.outstanding.columns.serial"),
-        width: 130,
+        width: 180,
         renderCell: (part) => (
-          <SerialLink cylinderId={part.row.cylinder_id} serial={part.value} />
+          <Stack direction="row" spacing={0.75} alignItems="center">
+            <SerialLink cylinderId={part.row.cylinder_id} serial={part.value} />
+            {part.row.to_verify ? (
+              <Chip
+                size="small"
+                color="warning"
+                label={translate("reconciliation.to_verify")}
+              />
+            ) : null}
+          </Stack>
         ),
       },
       {
@@ -184,22 +257,57 @@ export default function ReconciliationPage() {
         width: 100,
       },
       {
-        field: "to_verify",
-        headerName: translate("reconciliation.outstanding.columns.verify"),
-        width: 110,
-        renderCell: (part) =>
-          part.value ? (
-            <Chip
-              size="small"
-              color="warning"
-              label={translate("reconciliation.to_verify")}
-            />
-          ) : (
-            "—"
-          ),
+        field: "actions",
+        headerName: translate("reconciliation.outstanding.columns.actions"),
+        width: gridActionsColumnWidth(3),
+        sortable: false,
+        filterable: false,
+        align: "left",
+        headerAlign: "left",
+        renderCell: (params) => {
+          const busy = loadingActionId === params.row.movement_id;
+          const actions: GridActionItem[] = [];
+          // Outstanding rows are open movements (on loan / refill in progress).
+          if (canWriteMovements) {
+            actions.push({
+              key: "return",
+              label: translate("actions.return"),
+              icon: <AssignmentReturnIcon fontSize="small" />,
+              disabled: busy,
+              onClick: () => {
+                void openMovementAction(
+                  params.row.movement_id,
+                  setReturnTarget,
+                );
+              },
+            });
+            actions.push({
+              key: "swap",
+              label: translate("actions.swap"),
+              icon: <SwapHorizIcon fontSize="small" />,
+              disabled: busy,
+              onClick: () => {
+                void openMovementAction(params.row.movement_id, setSwapTarget);
+              },
+            });
+          }
+          if (canVoid) {
+            actions.push({
+              key: "void",
+              label: translate("actions.void"),
+              icon: <CancelOutlinedIcon fontSize="small" />,
+              color: "warning",
+              disabled: busy,
+              onClick: () => {
+                void openMovementAction(params.row.movement_id, setVoidTarget);
+              },
+            });
+          }
+          return <GridActionsCell actions={actions} />;
+        },
       },
     ],
-    [translate],
+    [translate, canWriteMovements, canVoid, loadingActionId],
   );
 
   const varianceColumns = useMemo<GridColDef<ReconciliationVarianceRow>[]>(
@@ -310,6 +418,7 @@ export default function ReconciliationPage() {
           {outstandingQuery.isError && (
             <Alert severity="error">{translate("errors.load_failed")}</Alert>
           )}
+          {actionError && <Alert severity="error">{actionError}</Alert>}
           <Box sx={{ flex: 1, minHeight: 360 }}>
             <DataGrid
               rows={rows}
@@ -322,12 +431,9 @@ export default function ReconciliationPage() {
               paginationModel={paginationModel}
               onPaginationModelChange={handlePaginationModelChange}
               pageSizeOptions={[25, 50, 100]}
-              rowCount={cursorPageRowCount(
-                paginationModel.page,
-                paginationModel.pageSize,
-                rows.length,
-                pageMeta?.has_more ?? false,
-              )}
+              rowCount={gridPagination.rowCount}
+              estimatedRowCount={gridPagination.estimatedRowCount}
+              paginationMeta={gridPagination.paginationMeta}
               disableRowSelectionOnClick
               sx={{ [`& .${gridClasses.cell}`]: { outline: "none" } }}
             />
@@ -340,18 +446,18 @@ export default function ReconciliationPage() {
           <Alert severity="info">
             {translate("reconciliation.count.help")}
           </Alert>
-          {!canWrite && (
+          {!canWriteCylinders && (
             <Alert severity="info">
               {translate("reconciliation.count.read_only")}
             </Alert>
           )}
-          <TextField
+          <DatePicker
             label={translate("reconciliation.count.date")}
-            type="date"
-            value={countedOn}
-            onChange={(event) => setCountedOn(event.target.value)}
-            InputLabelProps={{ shrink: true }}
-            sx={{ maxWidth: 220 }}
+            value={dayjs(countedOn)}
+            onChange={(value: Dayjs | null) => {
+              if (value) setCountedOn(value.format("YYYY-MM-DD"));
+            }}
+            slotProps={{ textField: { sx: { maxWidth: 220 } } }}
           />
           <TextField
             label={translate("reconciliation.count.serials")}
@@ -366,7 +472,7 @@ export default function ReconciliationPage() {
               <Checkbox
                 checked={fullPlantCount}
                 onChange={(event) => setFullPlantCount(event.target.checked)}
-                disabled={!canWrite}
+                disabled={!canWriteCylinders}
               />
             }
             label={translate("reconciliation.count.full_plant")}
@@ -378,7 +484,9 @@ export default function ReconciliationPage() {
           )}
           <Button
             variant="contained"
-            disabled={!canWrite || countMutation.isPending || !serials.trim()}
+            disabled={
+              !canWriteCylinders || countMutation.isPending || !serials.trim()
+            }
             onClick={() => countMutation.mutate()}
             sx={{ alignSelf: "flex-start" }}
           >
@@ -402,6 +510,22 @@ export default function ReconciliationPage() {
           </Box>
         </Stack>
       )}
+
+      <ReturnDialog
+        open={Boolean(returnTarget)}
+        movement={returnTarget}
+        onClose={() => setReturnTarget(null)}
+      />
+      <SwapDialog
+        open={Boolean(swapTarget)}
+        movement={swapTarget}
+        onClose={() => setSwapTarget(null)}
+      />
+      <VoidDialog
+        open={Boolean(voidTarget)}
+        movement={voidTarget}
+        onClose={() => setVoidTarget(null)}
+      />
     </Box>
   );
 }

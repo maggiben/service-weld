@@ -21,7 +21,9 @@ import {
   type GridPaginationModel,
   gridClasses,
 } from "@mui/x-data-grid";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import dayjs, { type Dayjs } from "dayjs";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type {
@@ -512,22 +514,30 @@ export default function TransfersPage() {
             )}
           />
 
-          <TextField
+          <DatePicker
             label={translate("transfers.form.exit_date")}
-            type="date"
-            value={transferDate}
-            onChange={(event) => setTransferDate(event.target.value)}
-            InputLabelProps={{ shrink: true }}
-            helperText={translate("transfers.form.exit_date_hint")}
-            required
+            value={dayjs(transferDate)}
+            onChange={(value: Dayjs | null) => {
+              if (value) setTransferDate(value.format("YYYY-MM-DD"));
+            }}
+            slotProps={{
+              textField: {
+                helperText: translate("transfers.form.exit_date_hint"),
+                required: true,
+              },
+            }}
           />
-          <TextField
+          <DatePicker
             label={translate("transfers.form.entry_date")}
-            type="date"
-            value={returnDate}
-            onChange={(event) => setReturnDate(event.target.value)}
-            InputLabelProps={{ shrink: true }}
-            helperText={translate("transfers.form.entry_date_hint")}
+            value={returnDate ? dayjs(returnDate) : null}
+            onChange={(value: Dayjs | null) => {
+              setReturnDate(value ? value.format("YYYY-MM-DD") : "");
+            }}
+            slotProps={{
+              textField: {
+                helperText: translate("transfers.form.entry_date_hint"),
+              },
+            }}
           />
           <TextField
             label={translate("transfers.form.note")}
@@ -567,14 +577,15 @@ export default function TransfersPage() {
                 to: closeTarget?.to_party_name ?? "",
               })}
             </Typography>
-            <TextField
+            <DatePicker
               label={translate("transfers.form.entry_date")}
-              type="date"
-              value={closeDate}
-              onChange={(event) => setCloseDate(event.target.value)}
-              InputLabelProps={{ shrink: true }}
-              fullWidth
-              required
+              value={dayjs(closeDate)}
+              onChange={(value: Dayjs | null) => {
+                if (value) setCloseDate(value.format("YYYY-MM-DD"));
+              }}
+              slotProps={{
+                textField: { fullWidth: true, required: true },
+              }}
             />
           </Stack>
         </DialogContent>

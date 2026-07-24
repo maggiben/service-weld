@@ -187,13 +187,22 @@ describe("AuthService", () => {
   });
 
   it("login, refresh, logout, and me", async () => {
-    const db = createDbMock({});
+    const db = createDbMock({
+      takeFirst: (table) => (table === "app_user" ? userRow : null),
+      many: (table) => {
+        if (table === "user_role") return [{ code: "ADMIN" }];
+        if (table === "user_territory_scope") return [{ id: 1, name: "Junín" }];
+        return [];
+      },
+    });
     const service = new AuthService(
       db as never,
       jwtService as never,
       config as never,
     );
     const part = principal({
+      id: 1,
+      username: "admin",
       roles: ["ADMIN"],
       territories: [{ id: 1, name: "Junín" }],
       capabilities: ["admin:write"],
@@ -212,11 +221,14 @@ describe("AuthService", () => {
 
     await service.logout("old-refresh");
 
-    expect(service.me(part)).toMatchObject({
+    const me = await service.me(part);
+    expect(me).toMatchObject({
       id: part.id,
       username: part.username,
-      capabilities: ["admin:write"],
+      roles: ["ADMIN"],
       territories: ["Junín"],
     });
+    expect(me.capabilities).toContain("delivery_notes:read");
+    expect(me.capabilities).toContain("admin:write");
   });
 });

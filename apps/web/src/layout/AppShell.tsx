@@ -23,6 +23,7 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import ManageAccountsIcon from "@mui/icons-material/ManageAccounts";
 import HistoryIcon from "@mui/icons-material/History";
 import ImportExportIcon from "@mui/icons-material/ImportExport";
+import DescriptionIcon from "@mui/icons-material/Description";
 import Avatar from "@mui/material/Avatar";
 import Badge from "@mui/material/Badge";
 import AppBar from "@mui/material/AppBar";
@@ -103,6 +104,12 @@ const NAV_ITEMS: NavItem[] = [
     icon: <SwapHorizIcon />,
   },
   {
+    to: "/delivery-notes",
+    labelKey: "nav.delivery_notes",
+    capability: "delivery_notes:read",
+    icon: <DescriptionIcon />,
+  },
+  {
     to: "/reconciliation",
     labelKey: "nav.reconciliation",
     capability: "reports:read",
@@ -160,6 +167,7 @@ const BREADCRUMB_BY_PREFIX: Record<string, string> = {
   "/refills": "nav.refills",
   "/supplier-loans": "nav.supplier_loans",
   "/transfers": "nav.transfers",
+  "/delivery-notes": "nav.delivery_notes",
   "/reconciliation": "nav.reconciliation",
   "/reports": "nav.reports",
   "/accessories": "nav.accessories",

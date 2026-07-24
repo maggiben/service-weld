@@ -31,6 +31,7 @@ export type PackagingKind = "SINGLE" | "BATTERY" | "BATTERY_MEMBER";
 export type MovementKind = "RENTAL" | "REFILL";
 export type MovementState =
   "OPEN" | "CLOSED" | "SWAPPED" | "LOST" | "SOLD" | "VOID";
+export type DeliveryNoteKind = "DELIVERY" | "RETURN";
 export type RatePeriod = "DAILY" | "MONTHLY";
 export type InvoiceStatus = "DRAFT" | "APPROVED" | "EXPORTED" | "CANCELLED";
 export type LoanStage =
@@ -350,6 +351,7 @@ export interface AccessoryRentalTable {
 export interface DeliveryNoteTable {
   id: Generated<number>;
   remito_number: string;
+  kind: DeliveryNoteKind;
   issued_date: string | null;
   client_party_id: number | null;
 }

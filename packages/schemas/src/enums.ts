@@ -31,6 +31,10 @@ export type OwnershipBasis = zod.infer<typeof OwnershipBasis>;
 export const MovementKind = zod.enum(["RENTAL", "REFILL"]);
 export type MovementKind = zod.infer<typeof MovementKind>;
 
+/** Remito paper kind: outbound delivery vs return document. */
+export const DeliveryNoteKind = zod.enum(["DELIVERY", "RETURN"]);
+export type DeliveryNoteKind = zod.infer<typeof DeliveryNoteKind>;
+
 export const MovementState = zod.enum([
   "OPEN",
   "CLOSED",

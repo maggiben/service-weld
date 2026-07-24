@@ -28,7 +28,9 @@ import {
   type GridSortModel,
   gridClasses,
 } from "@mui/x-data-grid";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import dayjs, { type Dayjs } from "dayjs";
 import NextLink from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -513,13 +515,13 @@ export default function SupplierLoansPage() {
             required
             helperText={translate("loans.form.supplier_hint")}
           />
-          <TextField
+          <DatePicker
             label={translate("loans.form.received_on")}
-            type="date"
-            value={receivedOn}
-            onChange={(event) => setReceivedOn(event.target.value)}
-            InputLabelProps={{ shrink: true }}
-            required
+            value={dayjs(receivedOn)}
+            onChange={(value: Dayjs | null) => {
+              if (value) setReceivedOn(value.format("YYYY-MM-DD"));
+            }}
+            slotProps={{ textField: { required: true } }}
           />
           <Stack direction="row" spacing={1} justifyContent="flex-end">
             <Button onClick={() => setDrawerOpen(false)}>
@@ -571,13 +573,13 @@ export default function SupplierLoansPage() {
                 ))}
               </TextField>
             )}
-            <TextField
+            <DatePicker
               label={translate("loans.advance.date")}
-              type="date"
-              value={advanceDate}
-              onChange={(event) => setAdvanceDate(event.target.value)}
-              InputLabelProps={{ shrink: true }}
-              required
+              value={dayjs(advanceDate)}
+              onChange={(value: Dayjs | null) => {
+                if (value) setAdvanceDate(value.format("YYYY-MM-DD"));
+              }}
+              slotProps={{ textField: { required: true } }}
             />
           </Stack>
         </DialogContent>

@@ -20,7 +20,9 @@ import {
   type GridColDef,
   type GridPaginationModel,
 } from "@mui/x-data-grid";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { useQuery } from "@tanstack/react-query";
+import dayjs, { type Dayjs } from "dayjs";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { AuditAction, AuditLogEntry } from "@weld/schemas";
@@ -234,27 +236,23 @@ function AuditLogsPageInner() {
             ))}
           </Select>
         </FormControl>
-        <TextField
-          size="small"
-          type="date"
+        <DatePicker
           label={translate("audit.filters.from")}
-          value={fromDate}
-          onChange={(event) => {
-            setFromDate(event.target.value);
+          value={fromDate ? dayjs(fromDate) : null}
+          onChange={(value: Dayjs | null) => {
+            setFromDate(value ? value.format("YYYY-MM-DD") : "");
             resetPaging();
           }}
-          slotProps={{ inputLabel: { shrink: true } }}
+          slotProps={{ textField: { size: "small" } }}
         />
-        <TextField
-          size="small"
-          type="date"
+        <DatePicker
           label={translate("audit.filters.to")}
-          value={toDate}
-          onChange={(event) => {
-            setToDate(event.target.value);
+          value={toDate ? dayjs(toDate) : null}
+          onChange={(value: Dayjs | null) => {
+            setToDate(value ? value.format("YYYY-MM-DD") : "");
             resetPaging();
           }}
-          slotProps={{ inputLabel: { shrink: true } }}
+          slotProps={{ textField: { size: "small" } }}
         />
       </Stack>
 

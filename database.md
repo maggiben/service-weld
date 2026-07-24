@@ -45,6 +45,7 @@ CREATE TYPE cylinder_cond     AS ENUM ('EMPTY','FULL');
 CREATE TYPE packaging_kind    AS ENUM ('SINGLE','BATTERY','BATTERY_MEMBER');
 CREATE TYPE movement_kind     AS ENUM ('RENTAL','REFILL');           -- Nuestra vs Su Propiedad
 CREATE TYPE movement_state    AS ENUM ('OPEN','CLOSED','SWAPPED','LOST','SOLD','VOID');
+CREATE TYPE delivery_note_kind AS ENUM ('DELIVERY','RETURN');         -- remito salida vs devolución
 CREATE TYPE accessory_type    AS ENUM ('REGULATOR','ADAPTER','PORTABLE_O2_BACKPACK'); -- regulador/adaptador/mochila
 CREATE TYPE accessory_state   AS ENUM ('IN_STOCK','ON_LOAN','IN_REPAIR','LOST','BROKEN','RETIRED');
 CREATE TYPE accessory_rental_state AS ENUM ('ON_LOAN','RETURNED','LOST');
@@ -271,11 +272,13 @@ CREATE UNIQUE INDEX uq_accessory_ident ON accessory(accessory_type, identifier)
 CREATE TABLE delivery_note (                       -- Remito
     id           bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     remito_number text NOT NULL,
+    kind         delivery_note_kind NOT NULL DEFAULT 'DELIVERY',
     issued_date  date,
     client_party_id bigint REFERENCES client(party_id),
     CONSTRAINT uq_remito UNIQUE (remito_number)
 );
 CREATE INDEX ix_remito_client ON delivery_note(client_party_id);
+CREATE INDEX ix_remito_kind ON delivery_note(kind);
 
 CREATE TABLE rental_rate (                         -- effective-dated rates (rate history)
     id            bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

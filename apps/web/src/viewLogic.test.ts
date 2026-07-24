@@ -4,6 +4,7 @@ import { ApiClientError } from "@weld/api-client";
 import type { Client, MovementEvent } from "@weld/schemas";
 
 import {
+  cursorGridServerPagination,
   cursorPageRowCount,
   paginationAfterChange,
   stashNextCursor,
@@ -87,6 +88,32 @@ describe("cursorPagination", () => {
         { page: 2, pageSize: 100 },
       ),
       { pagination: { page: 0, pageSize: 100 }, resetCursors: true },
+    );
+    assert.deepEqual(
+      cursorGridServerPagination({
+        page: 1,
+        pageSize: 50,
+        loadedCount: 50,
+        hasMore: true,
+      }),
+      {
+        rowCount: -1,
+        estimatedRowCount: 101,
+        paginationMeta: { hasNextPage: true },
+      },
+    );
+    assert.deepEqual(
+      cursorGridServerPagination({
+        page: 0,
+        pageSize: 50,
+        loadedCount: 0,
+        hasMore: undefined,
+      }),
+      {
+        rowCount: -1,
+        estimatedRowCount: undefined,
+        paginationMeta: { hasNextPage: false },
+      },
     );
   });
 });

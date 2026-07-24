@@ -121,6 +121,9 @@ export const SupplierReturnsQuery = PaginationQuery.extend({
   min_days: zod.coerce.number().int().min(0).optional(),
   "filter[supplier_party_id]": zod.coerce.number().int().optional(),
   as_of: IsoDate.optional(),
+  /** When both set: loans whose custody overlapped the inclusive range. */
+  period_start: IsoDate.optional(),
+  period_end: IsoDate.optional(),
 });
 export type SupplierReturnsQuery = zod.infer<typeof SupplierReturnsQuery>;
 

@@ -50,6 +50,11 @@ import type {
   StockTransferListResponse,
   CreateStockTransferInput,
   CloseStockTransferInput,
+  DeliveryNote,
+  DeliveryNoteDetail,
+  DeliveryNoteListQuery,
+  DeliveryNoteListResponse,
+  CreateDeliveryNoteInput,
   SupplierLoan,
   SupplierLoanListQuery,
   SupplierLoanListResponse,
@@ -587,6 +592,25 @@ export class WeldApiClient {
     input: CloseStockTransferInput,
   ): Promise<StockTransfer> {
     return this.request<StockTransfer>("PATCH", `/transfers/${id}/close`, {
+      body: input,
+    });
+  }
+
+  listDeliveryNotes(
+    query: Partial<DeliveryNoteListQuery> & Record<string, QueryValue> = {},
+  ): Promise<DeliveryNoteListResponse> {
+    return this.request<DeliveryNoteListResponse>(
+      "GET",
+      `/delivery-notes${toQuery(query as Record<string, QueryValue>)}`,
+    );
+  }
+
+  getDeliveryNote(id: number): Promise<DeliveryNoteDetail> {
+    return this.request<DeliveryNoteDetail>("GET", `/delivery-notes/${id}`);
+  }
+
+  createDeliveryNote(input: CreateDeliveryNoteInput): Promise<DeliveryNote> {
+    return this.request<DeliveryNote>("POST", "/delivery-notes", {
       body: input,
     });
   }
