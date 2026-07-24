@@ -79,6 +79,8 @@ export function InvoiceBillingDrawer({
       anchor="right"
       open={open}
       onClose={onClose}
+      // Above the fixed AppBar (shell uses drawer + 1) so the title/labels are not clipped.
+      sx={{ zIndex: (theme) => theme.zIndex.modal }}
       PaperProps={{ sx: { width: { xs: "100%", sm: 720, md: 880 } } }}
     >
       <Stack spacing={2} sx={{ p: 2.5, height: "100%" }}>
