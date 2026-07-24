@@ -13,9 +13,12 @@ export type { CapacityUnit } from "./value-objects";
 export {
   TERMINAL_CYLINDER_STATES,
   DELIVERABLE_STATES,
+  SELLABLE_STATES,
   isTerminalCylinderState,
   assertCylinderTransition,
   assertDeliverable,
+  assertSellable,
+  stateAfterSale,
   stateAfterReturn,
   stateAfterDelivery,
   stateAfterLoss,
@@ -30,6 +33,7 @@ export {
 export {
   assertOwnerBasisConsistency,
   assertKindBasisConsistency,
+  movementKindForBasis,
 } from "./ownership";
 export type { PartyType } from "./ownership";
 export {
@@ -79,3 +83,68 @@ export type { VarianceKind, SuggestedAction } from "./reconciliation";
 export { assertAccessoryRentable, assertAccessoryOnLoan } from "./accessory";
 export { agingBucket, matchesAgingFilter } from "./reports";
 export type { AgingBucket } from "./reports";
+export {
+  paperKindForRemitoType,
+  remitoTypeForPaperKind,
+  isReturnLikeRemitoType,
+  isDeliveryLikeRemitoType,
+  remitoPostsCylinderCustodyOnClose,
+  remitoPostsAccessoryRentalOnClose,
+  formatRemitoSeriesNumber,
+  isCustomerFacingRemitoType,
+  remitoSkipsFleet,
+  isRemitoHeaderEditable,
+  allowedRemitoTransitions,
+  assertRemitoTransition,
+  assertRemitoEditable,
+} from "./remito-transitions";
+export type { RemitoTransitionContext } from "./remito-transitions";
+export {
+  deriveArcaStatus,
+  deriveArcaStatusChecks,
+  arcaSdkProductionFlag,
+  effectiveArcaEnvironment,
+  assertArcaActionAllowed,
+  cuitDigits,
+  cuitAsNumber,
+  ARCA_SIMULATION_FINGERPRINT,
+  simulatedArcaCredentialFacts,
+  buildSimulatedArcaCae,
+} from "./arca-onboarding";
+export type { ArcaCredentialFacts, ArcaAction } from "./arca-onboarding";
+export {
+  inferEnvironmentFromIssuer,
+  extractCuitFromSubject,
+  validateArcaCertificate,
+  allValidationChecksPassed,
+} from "./arca-validation";
+export type { ParsedCertificateFacts } from "./arca-validation";
+export {
+  AFIP_QR_BASE_URL,
+  CBTE_TIPO_FACTURA_B,
+  CBTE_TIPO_NOTA_CREDITO_B,
+  CONDICION_IVA_CONSUMIDOR_FINAL,
+  CONDICION_IVA_MONOTRIBUTO,
+  DOC_TIPO_CUIT,
+  DOC_TIPO_SIN_IDENTIFICAR,
+  IVA_ALICUOTA_21_ID,
+  IVA_RATE_21,
+  buildArcaFacturaBVoucher,
+  buildArcaNotaCreditoBVoucher,
+  buildArcaQrPayload,
+  buildArcaQrUrl,
+  cbteTipoLetter,
+  formatCbteNumber,
+  fromAfipDate,
+  resolveReceptorDocument,
+  splitIvaIncluido,
+  toAfipDate,
+} from "./arca-invoice";
+export type {
+  ArcaAssociatedVoucher,
+  ArcaFiscalAmounts,
+  ArcaQrPayload,
+  BuildArcaCreditNoteInput,
+  BuildArcaVoucherInput,
+  BuiltArcaVoucher,
+} from "./arca-invoice";

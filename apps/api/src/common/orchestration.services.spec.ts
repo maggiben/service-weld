@@ -10,11 +10,11 @@ import { SettingsService } from "../settings/settings.service";
 describe("thin orchestration services", () => {
   it("AlertsService maps not found and refreshes", async () => {
     const repository = {
-      list: jest.fn().mockResolvedValue({ data: [] }),
-      openCount: jest.fn().mockResolvedValue(3),
-      resolve: jest.fn(),
-      updateContact: jest.fn(),
-      refresh: jest.fn().mockResolvedValue({ created: 1 }),
+      list: vi.fn().mockResolvedValue({ data: [] }),
+      openCount: vi.fn().mockResolvedValue(3),
+      resolve: vi.fn(),
+      updateContact: vi.fn(),
+      refresh: vi.fn().mockResolvedValue({ created: 1 }),
     };
     const service = new AlertsService(repository as never);
     expect(await service.list({} as never)).toEqual({ data: [] });
@@ -42,19 +42,19 @@ describe("thin orchestration services", () => {
 
   it("RatesService validates date ranges", async () => {
     const repository = {
-      list: jest.fn().mockResolvedValue({ data: [] }),
-      create: jest.fn().mockResolvedValue({ id: 1 }),
-      getById: jest.fn().mockResolvedValue({
+      list: vi.fn().mockResolvedValue({ data: [] }),
+      create: vi.fn().mockResolvedValue({ id: 1 }),
+      getById: vi.fn().mockResolvedValue({
         id: 1,
         effective_from: "2026-01-01",
         effective_to: null,
       }),
-      update: jest.fn().mockResolvedValue({ id: 1 }),
+      update: vi.fn().mockResolvedValue({ id: 1 }),
     };
     const service = new RatesService(
       repository as never,
       {
-        createDraft: jest.fn(),
+        createDraft: vi.fn(),
       } as never,
     );
     expect(await service.list({} as never)).toEqual({ data: [] });
@@ -76,11 +76,11 @@ describe("thin orchestration services", () => {
 
   it("AdminUsersService / SettingsService / AuditLogsService / MastersService delegate", async () => {
     const adminRepo = {
-      list: jest.fn().mockResolvedValue({ data: [] }),
-      getById: jest.fn().mockResolvedValue({ id: 1 }),
-      create: jest.fn().mockResolvedValue({ id: 1 }),
-      update: jest.fn().mockResolvedValue({ id: 1 }),
-      remove: jest.fn().mockResolvedValue(undefined),
+      list: vi.fn().mockResolvedValue({ data: [] }),
+      getById: vi.fn().mockResolvedValue({ id: 1 }),
+      create: vi.fn().mockResolvedValue({ id: 1 }),
+      update: vi.fn().mockResolvedValue({ id: 1 }),
+      remove: vi.fn().mockResolvedValue(undefined),
     };
     const admin = new AdminUsersService(adminRepo as never);
     expect(await admin.list({} as never)).toEqual({ data: [] });
@@ -90,8 +90,8 @@ describe("thin orchestration services", () => {
     await admin.remove(1, 2);
 
     const settingsRepo = {
-      getSettings: jest.fn().mockResolvedValue({ version: 1 }),
-      updateSettings: jest.fn().mockResolvedValue({ version: 2 }),
+      getSettings: vi.fn().mockResolvedValue({ version: 1 }),
+      updateSettings: vi.fn().mockResolvedValue({ version: 2 }),
     };
     const settings = new SettingsService(settingsRepo as never);
     expect(await settings.getSettings()).toEqual({ version: 1 });
@@ -99,16 +99,16 @@ describe("thin orchestration services", () => {
       version: 2,
     });
 
-    const auditRepo = { list: jest.fn().mockResolvedValue({ data: [] }) };
+    const auditRepo = { list: vi.fn().mockResolvedValue({ data: [] }) };
     expect(
       await new AuditLogsService(auditRepo as never).list({} as never),
     ).toEqual({ data: [] });
 
     const mastersRepo = {
-      listTerritories: jest.fn().mockResolvedValue({ data: [] }),
-      createTerritory: jest.fn().mockResolvedValue({ id: 1 }),
-      listLocalities: jest.fn().mockResolvedValue({ data: [] }),
-      createLocality: jest.fn().mockResolvedValue({ id: 2 }),
+      listTerritories: vi.fn().mockResolvedValue({ data: [] }),
+      createTerritory: vi.fn().mockResolvedValue({ id: 1 }),
+      listLocalities: vi.fn().mockResolvedValue({ data: [] }),
+      createLocality: vi.fn().mockResolvedValue({ id: 2 }),
     };
     const masters = new MastersService(mastersRepo as never);
     expect(await masters.listTerritories({} as never)).toEqual({ data: [] });
@@ -119,14 +119,14 @@ describe("thin orchestration services", () => {
 
   it("ReportsService wraps repository rows", async () => {
     const repository = {
-      fleet: jest.fn().mockResolvedValue([{ id: 1 }]),
-      floatAging: jest.fn().mockResolvedValue({ data: [], page: {} }),
-      rental: jest.fn().mockResolvedValue([]),
-      loss: jest.fn().mockResolvedValue([]),
-      supplierReturns: jest.fn().mockResolvedValue({ data: [], page: {} }),
-      cylinderLife: jest.fn().mockResolvedValue([]),
-      medicalStatement: jest.fn().mockResolvedValue([]),
-      dataQuality: jest.fn().mockResolvedValue({ data: [], page: {} }),
+      fleet: vi.fn().mockResolvedValue([{ id: 1 }]),
+      floatAging: vi.fn().mockResolvedValue({ data: [], page: {} }),
+      rental: vi.fn().mockResolvedValue([]),
+      loss: vi.fn().mockResolvedValue([]),
+      supplierReturns: vi.fn().mockResolvedValue({ data: [], page: {} }),
+      cylinderLife: vi.fn().mockResolvedValue([]),
+      medicalStatement: vi.fn().mockResolvedValue([]),
+      dataQuality: vi.fn().mockResolvedValue({ data: [], page: {} }),
     };
     const service = new ReportsService(repository as never);
     expect((await service.fleet({} as never)).data).toEqual([{ id: 1 }]);
@@ -143,8 +143,8 @@ describe("thin orchestration services", () => {
 
   it("ReconciliationService validates count date", async () => {
     const repository = {
-      listOutstanding: jest.fn().mockResolvedValue({ data: [] }),
-      runPhysicalCount: jest.fn().mockResolvedValue({ matched: 1 }),
+      listOutstanding: vi.fn().mockResolvedValue({ data: [] }),
+      runPhysicalCount: vi.fn().mockResolvedValue({ matched: 1 }),
     };
     const service = new ReconciliationService(repository as never);
     expect(await service.listOutstanding({} as never)).toEqual({ data: [] });

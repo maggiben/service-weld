@@ -3,14 +3,24 @@ import { BillingService } from "./billing.service";
 
 describe("BillingService", () => {
   const repository = {
-    createDraftRun: jest.fn(),
-    getRun: jest.fn(),
-    approveRun: jest.fn(),
-    exportRun: jest.fn(),
+    createDraftRun: vi.fn(),
+    getRun: vi.fn(),
+    getInvoiceById: vi.fn(),
+    approveRun: vi.fn(),
+    approveInvoice: vi.fn(),
+    exportRun: vi.fn(),
+    saveArcaAuthorization: vi.fn(),
+    resetInvoiceForSimulation: vi.fn(),
   };
-  const service = new BillingService(repository as never);
+  const arcaService = {
+    getCompanyProfile: vi.fn(),
+    createElectronicVoucher: vi.fn(),
+    isSimulationModeEnabled: vi.fn(),
+    getSimulationMode: vi.fn(),
+  };
+  const service = new BillingService(repository as never, arcaService as never);
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => vi.clearAllMocks());
 
   it("normalizes history mode drafts", async () => {
     repository.createDraftRun.mockResolvedValue({ id: 1 });
@@ -56,5 +66,354 @@ describe("BillingService", () => {
 
     repository.exportRun.mockResolvedValue({ invoices: [] });
     await expect(service.export(1)).resolves.toEqual({ invoices: [] });
+  });
+
+  it("rejects authorize when invoice is not approved", async () => {
+    repository.getInvoiceById.mockResolvedValue({
+      id: 9,
+      status: "DRAFT",
+      total: 100,
+      arca: { cae: null },
+    });
+    await expect(
+      service.authorizeWithArca(principal(), 9),
+    ).rejects.toMatchObject({ code: "INVOICE_NOT_APPROVED" });
+  });
+
+  it("approves a single draft before authorize via issue", async () => {
+    repository.getInvoiceById
+      .mockResolvedValueOnce({
+        id: 9,
+        status: "DRAFT",
+        total: 121,
+        period_start: "2026-07-01",
+        period_end: "2026-07-24",
+        client_cuit: null,
+        arca: { cae: null },
+      })
+      .mockResolvedValue({
+        id: 9,
+        status: "APPROVED",
+        total: 121,
+        period_start: "2026-07-01",
+        period_end: "2026-07-24",
+        client_cuit: null,
+        arca: { cae: null },
+      });
+    repository.approveInvoice.mockResolvedValue({
+      id: 9,
+      status: "APPROVED",
+      total: 121,
+      period_start: "2026-07-01",
+      period_end: "2026-07-24",
+      client_cuit: null,
+      arca: { cae: null },
+    });
+    arcaService.getCompanyProfile.mockResolvedValue({
+      cuit: "30-71552577-8",
+      legal_name: "Weld",
+      alias: null,
+      point_of_sale: 1,
+    });
+    arcaService.createElectronicVoucher.mockResolvedValue({
+      result: {
+        cae: "71234567890123",
+        caeFchVto: "20260803",
+        cbteNro: 10,
+      },
+      environment: "HOMOLOGATION",
+      company: {
+        cuit: "30-71552577-8",
+        legal_name: "Weld",
+        alias: null,
+        point_of_sale: 1,
+      },
+      issuerCuitDigits: "30715525778",
+    });
+    repository.saveArcaAuthorization.mockResolvedValue({
+      id: 9,
+      status: "APPROVED",
+      arca: { cae: "71234567890123" },
+    });
+
+    await expect(
+      service.approveAndAuthorize(principal(), 9),
+    ).resolves.toMatchObject({
+      arca: { cae: "71234567890123" },
+    });
+    expect(repository.approveInvoice).toHaveBeenCalledWith(9);
+  });
+
+  it("rejects PDF when CAE is missing", async () => {
+    repository.getInvoiceById.mockResolvedValue({
+      id: 9,
+      status: "APPROVED",
+      total: 100,
+      arca: { cae: null },
+    });
+    await expect(service.printInvoicePdf(9)).rejects.toMatchObject({
+      code: "INVOICE_NOT_AUTHORIZED",
+    });
+  });
+
+  it("authorizes an approved invoice with ARCA (happy path)", async () => {
+    repository.getInvoiceById.mockResolvedValue({
+      id: 12,
+      status: "APPROVED",
+      total: 605,
+      period_start: "2026-07-01",
+      period_end: "2026-07-24",
+      client_cuit: null,
+      arca: { cae: null },
+    });
+    arcaService.getCompanyProfile.mockResolvedValue({
+      cuit: "30-71552577-8",
+      legal_name: "Weld",
+      alias: null,
+      point_of_sale: 2,
+    });
+    arcaService.createElectronicVoucher.mockResolvedValue({
+      result: { cae: "71234567890123", caeFchVto: "20260803", cbteNro: 15 },
+      environment: "HOMOLOGATION",
+      company: {
+        cuit: "30-71552577-8",
+        legal_name: "Weld",
+        alias: null,
+        point_of_sale: 2,
+      },
+      issuerCuitDigits: "30715525778",
+    });
+    repository.saveArcaAuthorization.mockResolvedValue({
+      id: 12,
+      status: "APPROVED",
+      arca: { cae: "71234567890123" },
+    });
+
+    await expect(
+      service.authorizeWithArca(principal(), 12),
+    ).resolves.toMatchObject({ arca: { cae: "71234567890123" } });
+    expect(repository.saveArcaAuthorization).toHaveBeenCalledWith(
+      12,
+      expect.objectContaining({ cae: "71234567890123", ptoVta: 2 }),
+    );
+  });
+
+  it("rejects authorize when the invoice is already authorized", async () => {
+    repository.getInvoiceById.mockResolvedValue({
+      id: 13,
+      status: "APPROVED",
+      total: 100,
+      arca: { cae: "already-authorized" },
+    });
+    await expect(
+      service.authorizeWithArca(principal(), 13),
+    ).rejects.toMatchObject({ code: "INVOICE_ALREADY_AUTHORIZED" });
+    expect(arcaService.createElectronicVoucher).not.toHaveBeenCalled();
+  });
+
+  it("rejects authorize when the invoice total is zero", async () => {
+    repository.getInvoiceById.mockResolvedValue({
+      id: 14,
+      status: "APPROVED",
+      total: 0,
+      arca: { cae: null },
+    });
+    await expect(
+      service.authorizeWithArca(principal(), 14),
+    ).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+  });
+
+  it("throws ARCA_AUTHORIZATION_FAILED when ARCA does not return a voucher number", async () => {
+    repository.getInvoiceById.mockResolvedValue({
+      id: 15,
+      status: "APPROVED",
+      total: 100,
+      period_start: "2026-07-01",
+      period_end: "2026-07-24",
+      client_cuit: null,
+      arca: { cae: null },
+    });
+    arcaService.getCompanyProfile.mockResolvedValue({
+      cuit: "30-71552577-8",
+      legal_name: "Weld",
+      alias: null,
+      point_of_sale: 1,
+    });
+    arcaService.createElectronicVoucher.mockResolvedValue({
+      result: { cae: "71234567890123", caeFchVto: "20260803", cbteNro: null },
+      environment: "HOMOLOGATION",
+      company: {
+        cuit: "30-71552577-8",
+        legal_name: "Weld",
+        alias: null,
+        point_of_sale: 1,
+      },
+      issuerCuitDigits: "30715525778",
+    });
+    await expect(
+      service.authorizeWithArca(principal(), 15),
+    ).rejects.toMatchObject({ code: "ARCA_AUTHORIZATION_FAILED" });
+  });
+
+  it("prints an authorized invoice as a PDF", async () => {
+    repository.getInvoiceById.mockResolvedValue({
+      id: 16,
+      status: "APPROVED",
+      total: 605,
+      period_start: "2026-07-01",
+      period_end: "2026-07-24",
+      client_name: "Cliente Demo",
+      client_party_id: 3,
+      client_cuit: "20-12345678-6",
+      client_address: "Calle 1",
+      client_locality_name: "Chacabuco",
+      charge_lines: [
+        {
+          description: "Alquiler O2",
+          quantity: 5,
+          unit: "day",
+          unit_price: 100,
+          amount: 500,
+        },
+      ],
+      arca: {
+        cae: "71234567890123",
+        cae_due_date: "2026-08-03",
+        cbte_tipo: 6,
+        pto_vta: 1,
+        cbte_nro: 42,
+        cbte_fch: "2026-07-24",
+        imp_neto: 500,
+        imp_iva: 105,
+        imp_total: 605,
+        arca_qr_url: "https://www.arca.gob.ar/fe/qr/?p=eyJ2ZXIiOjF9",
+        arca_environment: "HOMOLOGATION",
+      },
+    });
+    arcaService.getCompanyProfile.mockResolvedValue({
+      cuit: "30-71552577-8",
+      legal_name: "Weld SRL",
+      alias: null,
+      point_of_sale: 1,
+    });
+
+    const result = await service.printInvoicePdf(16);
+    expect(result.filename).toMatch(/factura-B-/);
+    expect(result.buffer.subarray(0, 4).toString()).toBe("%PDF");
+  });
+
+  it("rejects simulation reset when simulation mode is off", async () => {
+    arcaService.isSimulationModeEnabled.mockResolvedValue(false);
+    await expect(
+      service.resetSimulationInvoice(principal(), 9),
+    ).rejects.toMatchObject({ code: "SIMULATION_MODE_REQUIRED" });
+    expect(repository.resetInvoiceForSimulation).not.toHaveBeenCalled();
+  });
+
+  it("resets approved invoice without CAE when simulation mode is on", async () => {
+    arcaService.isSimulationModeEnabled.mockResolvedValue(true);
+    repository.getInvoiceById.mockResolvedValue({
+      id: 9,
+      status: "APPROVED",
+      total: 100,
+      arca: { cae: null },
+    });
+    repository.resetInvoiceForSimulation.mockResolvedValue({
+      id: 9,
+      status: "DRAFT",
+      arca: { cae: null },
+    });
+    await expect(
+      service.resetSimulationInvoice(principal(), 9),
+    ).resolves.toMatchObject({ status: "DRAFT" });
+    expect(arcaService.createElectronicVoucher).not.toHaveBeenCalled();
+    expect(repository.resetInvoiceForSimulation).toHaveBeenCalledWith(9);
+  });
+
+  it("issues Nota de Crédito then resets when invoice has CAE", async () => {
+    arcaService.isSimulationModeEnabled.mockResolvedValue(true);
+    repository.getInvoiceById.mockResolvedValue({
+      id: 9,
+      status: "APPROVED",
+      total: 1210,
+      period_start: "2026-07-01",
+      period_end: "2026-07-24",
+      client_cuit: "20-12345678-9",
+      arca: {
+        cae: "71234567890123",
+        cae_due_date: "2026-08-03",
+        cbte_tipo: 6,
+        pto_vta: 1,
+        cbte_nro: 42,
+        cbte_fch: "2026-07-24",
+        doc_tipo: 80,
+        doc_nro: 20123456789,
+        condicion_iva_receptor: 6,
+        imp_total: 1210,
+      },
+    });
+    arcaService.getCompanyProfile.mockResolvedValue({
+      cuit: "30-71552577-8",
+      legal_name: "Weld",
+      alias: null,
+      point_of_sale: 1,
+    });
+    arcaService.createElectronicVoucher.mockResolvedValue({
+      result: { cae: "79999999999999", caeFchVto: "20260810", cbteNro: 3 },
+      environment: "HOMOLOGATION",
+      company: {
+        cuit: "30-71552577-8",
+        legal_name: "Weld",
+        alias: null,
+        point_of_sale: 1,
+      },
+      issuerCuitDigits: "30715525778",
+    });
+    repository.resetInvoiceForSimulation.mockResolvedValue({
+      id: 9,
+      status: "DRAFT",
+      arca: { cae: null },
+    });
+
+    await expect(
+      service.resetSimulationInvoice(principal(), 9),
+    ).resolves.toMatchObject({ status: "DRAFT" });
+
+    expect(arcaService.createElectronicVoucher).toHaveBeenCalledWith(
+      expect.objectContaining({
+        voucher: expect.objectContaining({
+          CbteTipo: 8,
+          CbtesAsoc: [
+            expect.objectContaining({
+              Tipo: 6,
+              PtoVta: 1,
+              Nro: 42,
+            }),
+          ],
+        }),
+      }),
+    );
+    expect(repository.resetInvoiceForSimulation).toHaveBeenCalledWith(9);
+  });
+
+  it("rejects void when CAE voucher fields are incomplete", async () => {
+    arcaService.isSimulationModeEnabled.mockResolvedValue(true);
+    repository.getInvoiceById.mockResolvedValue({
+      id: 9,
+      status: "APPROVED",
+      total: 100,
+      arca: { cae: "71234567890123", cbte_tipo: 6, pto_vta: null, cbte_nro: 1 },
+    });
+    await expect(
+      service.resetSimulationInvoice(principal(), 9),
+    ).rejects.toMatchObject({ code: "INVOICE_CANNOT_VOID_WITH_ARCA" });
+    expect(repository.resetInvoiceForSimulation).not.toHaveBeenCalled();
+  });
+
+  it("proxies billing simulation mode from ARCA", async () => {
+    arcaService.getSimulationMode.mockResolvedValue({ enabled: true });
+    await expect(service.getSimulationMode()).resolves.toEqual({
+      enabled: true,
+    });
   });
 });

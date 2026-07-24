@@ -30,18 +30,20 @@ function movement(overrides: Record<string, unknown> = {}) {
 
 describe("MovementsService", () => {
   const repository = {
-    list: jest.fn(),
-    getById: jest.fn(),
-    getCylinderForDelivery: jest.fn(),
-    holderExists: jest.fn(),
-    hasOpenMovement: jest.fn(),
-    createDelivery: jest.fn(),
-    closeReturn: jest.fn(),
-    swapReturn: jest.fn(),
-    voidMovement: jest.fn(),
+    list: vi.fn(),
+    getById: vi.fn(),
+    getCylinderForDelivery: vi.fn(),
+    holderExists: vi.fn(),
+    hasOpenMovement: vi.fn(),
+    createDelivery: vi.fn(),
+    createSale: vi.fn(),
+    closeReturn: vi.fn(),
+    closeRefill: vi.fn(),
+    swapReturn: vi.fn(),
+    voidMovement: vi.fn(),
   };
   const billingLookup = {
-    movementHasLockedCharges: jest.fn(),
+    movementHasLockedCharges: vi.fn(),
   };
   const service = new MovementsService(
     repository as never,
@@ -50,7 +52,7 @@ describe("MovementsService", () => {
   const user = principal();
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it("lists and gets by id", async () => {
@@ -135,12 +137,43 @@ describe("MovementsService", () => {
         code: "CYLINDER_ALREADY_OUT",
       });
     });
+
+    it("sells an in-stock cylinder via createSale", async () => {
+      const saleInput = { ...input, movement_kind: "SALE" as const };
+      repository.getCylinderForDelivery.mockResolvedValue(cylinder());
+      repository.holderExists.mockResolvedValue(true);
+      repository.hasOpenMovement.mockResolvedValue(false);
+      repository.createSale.mockResolvedValue(
+        movement({ movement_kind: "SALE", state: "SOLD" }),
+      );
+      await expect(service.create(user, saleInput)).resolves.toMatchObject({
+        state: "SOLD",
+      });
+      expect(repository.createSale).toHaveBeenCalledWith(
+        saleInput,
+        "OURS",
+        "O2",
+        user.id,
+      );
+      expect(repository.createDelivery).not.toHaveBeenCalled();
+    });
+
+    it("rejects selling a supplier-owned cylinder", async () => {
+      repository.getCylinderForDelivery.mockResolvedValue(
+        cylinder({ ownership_basis: "SUPPLIER" }),
+      );
+      repository.holderExists.mockResolvedValue(true);
+      repository.hasOpenMovement.mockResolvedValue(false);
+      await expect(
+        service.create(user, { ...input, movement_kind: "SALE" as const }),
+      ).rejects.toMatchObject({ code: "KIND_BASIS_MISMATCH" });
+    });
   });
 
   describe("returnMovement", () => {
     const input = { return_date: "2026-06-08" };
 
-    it("rejects missing, closed, customer-owned, and closes rental", async () => {
+    it("rejects missing, closed, closes customer refill and rental", async () => {
       repository.getById.mockResolvedValue(null);
       await expect(
         service.returnMovement(user, 1, input),
@@ -151,12 +184,16 @@ describe("MovementsService", () => {
         service.returnMovement(user, 1, input),
       ).rejects.toMatchObject({ code: "NOT_OPEN" });
 
+      // Customer-owned / REFILL closes the fill cycle (unit stays with client).
       repository.getById.mockResolvedValue(
         movement({ property_basis: "CUSTOMER", movement_kind: "REFILL" }),
       );
+      repository.closeRefill.mockResolvedValue(
+        movement({ state: "CLOSED", movement_kind: "REFILL" }),
+      );
       await expect(
         service.returnMovement(user, 1, input),
-      ).rejects.toMatchObject({ code: "VALIDATION_FAILED" });
+      ).resolves.toMatchObject({ state: "CLOSED" });
 
       repository.getById.mockResolvedValue(movement());
       repository.closeReturn.mockResolvedValue(movement({ state: "CLOSED" }));

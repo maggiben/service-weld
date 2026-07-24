@@ -20,6 +20,12 @@ export const DELIVERABLE_STATES: ReadonlySet<CylinderState> = new Set([
   "IN_STOCK_FULL",
 ]);
 
+/** States from which we may sell a cylinder we own (from stock). */
+export const SELLABLE_STATES: ReadonlySet<CylinderState> = new Set([
+  "IN_STOCK_EMPTY",
+  "IN_STOCK_FULL",
+]);
+
 /**
  * Allowed cylinder state transitions (sdd.md §Cylinder lifecycle).
  * Partial map: only edges we enforce in Phase 2 walking skeleton.
@@ -33,6 +39,7 @@ const TRANSITIONS: ReadonlyMap<
     new Set([
       "IN_STOCK_FULL",
       "AT_CLIENT",
+      "SOLD",
       "RETURNED_TO_SUPPLIER",
       "RETIRED",
       "LOST",
@@ -87,6 +94,23 @@ export function assertDeliverable(
   if (DELIVERABLE_STATES.has(state)) return;
   if (opts?.forRefill && state === "AT_CLIENT") return;
   throw DomainErrors.illegalStateTransition(state, "AT_CLIENT");
+}
+
+/**
+ * SALE: we sell one of our in-stock cylinders to a customer. The unit leaves
+ * our fleet permanently, so it must come from stock (never mid-rental).
+ */
+export function assertSellable(state: CylinderState): void {
+  if (isTerminalCylinderState(state)) {
+    throw DomainErrors.cylinderTerminal(state);
+  }
+  if (SELLABLE_STATES.has(state)) return;
+  throw DomainErrors.illegalStateTransition(state, "SOLD");
+}
+
+/** A sold cylinder lands in the terminal SOLD state. */
+export function stateAfterSale(): CylinderState {
+  return "SOLD";
 }
 
 /** After a normal return, cylinder lands empty in stock. */

@@ -512,7 +512,10 @@ export class ReportsRepository {
         .where("movement_event.return_date", "is", null);
     }
 
-    if (query["filter[territory_id]"] != null) {
+    const localityFilter = query["filter[locality_id]"];
+    if (localityFilter != null) {
+      qb = qb.where("client.locality_id", "=", localityFilter);
+    } else if (query["filter[territory_id]"] != null) {
       qb = qb.where("client.territory_id", "=", query["filter[territory_id]"]);
     }
 

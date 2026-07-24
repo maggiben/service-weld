@@ -9,8 +9,8 @@
     "start": "next start --port 3003",
     "typecheck": "tsc --noEmit",
     "lint": "tsc --noEmit",
-    "test": "node ../../scripts/run-node-tests.mjs",
-    "test:coverage": "node ../../scripts/run-node-tests.mjs --coverage"
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@emotion/cache": "^11.13.1",
@@ -29,7 +29,8 @@
     "@types/node": "^24.0.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
-    "tsx": "^4.23.1",
-    "typescript": "^6.0.3"
+    "@vitest/coverage-v8": "^3.2.4",
+    "typescript": "^6.0.3",
+    "vitest": "^3.2.4"
   }
 }

@@ -1,6 +1,4 @@
 import assert from "node:assert/strict";
-import { describe, it, beforeEach } from "node:test";
-
 import { displayRentalDays } from "./features/movements/displayRentalDays";
 import {
   formatAlertDetail,

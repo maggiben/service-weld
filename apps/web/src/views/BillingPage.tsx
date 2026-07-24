@@ -35,10 +35,12 @@ import type {
 import { ApiClientError } from "@weld/api-client";
 import { api } from "../api/client";
 import {
+  filterBillingInvoices,
   formatInvoiceDailyRate,
   formatInvoiceDaysBreakdown,
   invoiceTotalDays,
 } from "../features/billing/billingLogic";
+import { InvoiceBillingDrawer } from "../features/billing/InvoiceBillingDrawer";
 import { ClientLedgerDrawer } from "../features/clients/ClientLedgerDrawer";
 import { useLocations } from "../hooks/useLocations";
 import { useSessionStore } from "../store/sessionStore";
@@ -47,9 +49,6 @@ export default function BillingPage() {
   const { t: translate } = useTranslation();
   const canWrite = useSessionStore((state) =>
     state.hasCapability("billing:write"),
-  );
-  const canApprove = useSessionStore((state) =>
-    state.hasCapability("billing:approve"),
   );
   const { territories, localities, encodeFilter, decodeFilter } =
     useLocations();
@@ -68,6 +67,7 @@ export default function BillingPage() {
   const [exportPayload, setExportPayload] =
     useState<BillingExportPayload | null>(null);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [invoiceDrawerOpen, setInvoiceDrawerOpen] = useState(false);
   const [ledgerClient, setLedgerClient] = useState<{
     id: number;
     name?: string;
@@ -90,32 +90,44 @@ export default function BillingPage() {
       }),
   });
 
+  const billingScope = {
+    client_party_id: client?.id ?? null,
+    locality_id:
+      client != null
+        ? null
+        : location?.kind === "locality"
+          ? location.id
+          : null,
+    territory_id:
+      client != null
+        ? null
+        : location?.kind === "territory"
+          ? location.id
+          : null,
+  };
+
   const draftMutation = useMutation({
     mutationFn: (mode: "period" | "history") =>
       api.createBillingRun(
         mode === "history"
           ? {
               mode: "history",
-              client_party_id: client?.id ?? null,
-              locality_id:
-                client || location?.kind !== "locality" ? null : location.id,
-              territory_id:
-                client || location?.kind !== "territory" ? null : location.id,
+              ...billingScope,
             }
           : {
               period_start: periodStart,
               period_end: periodEnd,
               mode: "period",
-              client_party_id: client?.id ?? null,
-              locality_id:
-                client || location?.kind !== "locality" ? null : location.id,
-              territory_id:
-                client || location?.kind !== "territory" ? null : location.id,
+              ...billingScope,
             },
       ),
     onSuccess: (result, mode) => {
       setRun(result);
       setRunMode(mode);
+      if (mode === "history") {
+        setPeriodStart(result.period_start);
+        setPeriodEnd(result.period_end);
+      }
       setExportPayload(null);
       setSelectedInvoice(null);
       setError(null);
@@ -126,27 +138,6 @@ export default function BillingPage() {
           setError(translate("errors.period_locked"));
           return;
         }
-        setError(err.message);
-        return;
-      }
-      setError(translate("errors.generic"));
-    },
-  });
-
-  const approveMutation = useMutation({
-    mutationFn: () => {
-      if (!run) throw new Error("No run");
-      return api.approveBillingRun(run.id);
-    },
-    onSuccess: (result) => {
-      setRun(result);
-      setSelectedInvoice(
-        result.invoices.find((inv) => inv.id === selectedInvoice?.id) ?? null,
-      );
-      setError(null);
-    },
-    onError: (err) => {
-      if (err instanceof ApiClientError) {
         setError(err.message);
         return;
       }
@@ -196,6 +187,7 @@ export default function BillingPage() {
             underline="hover"
             onClick={(event) => {
               event.stopPropagation();
+              setSelectedInvoice(params.row);
               setLedgerClient({
                 id: params.row.client_party_id,
                 name: params.row.client_name,
@@ -260,6 +252,16 @@ export default function BillingPage() {
         valueFormatter: (value: string) =>
           translate(`enums.invoice_status.${value}`),
       },
+      {
+        field: "arca",
+        headerName: translate("billing.columns.arca"),
+        width: 110,
+        sortable: false,
+        valueGetter: (_v, row) =>
+          row.arca?.cae
+            ? translate("billing.columns.arca_ok")
+            : translate("billing.columns.arca_pending"),
+      },
     ],
     [translate],
   );
@@ -318,12 +320,61 @@ export default function BillingPage() {
     [translate],
   );
 
-  const busy =
-    draftMutation.isPending ||
-    approveMutation.isPending ||
-    exportMutation.isPending;
+  const busy = draftMutation.isPending || exportMutation.isPending;
+
+  const displayedInvoices = useMemo(
+    () =>
+      filterBillingInvoices(run?.invoices ?? [], {
+        clientPartyId: client?.id,
+        location,
+      }),
+    [run?.invoices, client?.id, location],
+  );
 
   const selectedLines = selectedInvoice?.charge_lines ?? [];
+
+  const handleInvoiceUpdated = async (updated: Invoice) => {
+    setSelectedInvoice(updated);
+    if (!run) {
+      setRun((current) => {
+        if (!current) return current;
+        return {
+          ...current,
+          invoices: current.invoices.map((inv) =>
+            inv.id === updated.id
+              ? {
+                  ...updated,
+                  charge_lines: updated.charge_lines ?? inv.charge_lines,
+                }
+              : inv,
+          ),
+        };
+      });
+      return;
+    }
+    try {
+      const refreshed = await api.getBillingRun(run.id);
+      setRun(refreshed);
+      setSelectedInvoice(
+        refreshed.invoices.find((inv) => inv.id === updated.id) ?? updated,
+      );
+    } catch {
+      setRun((current) => {
+        if (!current) return current;
+        return {
+          ...current,
+          invoices: current.invoices.map((inv) =>
+            inv.id === updated.id
+              ? {
+                  ...updated,
+                  charge_lines: updated.charge_lines ?? inv.charge_lines,
+                }
+              : inv,
+          ),
+        };
+      });
+    }
+  };
 
   return (
     <Stack spacing={2} sx={{ height: "calc(100vh - 180px)" }}>
@@ -365,6 +416,17 @@ export default function BillingPage() {
               sx={{ height: 40 }}
             >
               {translate("actions.run_billing")}
+            </Button>
+          )}
+          {canWrite && (
+            <Button
+              size="small"
+              variant="outlined"
+              disabled={busy}
+              onClick={() => draftMutation.mutate("history")}
+              sx={{ height: 40 }}
+            >
+              {translate("actions.run_billing_history")}
             </Button>
           )}
           <FormControl size="small" sx={{ minWidth: 220 }}>
@@ -417,7 +479,7 @@ export default function BillingPage() {
                 ? [
                     client,
                     ...(clientsSearch.data?.data ?? []).filter(
-                      (client) => client.id !== client.id,
+                      (option) => option.id !== client.id,
                     ),
                   ]
                 : (clientsSearch.data?.data ?? [])
@@ -437,28 +499,6 @@ export default function BillingPage() {
               />
             )}
           />
-          {canWrite && (
-            <Button
-              size="small"
-              variant="outlined"
-              disabled={busy}
-              onClick={() => draftMutation.mutate("history")}
-              sx={{ height: 40 }}
-            >
-              {translate("actions.run_billing_history")}
-            </Button>
-          )}
-          {canApprove && run?.status === "DRAFT" && (
-            <Button
-              size="small"
-              variant="outlined"
-              disabled={busy || (run.invoice_count ?? 0) === 0}
-              onClick={() => approveMutation.mutate()}
-              sx={{ height: 40 }}
-            >
-              {translate("actions.approve_billing")}
-            </Button>
-          )}
           {canWrite &&
             (run?.status === "APPROVED" || run?.status === "EXPORTED") && (
               <Button
@@ -543,14 +583,15 @@ export default function BillingPage() {
 
       <Box sx={{ flex: 1, minHeight: 240 }}>
         <DataGrid
-          rows={run?.invoices ?? []}
+          rows={displayedInvoices}
           columns={invoiceColumns}
           getRowId={(row) => row.id}
           loading={busy}
           disableRowSelectionOnClick
-          onRowClick={(params: GridRowParams<Invoice>) =>
-            setSelectedInvoice(params.row)
-          }
+          onRowClick={(params: GridRowParams<Invoice>) => {
+            setSelectedInvoice(params.row);
+            setInvoiceDrawerOpen(true);
+          }}
           sx={{
             [`& .${gridClasses.cell}`]: { outline: "none" },
             [`& .${gridClasses.row}`]: { cursor: "pointer" },
@@ -567,7 +608,7 @@ export default function BillingPage() {
         />
       </Box>
 
-      {selectedInvoice && (
+      {selectedInvoice && !invoiceDrawerOpen && (
         <Box sx={{ minHeight: 180, maxHeight: 280 }}>
           <Typography variant="subtitle2" sx={{ mb: 1 }}>
             {translate("billing.lines.title", {
@@ -611,10 +652,27 @@ export default function BillingPage() {
         </Box>
       )}
 
+      <InvoiceBillingDrawer
+        open={invoiceDrawerOpen && selectedInvoice != null}
+        invoice={selectedInvoice}
+        onClose={() => setInvoiceDrawerOpen(false)}
+        onInvoiceUpdated={handleInvoiceUpdated}
+      />
+
       <ClientLedgerDrawer
         open={ledgerClient != null}
         clientPartyId={ledgerClient?.id ?? null}
         clientName={ledgerClient?.name}
+        billingInvoice={
+          selectedInvoice != null &&
+          ledgerClient != null &&
+          selectedInvoice.client_party_id === ledgerClient.id
+            ? selectedInvoice
+            : (run?.invoices.find(
+                (inv) => inv.client_party_id === ledgerClient?.id,
+              ) ?? null)
+        }
+        onBillingInvoiceUpdated={handleInvoiceUpdated}
         onClose={() => setLedgerClient(null)}
       />
     </Stack>

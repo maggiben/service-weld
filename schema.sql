@@ -36,9 +36,28 @@ CREATE TYPE cylinder_state   AS ENUM ('IN_STOCK_EMPTY','IN_STOCK_FULL','AT_CLIEN
                                       'SOLD','LOST','BROKEN','RETURNED_TO_SUPPLIER','RETIRED');
 CREATE TYPE cylinder_cond    AS ENUM ('EMPTY','FULL');
 CREATE TYPE packaging_kind   AS ENUM ('SINGLE','BATTERY','BATTERY_MEMBER');
-CREATE TYPE movement_kind    AS ENUM ('RENTAL','REFILL');
+CREATE TYPE movement_kind    AS ENUM ('RENTAL','REFILL','SALE');
 CREATE TYPE movement_state   AS ENUM ('OPEN','CLOSED','SWAPPED','LOST','SOLD','VOID');
 CREATE TYPE delivery_note_kind AS ENUM ('DELIVERY','RETURN');
+CREATE TYPE remito_status AS ENUM (
+    'DRAFT','PREPARED','ASSIGNED','LOADED','IN_TRANSIT','DELIVERED',
+    'SIGNED','CLOSED','INVOICED','ARCHIVED','CANCELLED'
+);
+CREATE TYPE remito_type AS ENUM (
+    'DELIVERY','CYLINDER_RETURN','ACCESSORY_RETURN','TRANSFER_WAREHOUSE',
+    'INTERNAL_TRANSFER','CUSTOMER_PICKUP','ADJUSTMENT','RENTAL_PICKUP',
+    'RENTAL_DELIVERY'
+);
+CREATE TYPE remito_priority AS ENUM ('LOW','NORMAL','HIGH','URGENT');
+CREATE TYPE picking_status AS ENUM ('PENDING','PREPARING','COMPLETE','LOADED');
+CREATE TYPE remito_line_kind AS ENUM ('CYLINDER','ACCESSORY','BATTERY');
+CREATE TYPE print_copy_kind AS ENUM ('ORIGINAL','DUPLICADO','TRIPLICADO','REIMPRESION');
+CREATE TYPE incident_type AS ENUM (
+    'CUSTOMER_ABSENT','CYLINDER_DAMAGED','WRONG_QUANTITY','LEAK',
+    'WRONG_GAS','WRONG_SERIAL','DELIVERY_REJECTED','LATE_DELIVERY','OTHER'
+);
+CREATE TYPE incident_severity AS ENUM ('LOW','MEDIUM','HIGH','CRITICAL');
+CREATE TYPE incident_status AS ENUM ('OPEN','IN_REVIEW','RESOLVED','DISMISSED');
 CREATE TYPE accessory_type   AS ENUM ('REGULATOR','ADAPTER','PORTABLE_O2_BACKPACK');
 CREATE TYPE accessory_state  AS ENUM ('IN_STOCK','ON_LOAN','IN_REPAIR','LOST','BROKEN','RETIRED');
 CREATE TYPE accessory_rental_state AS ENUM ('ON_LOAN','RETURNED','LOST');
@@ -254,15 +273,116 @@ CREATE UNIQUE INDEX uq_accessory_ident ON accessory(accessory_type, identifier)
     WHERE identifier IS NOT NULL AND deleted_at IS NULL;
 
 CREATE TABLE delivery_note (
-    id              bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    remito_number   text NOT NULL,
-    kind            delivery_note_kind NOT NULL DEFAULT 'DELIVERY',
-    issued_date     date,
-    client_party_id bigint REFERENCES client(party_id),
+    id                        bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    remito_number             text NOT NULL,
+    series_id                 bigint,
+    kind                      delivery_note_kind NOT NULL DEFAULT 'DELIVERY',
+    remito_type               remito_type NOT NULL DEFAULT 'DELIVERY',
+    status                    remito_status NOT NULL DEFAULT 'DRAFT',
+    picking_status            picking_status NOT NULL DEFAULT 'PENDING',
+    priority                  remito_priority NOT NULL DEFAULT 'NORMAL',
+    issued_date               date,
+    scheduled_delivery_at     timestamptz,
+    departure_at              timestamptz,
+    arrival_at                timestamptz,
+    closed_at                 timestamptz,
+    client_party_id           bigint REFERENCES client(party_id),
+    origin_warehouse_id       bigint,
+    destination_warehouse_id  bigint,
+    driver_id                 bigint,
+    helper_id                 bigint,
+    vehicle_id                bigint,
+    observations              text,
+    cancel_reason             text,
+    created_at                timestamptz NOT NULL DEFAULT now(),
+    updated_at                timestamptz NOT NULL DEFAULT now(),
+    version                   integer NOT NULL DEFAULT 1,
+    deleted_at                timestamptz,
     CONSTRAINT uq_remito UNIQUE (remito_number)
 );
 CREATE INDEX ix_remito_client ON delivery_note(client_party_id);
 CREATE INDEX ix_remito_kind ON delivery_note(kind);
+CREATE INDEX ix_remito_status ON delivery_note(status);
+CREATE INDEX ix_remito_type ON delivery_note(remito_type);
+CREATE INDEX ix_remito_priority ON delivery_note(priority);
+CREATE INDEX ix_remito_scheduled ON delivery_note(scheduled_delivery_at);
+CREATE INDEX ix_remito_deleted ON delivery_note(deleted_at);
+CREATE INDEX ix_remito_picking ON delivery_note(picking_status);
+CREATE INDEX ix_remito_driver ON delivery_note(driver_id);
+CREATE INDEX ix_remito_vehicle ON delivery_note(vehicle_id);
+CREATE INDEX ix_remito_warehouse ON delivery_note(origin_warehouse_id);
+
+CREATE TABLE remito_status_history (
+    id            bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    remito_id     bigint NOT NULL REFERENCES delivery_note(id),
+    from_status   remito_status,
+    to_status     remito_status NOT NULL,
+    actor_user_id bigint REFERENCES app_user(id),
+    note          text,
+    at            timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX ix_remito_status_history_remito ON remito_status_history(remito_id, at);
+
+CREATE TABLE warehouse (
+    id            bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    code          text NOT NULL,
+    name          text NOT NULL,
+    territory_id  bigint REFERENCES dispatch_territory(id),
+    address       text,
+    is_active     boolean NOT NULL DEFAULT true,
+    created_at    timestamptz NOT NULL DEFAULT now(),
+    updated_at    timestamptz NOT NULL DEFAULT now(),
+    deleted_at    timestamptz,
+    CONSTRAINT uq_warehouse_code UNIQUE (code)
+);
+
+CREATE TABLE vehicle (
+    id               bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    plate            citext NOT NULL,
+    name             text,
+    capacity_units   integer,
+    capacity_weight  numeric(12,2),
+    is_active        boolean NOT NULL DEFAULT true,
+    created_at       timestamptz NOT NULL DEFAULT now(),
+    updated_at       timestamptz NOT NULL DEFAULT now(),
+    deleted_at       timestamptz,
+    CONSTRAINT uq_vehicle_plate UNIQUE (plate)
+);
+
+CREATE TABLE driver_profile (
+    id                   bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id              bigint REFERENCES app_user(id),
+    display_name         text NOT NULL,
+    phone                text,
+    license_no           text,
+    license_expiry       date,
+    default_vehicle_id   bigint REFERENCES vehicle(id),
+    is_helper_eligible   boolean NOT NULL DEFAULT true,
+    is_active            boolean NOT NULL DEFAULT true,
+    created_at           timestamptz NOT NULL DEFAULT now(),
+    updated_at           timestamptz NOT NULL DEFAULT now(),
+    deleted_at           timestamptz,
+    CONSTRAINT uq_driver_profile_user UNIQUE (user_id)
+);
+
+CREATE TABLE remito_series (
+    id                     bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    code                   text NOT NULL,
+    emission_point_label   text,
+    pad_width              integer NOT NULL DEFAULT 8 CHECK (pad_width BETWEEN 4 AND 12),
+    next_number            bigint NOT NULL DEFAULT 1 CHECK (next_number >= 1),
+    is_active              boolean NOT NULL DEFAULT true,
+    created_at             timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT uq_remito_series_code UNIQUE (code)
+);
+
+ALTER TABLE delivery_note
+    ADD CONSTRAINT fk_remito_series FOREIGN KEY (series_id) REFERENCES remito_series(id),
+    ADD CONSTRAINT fk_remito_origin_wh FOREIGN KEY (origin_warehouse_id) REFERENCES warehouse(id),
+    ADD CONSTRAINT fk_remito_dest_wh FOREIGN KEY (destination_warehouse_id) REFERENCES warehouse(id),
+    ADD CONSTRAINT fk_remito_driver FOREIGN KEY (driver_id) REFERENCES driver_profile(id),
+    ADD CONSTRAINT fk_remito_helper FOREIGN KEY (helper_id) REFERENCES driver_profile(id),
+    ADD CONSTRAINT fk_remito_vehicle FOREIGN KEY (vehicle_id) REFERENCES vehicle(id);
 
 CREATE TABLE rental_rate (
     id              bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -412,6 +532,82 @@ CREATE TABLE accessory_rental (
 CREATE UNIQUE INDEX uq_acc_one_open   ON accessory_rental (accessory_id) WHERE state = 'ON_LOAN';
 CREATE INDEX ix_acc_client_open       ON accessory_rental (client_party_id) WHERE state='ON_LOAN';
 
+CREATE TABLE remito_line (
+    id                   bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    remito_id            bigint NOT NULL REFERENCES delivery_note(id),
+    line_no              integer NOT NULL,
+    item_kind            remito_line_kind NOT NULL,
+    cylinder_id          bigint REFERENCES cylinder(id),
+    battery_id           bigint REFERENCES cylinder_battery(id),
+    accessory_id         bigint REFERENCES accessory(id),
+    serial_number        citext,
+    gas_code             text REFERENCES gas_type(code),
+    capacity_value       numeric(5,2),
+    capacity_unit        capacity_unit,
+    owner_party_id       bigint REFERENCES party(id),
+    is_rental            boolean NOT NULL DEFAULT false,
+    ownership_basis      ownership_basis,
+    qty                  numeric(12,3) NOT NULL DEFAULT 1 CHECK (qty > 0),
+    picked_qty           numeric(12,3) NOT NULL DEFAULT 0 CHECK (picked_qty >= 0),
+    delivered_qty        numeric(12,3),
+    returned_qty         numeric(12,3),
+    unit                 text,
+    pressure             numeric(10,2),
+    condition            cylinder_cond,
+    barcode              text,
+    qr_code              text,
+    movement_event_id    bigint REFERENCES movement_event(id),
+    accessory_rental_id  bigint REFERENCES accessory_rental(id),
+    weight_kg            numeric(10,2),
+    notes                text,
+    scanned_at           timestamptz,
+    created_at           timestamptz NOT NULL DEFAULT now(),
+    updated_at           timestamptz NOT NULL DEFAULT now(),
+    deleted_at           timestamptz,
+    CONSTRAINT uq_remito_line_no UNIQUE (remito_id, line_no),
+    CONSTRAINT ck_remito_line_picked CHECK (picked_qty <= qty)
+);
+CREATE INDEX ix_remito_line_remito ON remito_line(remito_id);
+CREATE INDEX ix_remito_line_cylinder ON remito_line(cylinder_id);
+CREATE INDEX ix_remito_line_serial ON remito_line(serial_number);
+
+CREATE TABLE remito_incident (
+    id            bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    remito_id     bigint NOT NULL REFERENCES delivery_note(id),
+    line_id       bigint REFERENCES remito_line(id),
+    type          incident_type NOT NULL,
+    severity      incident_severity NOT NULL DEFAULT 'MEDIUM',
+    status        incident_status NOT NULL DEFAULT 'OPEN',
+    description   text NOT NULL,
+    reported_by   bigint REFERENCES app_user(id),
+    reported_at   timestamptz NOT NULL DEFAULT now(),
+    resolution    text,
+    resolved_by   bigint REFERENCES app_user(id),
+    resolved_at   timestamptz,
+    created_at    timestamptz NOT NULL DEFAULT now(),
+    updated_at    timestamptz NOT NULL DEFAULT now(),
+    deleted_at    timestamptz
+);
+CREATE INDEX ix_remito_incident_remito ON remito_incident(remito_id);
+CREATE INDEX ix_remito_incident_status ON remito_incident(status);
+
+CREATE TABLE remito_print_log (
+    id               bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    remito_id        bigint NOT NULL REFERENCES delivery_note(id),
+    copy_kind        print_copy_kind NOT NULL,
+    reprint_seq      integer,
+    reason           text,
+    printed_by       bigint REFERENCES app_user(id),
+    printed_at       timestamptz NOT NULL DEFAULT now(),
+    pdf_object_ref   text,
+    content_version  integer,
+    CONSTRAINT ck_remito_print_reprint CHECK (
+        (copy_kind = 'REIMPRESION' AND reprint_seq IS NOT NULL AND reason IS NOT NULL AND length(trim(reason)) > 0)
+        OR (copy_kind <> 'REIMPRESION' AND reprint_seq IS NULL)
+    )
+);
+CREATE INDEX ix_remito_print_log_remito ON remito_print_log (remito_id, printed_at DESC);
+
 -- ---------------------------------------------------------------------
 -- 8. Billing
 -- ---------------------------------------------------------------------
@@ -422,13 +618,37 @@ CREATE TABLE invoice (
     period_end      date NOT NULL,
     status          invoice_status NOT NULL DEFAULT 'DRAFT',
     total           numeric(14,2) NOT NULL DEFAULT 0,
+    billing_run_id  bigint,
+    cae             text,
+    cae_due_date    date,
+    cbte_tipo       smallint,
+    pto_vta         smallint,
+    cbte_nro        integer,
+    cbte_fch        date,
+    doc_tipo        smallint,
+    doc_nro         bigint,
+    condicion_iva_receptor smallint,
+    imp_neto        numeric(14,2),
+    imp_iva         numeric(14,2),
+    imp_total       numeric(14,2),
+    arca_environment text,
+    arca_qr_url     text,
+    authorized_at   timestamptz,
+    authorized_by   bigint,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now(),
     version    integer NOT NULL DEFAULT 1,
-    CONSTRAINT ck_inv_period CHECK (period_end >= period_start)
+    CONSTRAINT ck_inv_period CHECK (period_end >= period_start),
+    CONSTRAINT ck_invoice_cae_pair CHECK (
+        (cae IS NULL AND cae_due_date IS NULL AND authorized_at IS NULL)
+        OR (cae IS NOT NULL AND cae_due_date IS NOT NULL AND authorized_at IS NOT NULL
+            AND cbte_tipo IS NOT NULL AND pto_vta IS NOT NULL AND cbte_nro IS NOT NULL)
+    )
 );
 CREATE UNIQUE INDEX uq_invoice_client_period ON invoice(client_party_id, period_start, period_end)
     WHERE status <> 'CANCELLED';
+CREATE UNIQUE INDEX uq_invoice_arca_voucher ON invoice (pto_vta, cbte_tipo, cbte_nro)
+    WHERE cae IS NOT NULL;
 CREATE INDEX ix_invoice_status ON invoice(status);
 
 CREATE TABLE charge_line (
@@ -505,6 +725,47 @@ INSERT INTO system_setting (key, value) VALUES ('long_outstanding_days', '90');
 INSERT INTO system_setting (key, value) VALUES ('business_timezone', 'America/Argentina/Buenos_Aires');
 INSERT INTO system_setting (key, value) VALUES ('rental_min_days', '0');          -- D-14: exact calendar days
 INSERT INTO system_setting (key, value) VALUES ('primary_language', 'es');       -- D-17 / 000 C1
+INSERT INTO system_setting (key, value) VALUES ('arca_testing_mode', 'true');    -- ARCA fail-safe
+INSERT INTO system_setting (key, value) VALUES ('arca_simulation_mode', 'true'); -- skip live WSAA/WSFE
+INSERT INTO system_setting (key, value) VALUES ('arca_company_cuit', '');
+INSERT INTO system_setting (key, value) VALUES ('arca_company_legal_name', '');
+INSERT INTO system_setting (key, value) VALUES ('arca_company_alias', '');
+INSERT INTO system_setting (key, value) VALUES ('arca_point_of_sale', '1');
+
+-- ---------------------------------------------------------------------
+-- 9b. ARCA credentials (docs/specs/arca-integration.md)
+-- ---------------------------------------------------------------------
+CREATE TYPE arca_environment AS ENUM ('HOMOLOGATION', 'PRODUCTION');
+
+CREATE TABLE arca_credentials (
+    id                        bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    company_id                bigint NOT NULL DEFAULT 1,
+    environment               arca_environment NOT NULL,
+    cuit                      text NOT NULL,
+    certificate_encrypted     text,
+    private_key_encrypted     text,
+    csr_pem                   text,
+    certificate_fingerprint   text,
+    valid_until               timestamptz,
+    last_validation           timestamptz,
+    last_authentication       timestamptz,
+    last_connection_status    text,
+    last_connection_error     text,
+    created_at                timestamptz NOT NULL DEFAULT now(),
+    updated_at                timestamptz NOT NULL DEFAULT now(),
+    version                   integer NOT NULL DEFAULT 1,
+    created_by                bigint REFERENCES app_user(id),
+    updated_by                bigint REFERENCES app_user(id),
+    deleted_at                timestamptz,
+    CONSTRAINT ck_arca_cuit_digits CHECK (cuit ~ '^\d{11}$'),
+    CONSTRAINT ck_arca_connection_status CHECK (
+        last_connection_status IS NULL
+        OR last_connection_status IN ('NOT_CONFIGURED', 'CONNECTED', 'FAILED')
+    )
+);
+CREATE UNIQUE INDEX uq_arca_credentials_company_env
+    ON arca_credentials (company_id, environment)
+    WHERE deleted_at IS NULL;
 
 -- ---------------------------------------------------------------------
 -- 10. History tables (SCD-2)  — created after client & cylinder (LIKE)
@@ -620,6 +881,9 @@ CREATE TRIGGER trg_touch_accessory        BEFORE UPDATE ON accessory        FOR 
 CREATE TRIGGER trg_touch_movement         BEFORE UPDATE ON movement_event   FOR EACH ROW EXECUTE FUNCTION fn_touch_row();
 CREATE TRIGGER trg_touch_accrental        BEFORE UPDATE ON accessory_rental FOR EACH ROW EXECUTE FUNCTION fn_touch_row();
 CREATE TRIGGER trg_touch_invoice          BEFORE UPDATE ON invoice          FOR EACH ROW EXECUTE FUNCTION fn_touch_row();
+CREATE TRIGGER trg_touch_delivery_note    BEFORE UPDATE ON delivery_note    FOR EACH ROW EXECUTE FUNCTION fn_touch_row();
+CREATE TRIGGER trg_touch_remito_line      BEFORE UPDATE ON remito_line      FOR EACH ROW EXECUTE FUNCTION fn_touch_row();
+CREATE TRIGGER trg_touch_arca_credentials BEFORE UPDATE ON arca_credentials FOR EACH ROW EXECUTE FUNCTION fn_touch_row();
 
 -- owner<->basis (BR-07)
 CREATE TRIGGER trg_cylinder_owner_basis   BEFORE INSERT OR UPDATE ON cylinder FOR EACH ROW EXECUTE FUNCTION fn_cylinder_owner_basis();
@@ -644,6 +908,79 @@ CREATE TRIGGER trg_audit_accrental  AFTER INSERT OR UPDATE OR DELETE ON accessor
 CREATE TRIGGER trg_audit_accessory  AFTER INSERT OR UPDATE OR DELETE ON accessory        FOR EACH ROW EXECUTE FUNCTION fn_audit();
 CREATE TRIGGER trg_audit_rate       AFTER INSERT OR UPDATE OR DELETE ON rental_rate       FOR EACH ROW EXECUTE FUNCTION fn_audit();
 CREATE TRIGGER trg_audit_refill_rate AFTER INSERT OR UPDATE OR DELETE ON refill_rate    FOR EACH ROW EXECUTE FUNCTION fn_audit();
+CREATE TRIGGER trg_audit_delivery_note AFTER INSERT OR UPDATE OR DELETE ON delivery_note FOR EACH ROW EXECUTE FUNCTION fn_audit();
+CREATE TRIGGER trg_audit_remito_line AFTER INSERT OR UPDATE OR DELETE ON remito_line FOR EACH ROW EXECUTE FUNCTION fn_audit();
+CREATE TRIGGER trg_audit_remito_incident AFTER INSERT OR UPDATE OR DELETE ON remito_incident FOR EACH ROW EXECUTE FUNCTION fn_audit();
+
+-- ARCA credentials audit with secret redaction (docs/specs/arca-integration.md R-53)
+CREATE OR REPLACE FUNCTION fn_audit_arca_credentials() RETURNS trigger
+LANGUAGE plpgsql AS $$
+DECLARE
+    v_before jsonb;
+    v_after  jsonb;
+    v_id     bigint;
+    v_action audit_action;
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        v_before := NULL;
+        v_after := to_jsonb(NEW);
+        v_action := 'INSERT';
+    ELSIF TG_OP = 'UPDATE' THEN
+        v_before := to_jsonb(OLD);
+        v_after := to_jsonb(NEW);
+        v_action := 'UPDATE';
+    ELSE
+        v_before := to_jsonb(OLD);
+        v_after := NULL;
+        v_action := 'DELETE';
+    END IF;
+
+    IF v_before IS NOT NULL THEN
+        v_before := v_before
+            || jsonb_build_object(
+                'certificate_encrypted',
+                CASE WHEN v_before ? 'certificate_encrypted'
+                     AND v_before->>'certificate_encrypted' IS NOT NULL
+                    THEN '«redacted»' ELSE NULL END,
+                'private_key_encrypted',
+                CASE WHEN v_before ? 'private_key_encrypted'
+                     AND v_before->>'private_key_encrypted' IS NOT NULL
+                    THEN '«redacted»' ELSE NULL END
+            );
+    END IF;
+    IF v_after IS NOT NULL THEN
+        v_after := v_after
+            || jsonb_build_object(
+                'certificate_encrypted',
+                CASE WHEN v_after ? 'certificate_encrypted'
+                     AND v_after->>'certificate_encrypted' IS NOT NULL
+                    THEN '«redacted»' ELSE NULL END,
+                'private_key_encrypted',
+                CASE WHEN v_after ? 'private_key_encrypted'
+                     AND v_after->>'private_key_encrypted' IS NOT NULL
+                    THEN '«redacted»' ELSE NULL END
+            );
+    END IF;
+
+    v_id := COALESCE(v_after->>'id', v_before->>'id')::bigint;
+    INSERT INTO audit_log(
+        actor_user_id, actor_role, action, entity_table, entity_id,
+        before, after, source
+    )
+    VALUES (
+        NULLIF(current_setting('app.current_user_id', true), '')::bigint,
+        NULLIF(current_setting('app.current_role_code', true), ''),
+        v_action, TG_TABLE_NAME, v_id, v_before, v_after,
+        NULLIF(current_setting('app.source', true), '')
+    );
+    RETURN NULL;
+END;
+$$;
+
+CREATE TRIGGER trg_audit_arca_credentials
+    AFTER INSERT OR UPDATE OR DELETE ON arca_credentials
+    FOR EACH ROW EXECUTE FUNCTION fn_audit_arca_credentials();
+CREATE TRIGGER trg_audit_remito_print_log AFTER INSERT OR UPDATE OR DELETE ON remito_print_log FOR EACH ROW EXECUTE FUNCTION fn_audit();
 
 -- Keep audit_log append-only (revoke UPDATE/DELETE from application role, if present).
 -- Example (uncomment after creating the role):

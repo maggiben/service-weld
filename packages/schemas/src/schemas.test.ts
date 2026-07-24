@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
 import { isValidCuit, Cuit } from "./cuit";
 import {
   CreateLocalityInput,
@@ -19,6 +18,63 @@ import {
   BusinessTimezone,
   LongOutstandingDays,
 } from "./settings";
+import {
+  CreateBillingRunInput,
+  BillingExportPayload,
+  BillingRun,
+  BillingRunDetail,
+  ChargeLine,
+  Invoice,
+  InvoiceArcaAuthorization,
+  InvoiceListQuery,
+} from "./billing";
+import {
+  CreateDeliveryNoteInput,
+  DeliveryNote,
+  DeliveryNoteDetail,
+  DeliveryNoteListQuery,
+  DeliveryNoteListResponse,
+  RemitoStatusHistoryEntry,
+  RemitoTransitionInput,
+  UpdateDeliveryNoteInput,
+} from "./delivery-note";
+import {
+  CreateDriverProfileInput,
+  CreateRemitoIncidentInput,
+  CreateRemitoLineInput,
+  CreateVehicleInput,
+  DriverListQuery,
+  DriverProfile,
+  PrintRemitoPdfQuery,
+  RemitoIncident,
+  RemitoLine,
+  RemitoPrintLog,
+  RemitoSeries,
+  UpdateRemitoIncidentInput,
+  UpdateRemitoLineInput,
+  Vehicle,
+  VehicleListQuery,
+  Warehouse,
+  WarehouseListQuery,
+} from "./remito-ops";
+import {
+  ArcaCompanyProfile,
+  ArcaConnectionStatus,
+  ArcaDashboard,
+  ArcaEnvironment,
+  ArcaEnvironmentQuery,
+  ArcaOnboardingStatus,
+  ArcaTestingMode,
+  ConnectionTestResult,
+  DeleteArcaCertificateInput,
+  GenerateArcaKeysInput,
+  UpdateArcaCompanyProfileInput,
+  UpdateArcaTestingModeInput,
+  UploadCertificateResult,
+  ValidateCertificateResult,
+} from "./arca";
+import { Money, IsoDate } from "./common";
+import { GasCode, IncidentType, PrintCopyKind, RemitoStatus } from "./enums";
 import {
   MigrationDataStatus,
   MigrationExportDataset,
@@ -41,12 +97,6 @@ import {
   SwapMovementInput,
   VoidMovementInput,
 } from "./movement";
-import {
-  CreateDeliveryNoteInput,
-  DeliveryNote,
-  DeliveryNoteDetail,
-  DeliveryNoteListQuery,
-} from "./delivery-note";
 
 /** Known-valid CUITs covering check-digit branches (mod 11→0, mod 10→9, normal). */
 const VALID = ["20-12345678-6", "00-00000000-0", "00-00000001-9"] as const;
@@ -335,6 +385,15 @@ describe("movement schemas", () => {
       }).returned_cylinder_id,
       11,
     );
+    assert.equal(
+      CreateMovementInput.parse({
+        cylinder_id: 10,
+        holder_party_id: 20,
+        movement_kind: "SALE",
+        delivery_date: "2026-07-01",
+      }).movement_kind,
+      "SALE",
+    );
     assert.equal(VoidMovementInput.parse({ reason: "dup" }).reason, "dup");
     assert.throws(() => VoidMovementInput.parse({ reason: "" }));
   });
@@ -374,6 +433,10 @@ describe("delivery-note schemas", () => {
         id: 1,
         remito_number: "1475",
         kind: "DELIVERY",
+        remito_type: "DELIVERY",
+        status: "DRAFT",
+        picking_status: "PENDING",
+        priority: "NORMAL",
         issued_date: "2018-05-04",
         client_party_id: 501,
         client_name: "Acme",
@@ -381,30 +444,36 @@ describe("delivery-note schemas", () => {
       "1475",
     );
     assert.equal(
-      CreateDeliveryNoteInput.parse({ remito_number: " 1475 " }).kind,
-      "DELIVERY",
+      CreateDeliveryNoteInput.parse({ remito_number: " 1475 " }).priority,
+      "NORMAL",
     );
     assert.equal(
       CreateDeliveryNoteInput.parse({
         remito_number: "90",
-        kind: "RETURN",
-      }).kind,
-      "RETURN",
+        remito_type: "CYLINDER_RETURN",
+      }).remito_type,
+      "CYLINDER_RETURN",
     );
     assert.throws(() => CreateDeliveryNoteInput.parse({ remito_number: "" }));
     const query = DeliveryNoteListQuery.parse({
       q: "1475",
       "filter[client_party_id]": "501",
       "filter[kind]": "RETURN",
+      "filter[status]": "DRAFT",
     });
     assert.equal(query.sort, "-issued_date");
     assert.equal(query["filter[client_party_id]"], 501);
     assert.equal(query["filter[kind]"], "RETURN");
+    assert.equal(query["filter[status]"], "DRAFT");
     assert.equal(
       DeliveryNoteDetail.parse({
         id: 1,
         remito_number: "1475",
         kind: "DELIVERY",
+        remito_type: "DELIVERY",
+        status: "CLOSED",
+        picking_status: "LOADED",
+        priority: "NORMAL",
         issued_date: "2018-05-04",
         client_party_id: 501,
         movement_count: 1,
@@ -425,6 +494,424 @@ describe("delivery-note schemas", () => {
         accessory_rentals: [],
       }).movements[0]?.cylinder_serial,
       "323214",
+    );
+  });
+});
+
+describe("arca", () => {
+  it("parses dashboard without secret fields", () => {
+    const parsed = ArcaDashboard.parse({
+      environment: "HOMOLOGATION",
+      status: "NOT_STARTED",
+      checks: {
+        has_private_key: false,
+        has_csr: false,
+        has_certificate: false,
+        is_validated: false,
+      },
+      company: {
+        cuit: null,
+        legal_name: null,
+        alias: null,
+        point_of_sale: 1,
+      },
+      testing_mode: true,
+      simulation_mode: false,
+      effective_environment: "HOMOLOGATION",
+      certificate_fingerprint: null,
+      valid_until: null,
+      last_validation: null,
+      last_authentication: null,
+      connection_status: "NOT_CONFIGURED",
+      last_connection_error: null,
+      last_invoice: null,
+      last_cae: null,
+      point_of_sale: 1,
+    });
+    assert.equal(parsed.status, "NOT_STARTED");
+    assert.ok(!("private_key" in parsed));
+  });
+
+  it("transforms and validates company profile updates", () => {
+    assert.deepEqual(
+      UpdateArcaCompanyProfileInput.parse({
+        cuit: "",
+        legal_name: "  ",
+        alias: null,
+      }),
+      { cuit: null, legal_name: null, alias: null },
+    );
+    assert.equal(
+      UpdateArcaCompanyProfileInput.parse({
+        cuit: "20-12345678-6",
+        point_of_sale: 3,
+      }).point_of_sale,
+      3,
+    );
+    assert.throws(() => UpdateArcaCompanyProfileInput.parse({}));
+    assert.equal(
+      ArcaCompanyProfile.parse({
+        cuit: "20-12345678-6",
+        legal_name: "Weld",
+        alias: "W",
+        point_of_sale: 1,
+      }).cuit,
+      "20-12345678-6",
+    );
+  });
+
+  it("parses keys, testing mode, and result payloads", () => {
+    assert.equal(ArcaEnvironmentQuery.parse({}).environment, "HOMOLOGATION");
+    assert.equal(
+      GenerateArcaKeysInput.parse({ environment: "PRODUCTION" }).environment,
+      "PRODUCTION",
+    );
+    assert.throws(() =>
+      DeleteArcaCertificateInput.parse({
+        environment: "HOMOLOGATION",
+        reason: "",
+      }),
+    );
+    assert.equal(ArcaTestingMode.parse({ enabled: true }).enabled, true);
+    assert.equal(
+      UpdateArcaTestingModeInput.parse({
+        enabled: false,
+        confirm_go_live: true,
+      }).confirm_go_live,
+      true,
+    );
+    assert.equal(
+      UploadCertificateResult.parse({
+        ok: true,
+        message: "ok",
+        status: "CERT_UPLOADED",
+      }).status,
+      "CERT_UPLOADED",
+    );
+    assert.equal(
+      ValidateCertificateResult.parse({
+        ok: true,
+        checks: [{ id: "VALID_X509", passed: true, message: "ok" }],
+        fingerprint: "abc",
+        valid_until: "2030-01-01T00:00:00.000Z",
+      }).ok,
+      true,
+    );
+    assert.equal(
+      ConnectionTestResult.parse({
+        ok: true,
+        steps: [{ id: "WSAA_OK", passed: true, message: "ok" }],
+        last_voucher_number: 12,
+        connection_status: "CONNECTED",
+      }).last_voucher_number,
+      12,
+    );
+  });
+});
+
+describe("remito-ops schemas", () => {
+  it("defaults line/incident creates and validates print query", () => {
+    assert.equal(CreateRemitoLineInput.parse({}).item_kind, "CYLINDER");
+    assert.equal(CreateRemitoLineInput.parse({}).qty, 1);
+    assert.equal(UpdateRemitoLineInput.parse({ qty: "2" }).qty, 2);
+    assert.equal(
+      CreateRemitoIncidentInput.parse({
+        type: "CYLINDER_DAMAGED",
+        description: "dent",
+      }).severity,
+      "MEDIUM",
+    );
+    assert.equal(
+      UpdateRemitoIncidentInput.parse({ status: "RESOLVED" }).status,
+      "RESOLVED",
+    );
+    assert.equal(PrintRemitoPdfQuery.parse({}).copy, "ORIGINAL");
+    assert.throws(() => PrintRemitoPdfQuery.parse({ copy: "REIMPRESION" }));
+    assert.equal(
+      PrintRemitoPdfQuery.parse({
+        copy: "REIMPRESION",
+        reason: "client copy",
+      }).reason,
+      "client copy",
+    );
+  });
+
+  it("parses fleet create inputs and warehouse", () => {
+    assert.equal(
+      CreateVehicleInput.parse({ plate: "AB123CD" }).plate,
+      "AB123CD",
+    );
+    assert.equal(
+      CreateDriverProfileInput.parse({ display_name: "Ana" })
+        .is_helper_eligible,
+      true,
+    );
+    assert.equal(
+      Warehouse.parse({
+        id: 1,
+        code: "MAIN",
+        name: "Main",
+        territory_id: null,
+        is_active: true,
+      }).code,
+      "MAIN",
+    );
+    assert.equal(
+      Vehicle.parse({
+        id: 2,
+        plate: "AB123CD",
+        name: null,
+        is_active: true,
+      }).plate,
+      "AB123CD",
+    );
+    assert.equal(
+      DriverProfile.parse({
+        id: 3,
+        user_id: null,
+        display_name: "Ana",
+        is_helper_eligible: true,
+        is_active: true,
+      }).display_name,
+      "Ana",
+    );
+    assert.equal(
+      RemitoSeries.parse({
+        id: 1,
+        code: "R",
+        pad_width: 8,
+        next_number: 10,
+        is_active: true,
+      }).next_number,
+      10,
+    );
+    assert.equal(
+      RemitoLine.parse({
+        id: 1,
+        remito_id: 9,
+        line_no: 1,
+        item_kind: "CYLINDER",
+        cylinder_id: 5,
+        serial_number: "S1",
+        is_rental: true,
+        qty: 1,
+        picked_qty: 0,
+      }).item_kind,
+      "CYLINDER",
+    );
+    assert.equal(
+      RemitoIncident.parse({
+        id: 1,
+        remito_id: 9,
+        line_id: null,
+        type: "LEAK",
+        severity: "HIGH",
+        status: "OPEN",
+        description: "leak",
+        reported_at: "2026-07-24T12:00:00.000Z",
+      }).type,
+      "LEAK",
+    );
+    assert.equal(
+      RemitoPrintLog.parse({
+        id: 1,
+        remito_id: 9,
+        copy_kind: "ORIGINAL",
+        reprint_seq: null,
+        reason: null,
+        printed_by: 1,
+        printed_at: "2026-07-24T12:00:00.000Z",
+      }).copy_kind,
+      "ORIGINAL",
+    );
+    assert.equal(WarehouseListQuery.parse({}).limit, 50);
+    assert.equal(VehicleListQuery.parse({ q: "AB" }).q, "AB");
+    assert.equal(
+      DriverListQuery.parse({ helpers_only: "true" }).helpers_only,
+      true,
+    );
+    assert.equal(PrintCopyKind.parse("DUPLICADO"), "DUPLICADO");
+    assert.equal(IncidentType.parse("OTHER"), "OTHER");
+  });
+});
+
+describe("billing schemas", () => {
+  it("requires period dates and parses invoice ARCA fields", () => {
+    assert.throws(() => CreateBillingRunInput.parse({ mode: "period" }));
+    assert.equal(
+      CreateBillingRunInput.parse({
+        mode: "period",
+        period_start: "2026-01-01",
+        period_end: "2026-01-31",
+      }).mode,
+      "period",
+    );
+    assert.equal(
+      CreateBillingRunInput.parse({ mode: "history" }).mode,
+      "history",
+    );
+    assert.equal(
+      InvoiceArcaAuthorization.parse({
+        cae: "123",
+        cae_due_date: "2026-08-01",
+        cbte_tipo: 6,
+        pto_vta: 1,
+        cbte_nro: 10,
+        cbte_fch: "2026-07-24",
+        doc_tipo: 80,
+        doc_nro: 20123456786,
+        condicion_iva_receptor: 5,
+        imp_neto: 100,
+        imp_iva: 21,
+        imp_total: 121,
+        arca_environment: "HOMOLOGATION",
+        arca_qr_url: null,
+        authorized_at: "2026-07-24T12:00:00.000Z",
+      }).cae,
+      "123",
+    );
+    assert.equal(
+      Invoice.parse({
+        id: 1,
+        client_party_id: 9,
+        period_start: "2026-01-01",
+        period_end: "2026-01-31",
+        status: "APPROVED",
+        total: 121,
+        created_at: "2026-07-24T12:00:00.000Z",
+        version: 1,
+      }).status,
+      "APPROVED",
+    );
+    assert.equal(
+      ChargeLine.parse({
+        id: 1,
+        invoice_id: 1,
+        source_table: "movement_event",
+        source_id: 9,
+        description: "rental",
+        quantity: 3,
+        unit: "day",
+        unit_price: 10,
+        amount: 30,
+      }).amount,
+      30,
+    );
+    assert.equal(
+      BillingRun.parse({
+        id: 1,
+        period_start: "2026-01-01",
+        period_end: "2026-01-31",
+        client_party_id: null,
+        status: "DRAFT",
+        created_at: "2026-07-24T12:00:00.000Z",
+      }).status,
+      "DRAFT",
+    );
+    assert.equal(
+      BillingRunDetail.parse({
+        id: 1,
+        period_start: "2026-01-01",
+        period_end: "2026-01-31",
+        client_party_id: null,
+        status: "DRAFT",
+        created_at: "2026-07-24T12:00:00.000Z",
+        invoices: [],
+      }).invoices.length,
+      0,
+    );
+    assert.equal(
+      BillingExportPayload.parse({
+        run_id: 1,
+        exported_at: "2026-07-24T12:00:00.000Z",
+        period_start: "2026-01-01",
+        period_end: "2026-01-31",
+        invoices: [
+          {
+            invoice_id: 1,
+            client_party_id: 9,
+            total: 30,
+            lines: [
+              {
+                source_table: "movement_event",
+                source_id: 9,
+                description: "rental",
+                quantity: 3,
+                unit: "day",
+                unit_price: 10,
+                amount: 30,
+              },
+            ],
+          },
+        ],
+      }).run_id,
+      1,
+    );
+    assert.equal(
+      InvoiceListQuery.parse({ "filter[status]": "APPROVED" })[
+        "filter[status]"
+      ],
+      "APPROVED",
+    );
+    assert.equal(Money.parse("12.50"), 12.5);
+    assert.equal(IsoDate.parse("2026-07-24"), "2026-07-24");
+  });
+});
+
+describe("delivery-note transitions", () => {
+  it("parses update, transition, and list response", () => {
+    assert.equal(
+      UpdateDeliveryNoteInput.parse({
+        version: 1,
+        observations: "x",
+      }).observations,
+      "x",
+    );
+    assert.equal(
+      RemitoTransitionInput.parse({ version: 2, note: "issue" }).version,
+      2,
+    );
+    assert.equal(
+      RemitoStatusHistoryEntry.parse({
+        id: 1,
+        from_status: null,
+        to_status: "PREPARED",
+        actor_user_id: 1,
+        note: null,
+        at: "2026-07-24T12:00:00.000Z",
+      }).to_status,
+      "PREPARED",
+    );
+    assert.equal(RemitoStatus.parse("CLOSED"), "CLOSED");
+    assert.equal(GasCode.parse("O2"), "O2");
+    assert.equal(ArcaEnvironment.parse("PRODUCTION"), "PRODUCTION");
+    assert.equal(ArcaOnboardingStatus.parse("CONNECTED"), "CONNECTED");
+    assert.equal(ArcaConnectionStatus.parse("FAILED"), "FAILED");
+    assert.equal(
+      DeliveryNoteListResponse.parse({
+        data: [
+          {
+            id: 1,
+            remito_number: "1",
+            kind: "DELIVERY",
+            remito_type: "DELIVERY",
+            status: "DRAFT",
+            picking_status: "PENDING",
+            priority: "NORMAL",
+            issued_date: "2026-01-01",
+            client_party_id: 1,
+            movement_count: 0,
+            accessory_rental_count: 0,
+          },
+        ],
+        page: {
+          limit: 20,
+          next_cursor: null,
+          has_more: false,
+          total_estimate: 1,
+        },
+      }).page.total_estimate,
+      1,
     );
   });
 });

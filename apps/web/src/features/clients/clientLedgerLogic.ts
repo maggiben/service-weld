@@ -1,4 +1,8 @@
-import type { ClientAccountSummary, MovementState } from "@weld/schemas";
+import type {
+  ClientAccountSummary,
+  MovementKind,
+  MovementState,
+} from "@weld/schemas";
 import type { TFunction } from "i18next";
 import { formatDateDMY } from "../../lib/dateFormat";
 import { movementStateChipColor } from "../../lib/chipColors";
@@ -9,7 +13,7 @@ export { movementStateChipColor };
 type CustodyLabelRow = {
   state: MovementState;
   return_date: string | null;
-  movement_kind: "RENTAL" | "REFILL" | "SUPPLIER_LOAN";
+  movement_kind: MovementKind | "SUPPLIER_LOAN";
 };
 
 /** True when the custody cycle has ended (return, swap, loss, sale, etc.). */

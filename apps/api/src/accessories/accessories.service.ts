@@ -150,6 +150,10 @@ export class AccessoriesService {
 
     return this.repository.returnRental(id, input, expected, principal.id);
   }
+
+  findOpenRentalIdByAccessory(accessoryId: number): Promise<number | null> {
+    return this.repository.findOpenRentalIdByAccessory(accessoryId);
+  }
 }
 
 function isUniqueViolation(error: unknown): boolean {

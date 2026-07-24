@@ -22,6 +22,10 @@ export const EnvSchema = zod.object({
   JWT_REFRESH_SECRET: zod.string().min(1),
   JWT_REFRESH_TTL: zod.coerce.number().int().default(2_592_000),
 
+  // ARCA credential encryption (docs/specs/arca-integration.md R-50).
+  // Base64-encoded 32-byte key for AES-256-GCM. Required to use ARCA module.
+  ARCA_ENCRYPTION_KEY: zod.string().min(1).optional(),
+
   // Bootstrap admin (D-11) — optional; CLI no-ops when unset.
   BOOTSTRAP_ADMIN_USER: zod.string().optional(),
   BOOTSTRAP_ADMIN_PASSWORD: zod.string().optional(),

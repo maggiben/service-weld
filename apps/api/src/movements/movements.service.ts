@@ -4,6 +4,7 @@ import {
   assertKindBasisConsistency,
   assertNotPackedMember,
   assertPlausibleBusinessDate,
+  assertSellable,
   RentalPeriod,
 } from "@weld/domain";
 import type {
@@ -70,11 +71,17 @@ export class MovementsService {
       throw ApiErrors.cylinderAlreadyOut();
     }
 
+    const isSale = input.movement_kind === "SALE";
+
     try {
       assertNotPackedMember(cylinder.packaging);
-      assertDeliverable(cylinder.state, {
-        forRefill: input.movement_kind === "REFILL",
-      });
+      if (isSale) {
+        assertSellable(cylinder.state);
+      } else {
+        assertDeliverable(cylinder.state, {
+          forRefill: input.movement_kind === "REFILL",
+        });
+      }
       assertKindBasisConsistency(input.movement_kind, cylinder.ownership_basis);
       assertPlausibleBusinessDate(input.delivery_date);
     } catch (error) {
@@ -84,12 +91,19 @@ export class MovementsService {
     const gasCode = input.gas_code ?? cylinder.gas_code;
 
     try {
-      return await this.repository.createDelivery(
-        input,
-        cylinder.ownership_basis,
-        gasCode,
-        principal.id,
-      );
+      return isSale
+        ? await this.repository.createSale(
+            input,
+            cylinder.ownership_basis,
+            gasCode,
+            principal.id,
+          )
+        : await this.repository.createDelivery(
+            input,
+            cylinder.ownership_basis,
+            gasCode,
+            principal.id,
+          );
     } catch (error) {
       if (isExclusionViolation(error)) {
         throw ApiErrors.cylinderAlreadyOut();
@@ -248,6 +262,10 @@ export class MovementsService {
       expectedVersion,
       principal.id,
     );
+  }
+
+  findOpenIdByCylinder(cylinderId: number): Promise<number | null> {
+    return this.repository.findOpenIdByCylinder(cylinderId);
   }
 }
 

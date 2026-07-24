@@ -9,7 +9,7 @@
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "isolatedModules": false,
-    "types": ["node", "jest"],
+    "types": ["node", "vitest/globals"],
     "paths": {
       "@weld/schemas": ["../../packages/schemas/src/index.ts"],
       "@weld/domain": ["../../packages/domain/src/index.ts"]

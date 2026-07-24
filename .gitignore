@@ -1,6 +1,9 @@
 # dependencies
 node_modules/
 .pnpm-store/
+.npm-cache/
+vendor/
+apps/api/vendor/
 
 # builds
 dist/

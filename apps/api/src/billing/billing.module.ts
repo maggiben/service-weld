@@ -1,4 +1,5 @@
 import { Injectable, Module, forwardRef } from "@nestjs/common";
+import { ArcaModule } from "../arca/arca.module";
 import { RatesModule } from "../rates/rates.module";
 import { RefillRatesModule } from "../refill-rates/refill-rates.module";
 import { BillingController } from "./billing.controller";
@@ -16,8 +17,11 @@ export class BillingLookupService {
 }
 
 @Module({
-  imports: [forwardRef(() => RatesModule), forwardRef(() => RefillRatesModule)],
-
+  imports: [
+    forwardRef(() => RatesModule),
+    forwardRef(() => RefillRatesModule),
+    ArcaModule,
+  ],
   controllers: [BillingController],
   providers: [BillingService, BillingRepository, BillingLookupService],
   exports: [BillingLookupService, BillingService],

@@ -1,4 +1,5 @@
 import type { Kysely } from "kysely";
+import { remitoTypeForPaperKind } from "@weld/domain";
 import type { DeliveryNoteKind } from "../database/schema.types";
 import type { Database } from "../database/schema.types";
 
@@ -22,6 +23,7 @@ function isUniqueViolation(error: unknown): boolean {
 /**
  * Find-or-create a delivery note by remito number for operational writes
  * (movements, accessory rentals). Empty/whitespace numbers resolve to null.
+ * Implicit creates are CLOSED (custody already posted on the caller path).
  * Concurrent creates race on uq_remito: re-select after unique violation.
  */
 export async function resolveDeliveryNote(
@@ -35,15 +37,23 @@ export async function resolveDeliveryNote(
     .selectFrom("delivery_note")
     .select("id")
     .where("remito_number", "=", remitoNumber)
+    .where("deleted_at", "is", null)
     .executeTakeFirst();
   if (existing) return Number(existing.id);
+
+  const kind = input.kind ?? "DELIVERY";
+  const remitoType = remitoTypeForPaperKind(kind);
 
   try {
     const inserted = await db
       .insertInto("delivery_note")
       .values({
         remito_number: remitoNumber,
-        kind: input.kind ?? "DELIVERY",
+        kind,
+        remito_type: remitoType,
+        status: "CLOSED",
+        picking_status: "LOADED",
+        priority: "NORMAL",
         issued_date: input.issued_date ?? null,
         client_party_id: input.client_party_id ?? null,
       })
@@ -56,6 +66,7 @@ export async function resolveDeliveryNote(
       .selectFrom("delivery_note")
       .select("id")
       .where("remito_number", "=", remitoNumber)
+      .where("deleted_at", "is", null)
       .executeTakeFirst();
     if (!raced) throw error;
     return Number(raced.id);

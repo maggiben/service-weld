@@ -3,6 +3,7 @@ import { businessTodayIso, calendarDaysBetween } from "@weld/domain";
 import type {
   Alert,
   AlertListQuery,
+  MovementKind,
   RefreshAlertsResult,
   UpdateAlertContact,
 } from "@weld/schemas";
@@ -38,7 +39,7 @@ type AlertContext = {
   gas_code: string | null;
   days_open: number | null;
   loan_stage: string | null;
-  movement_kind: "RENTAL" | "REFILL" | null;
+  movement_kind: MovementKind | null;
   client_phone: string | null;
 };
 

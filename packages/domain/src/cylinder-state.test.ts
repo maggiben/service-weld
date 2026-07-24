@@ -1,17 +1,19 @@
-import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
   assertCanEditCylinderData,
   assertCanEmpty,
   assertCanFill,
   assertDeliverable,
+  assertSellable,
   DELIVERABLE_STATES,
+  SELLABLE_STATES,
   isCylinderDataEditable,
   isTerminalCylinderState,
   stateAfterDelivery,
   stateAfterEmpty,
   stateAfterFill,
   stateAfterReturn,
+  stateAfterSale,
 } from "./cylinder-state";
 import { DomainError } from "./errors";
 import { assertKindBasisConsistency, movementKindForBasis } from "./ownership";
@@ -52,6 +54,34 @@ describe("assertDeliverable", () => {
       (err: unknown) =>
         err instanceof DomainError && err.code === "CYLINDER_TERMINAL",
     );
+  });
+});
+
+describe("assertSellable", () => {
+  for (const state of SELLABLE_STATES) {
+    it(`allows ${state}`, () => {
+      assert.doesNotThrow(() => assertSellable(state));
+    });
+  }
+
+  it("rejects AT_CLIENT (must sell from stock)", () => {
+    assert.throws(
+      () => assertSellable("AT_CLIENT"),
+      (err: unknown) =>
+        err instanceof DomainError && err.code === "ILLEGAL_STATE_TRANSITION",
+    );
+  });
+
+  it("rejects terminal SOLD", () => {
+    assert.throws(
+      () => assertSellable("SOLD"),
+      (err: unknown) =>
+        err instanceof DomainError && err.code === "CYLINDER_TERMINAL",
+    );
+  });
+
+  it("sale lands in terminal SOLD", () => {
+    assert.equal(stateAfterSale(), "SOLD");
   });
 });
 
@@ -148,12 +178,15 @@ describe("assertCanEmpty", () => {
 });
 
 describe("movement kind ↔ ownership (BR-08)", () => {
-  it("RENTAL only for OURS/SUPPLIER; REFILL only for CUSTOMER", () => {
+  it("RENTAL only for OURS/SUPPLIER; REFILL only for CUSTOMER; SALE only for OURS", () => {
     assert.doesNotThrow(() => assertKindBasisConsistency("RENTAL", "OURS"));
     assert.doesNotThrow(() => assertKindBasisConsistency("RENTAL", "SUPPLIER"));
     assert.doesNotThrow(() => assertKindBasisConsistency("REFILL", "CUSTOMER"));
+    assert.doesNotThrow(() => assertKindBasisConsistency("SALE", "OURS"));
     assert.throws(() => assertKindBasisConsistency("REFILL", "OURS"));
     assert.throws(() => assertKindBasisConsistency("RENTAL", "CUSTOMER"));
+    assert.throws(() => assertKindBasisConsistency("SALE", "SUPPLIER"));
+    assert.throws(() => assertKindBasisConsistency("SALE", "CUSTOMER"));
   });
 
   it("infers kind from basis", () => {

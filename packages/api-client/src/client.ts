@@ -5,6 +5,7 @@ import type {
   BatteryListResponse,
   BillingExportPayload,
   BillingRunDetail,
+  Invoice,
   Client,
   ClientAccountQuery,
   ClientAccountResponse,
@@ -55,6 +56,25 @@ import type {
   DeliveryNoteListQuery,
   DeliveryNoteListResponse,
   CreateDeliveryNoteInput,
+  UpdateDeliveryNoteInput,
+  RemitoTransitionInput,
+  CreateRemitoLineInput,
+  UpdateRemitoLineInput,
+  RemitoLine,
+  CreateRemitoIncidentInput,
+  UpdateRemitoIncidentInput,
+  RemitoIncident,
+  WarehouseListQuery,
+  WarehouseListResponse,
+  VehicleListQuery,
+  VehicleListResponse,
+  CreateVehicleInput,
+  Vehicle,
+  DriverListQuery,
+  DriverListResponse,
+  CreateDriverProfileInput,
+  DriverProfile,
+  RemitoSeries,
   SupplierLoan,
   SupplierLoanListQuery,
   SupplierLoanListResponse,
@@ -128,6 +148,19 @@ import type {
   MigrationSnapshot,
   MigrationUploadedFile,
   MigrationWorkbookSlot,
+  ArcaEnvironment,
+  ArcaDashboard,
+  ArcaCompanyProfile,
+  ArcaTestingMode,
+  ArcaSimulationMode,
+  UpdateArcaCompanyProfileInput,
+  UpdateArcaTestingModeInput,
+  UpdateArcaSimulationModeInput,
+  GenerateArcaKeysInput,
+  UploadCertificateResult,
+  ValidateCertificateResult,
+  DeleteArcaCertificateInput,
+  ConnectionTestResult,
 } from "@weld/schemas";
 import { ErrorEnvelope } from "@weld/schemas";
 import { ApiClientError } from "./errors";
@@ -609,10 +642,247 @@ export class WeldApiClient {
     return this.request<DeliveryNoteDetail>("GET", `/delivery-notes/${id}`);
   }
 
+  async downloadDeliveryNotePdf(
+    id: number,
+    query: { copy?: string; reason?: string } = {},
+  ): Promise<{ blob: Blob; filename: string }> {
+    const headers: Record<string, string> = { Accept: "application/pdf" };
+    const access = this.tokens.getAccessToken();
+    if (access) headers.Authorization = `Bearer ${access}`;
+    const response = await this.fetchImpl(
+      `${this.baseUrl}/delivery-notes/${id}/pdf${toQuery(query)}`,
+      { method: "GET", headers },
+    );
+    if (!response.ok) {
+      const text = await response.text();
+      let json: unknown = null;
+      try {
+        json = text ? JSON.parse(text) : null;
+      } catch {
+        json = null;
+      }
+      const parsed = ErrorEnvelope.safeParse(json);
+      if (parsed.success) {
+        throw ApiClientError.fromEnvelope(response.status, parsed.data);
+      }
+      throw new ApiClientError(
+        "HTTP_ERROR",
+        `Request failed with ${response.status}`,
+        response.status,
+      );
+    }
+    const disposition = response.headers.get("content-disposition") ?? "";
+    const match = /filename="?([^";]+)"?/i.exec(disposition);
+    const filename = match?.[1] ?? `remito-${id}.pdf`;
+    const blob = await response.blob();
+    return { blob, filename };
+  }
+
   createDeliveryNote(input: CreateDeliveryNoteInput): Promise<DeliveryNote> {
     return this.request<DeliveryNote>("POST", "/delivery-notes", {
       body: input,
     });
+  }
+
+  updateDeliveryNote(
+    id: number,
+    input: UpdateDeliveryNoteInput,
+  ): Promise<DeliveryNote> {
+    return this.request<DeliveryNote>("PATCH", `/delivery-notes/${id}`, {
+      body: input,
+    });
+  }
+
+  prepareDeliveryNote(
+    id: number,
+    input: RemitoTransitionInput,
+  ): Promise<DeliveryNote> {
+    return this.request<DeliveryNote>("POST", `/delivery-notes/${id}/prepare`, {
+      body: input,
+    });
+  }
+
+  assignDeliveryNote(
+    id: number,
+    input: RemitoTransitionInput,
+  ): Promise<DeliveryNote> {
+    return this.request<DeliveryNote>("POST", `/delivery-notes/${id}/assign`, {
+      body: input,
+    });
+  }
+
+  loadDeliveryNote(
+    id: number,
+    input: RemitoTransitionInput,
+  ): Promise<DeliveryNote> {
+    return this.request<DeliveryNote>("POST", `/delivery-notes/${id}/load`, {
+      body: input,
+    });
+  }
+
+  dispatchDeliveryNote(
+    id: number,
+    input: RemitoTransitionInput,
+  ): Promise<DeliveryNote> {
+    return this.request<DeliveryNote>(
+      "POST",
+      `/delivery-notes/${id}/dispatch`,
+      { body: input },
+    );
+  }
+
+  deliverDeliveryNote(
+    id: number,
+    input: RemitoTransitionInput,
+  ): Promise<DeliveryNote> {
+    return this.request<DeliveryNote>("POST", `/delivery-notes/${id}/deliver`, {
+      body: input,
+    });
+  }
+
+  signDeliveryNote(
+    id: number,
+    input: RemitoTransitionInput,
+  ): Promise<DeliveryNote> {
+    return this.request<DeliveryNote>("POST", `/delivery-notes/${id}/sign`, {
+      body: input,
+    });
+  }
+
+  closeDeliveryNote(
+    id: number,
+    input: RemitoTransitionInput,
+  ): Promise<DeliveryNote> {
+    return this.request<DeliveryNote>("POST", `/delivery-notes/${id}/close`, {
+      body: input,
+    });
+  }
+
+  cancelDeliveryNote(
+    id: number,
+    input: RemitoTransitionInput,
+  ): Promise<DeliveryNote> {
+    return this.request<DeliveryNote>("POST", `/delivery-notes/${id}/cancel`, {
+      body: input,
+    });
+  }
+
+  startDeliveryNotePicking(
+    id: number,
+    input: RemitoTransitionInput,
+  ): Promise<DeliveryNote> {
+    return this.request<DeliveryNote>(
+      "POST",
+      `/delivery-notes/${id}/picking/start`,
+      { body: input },
+    );
+  }
+
+  completeDeliveryNotePicking(
+    id: number,
+    input: RemitoTransitionInput,
+  ): Promise<DeliveryNote> {
+    return this.request<DeliveryNote>(
+      "POST",
+      `/delivery-notes/${id}/picking/complete`,
+      { body: input },
+    );
+  }
+
+  addDeliveryNoteLine(
+    id: number,
+    input: CreateRemitoLineInput,
+  ): Promise<RemitoLine> {
+    return this.request<RemitoLine>("POST", `/delivery-notes/${id}/lines`, {
+      body: input,
+    });
+  }
+
+  updateDeliveryNoteLine(
+    id: number,
+    lineId: number,
+    input: UpdateRemitoLineInput,
+  ): Promise<RemitoLine> {
+    return this.request<RemitoLine>(
+      "PATCH",
+      `/delivery-notes/${id}/lines/${lineId}`,
+      { body: input },
+    );
+  }
+
+  deleteDeliveryNoteLine(id: number, lineId: number): Promise<void> {
+    return this.request<void>(
+      "DELETE",
+      `/delivery-notes/${id}/lines/${lineId}`,
+    );
+  }
+
+  addDeliveryNoteIncident(
+    id: number,
+    input: CreateRemitoIncidentInput,
+  ): Promise<RemitoIncident> {
+    return this.request<RemitoIncident>(
+      "POST",
+      `/delivery-notes/${id}/incidents`,
+      { body: input },
+    );
+  }
+
+  updateDeliveryNoteIncident(
+    id: number,
+    incidentId: number,
+    input: UpdateRemitoIncidentInput,
+  ): Promise<RemitoIncident> {
+    return this.request<RemitoIncident>(
+      "PATCH",
+      `/delivery-notes/${id}/incidents/${incidentId}`,
+      { body: input },
+    );
+  }
+
+  listWarehouses(
+    query: Partial<WarehouseListQuery> & Record<string, QueryValue> = {},
+  ): Promise<WarehouseListResponse> {
+    return this.request<WarehouseListResponse>(
+      "GET",
+      `/warehouses${toQuery(query as Record<string, QueryValue>)}`,
+    );
+  }
+
+  listVehicles(
+    query: Partial<VehicleListQuery> & Record<string, QueryValue> = {},
+  ): Promise<VehicleListResponse> {
+    return this.request<VehicleListResponse>(
+      "GET",
+      `/vehicles${toQuery(query as Record<string, QueryValue>)}`,
+    );
+  }
+
+  createVehicle(input: CreateVehicleInput): Promise<Vehicle> {
+    return this.request<Vehicle>("POST", "/vehicles", { body: input });
+  }
+
+  listDrivers(
+    query: Partial<DriverListQuery> & Record<string, QueryValue> = {},
+  ): Promise<DriverListResponse> {
+    return this.request<DriverListResponse>(
+      "GET",
+      `/drivers${toQuery(query as Record<string, QueryValue>)}`,
+    );
+  }
+
+  createDriver(input: CreateDriverProfileInput): Promise<DriverProfile> {
+    return this.request<DriverProfile>("POST", "/drivers", { body: input });
+  }
+
+  listRemitoSeries(
+    query: Partial<{ limit: number; cursor?: string; q?: string }> &
+      Record<string, QueryValue> = {},
+  ): Promise<{
+    data: RemitoSeries[];
+    page: WarehouseListResponse["page"];
+  }> {
+    return this.request("GET", `/remito-series${toQuery(query)}`);
   }
 
   listOutstanding(
@@ -879,6 +1149,102 @@ export class WeldApiClient {
     return this.request<{ ok: true }>("DELETE", `/admin/users/${id}`);
   }
 
+  getArcaDashboard(
+    environment: ArcaEnvironment = "HOMOLOGATION",
+  ): Promise<ArcaDashboard> {
+    return this.request<ArcaDashboard>(
+      "GET",
+      `/arca${toQuery({ environment })}`,
+    );
+  }
+
+  getArcaCompanyProfile(): Promise<ArcaCompanyProfile> {
+    return this.request<ArcaCompanyProfile>("GET", "/arca/company");
+  }
+
+  updateArcaCompanyProfile(
+    input: UpdateArcaCompanyProfileInput,
+  ): Promise<ArcaCompanyProfile> {
+    return this.request<ArcaCompanyProfile>("PATCH", "/arca/company", {
+      body: input,
+    });
+  }
+
+  getArcaTestingMode(): Promise<ArcaTestingMode> {
+    return this.request<ArcaTestingMode>("GET", "/arca/testing-mode");
+  }
+
+  updateArcaTestingMode(
+    input: UpdateArcaTestingModeInput,
+  ): Promise<ArcaTestingMode> {
+    return this.request<ArcaTestingMode>("PATCH", "/arca/testing-mode", {
+      body: input,
+    });
+  }
+
+  getArcaSimulationMode(): Promise<ArcaSimulationMode> {
+    return this.request<ArcaSimulationMode>("GET", "/arca/simulation-mode");
+  }
+
+  updateArcaSimulationMode(
+    input: UpdateArcaSimulationModeInput,
+  ): Promise<ArcaSimulationMode> {
+    return this.request<ArcaSimulationMode>("PATCH", "/arca/simulation-mode", {
+      body: input,
+    });
+  }
+
+  generateArcaKeys(input: GenerateArcaKeysInput): Promise<ArcaDashboard> {
+    return this.request<ArcaDashboard>("POST", "/arca/keys", { body: input });
+  }
+
+  downloadArcaCsr(
+    environment: ArcaEnvironment = "HOMOLOGATION",
+  ): Promise<Blob> {
+    return this.requestBlob("GET", `/arca/csr${toQuery({ environment })}`);
+  }
+
+  uploadArcaCertificate(
+    environment: ArcaEnvironment,
+    file: Blob,
+    filename: string,
+  ): Promise<UploadCertificateResult> {
+    const form = new FormData();
+    form.append("environment", environment);
+    form.append("file", file, filename);
+    return this.requestForm<UploadCertificateResult>(
+      "POST",
+      "/arca/certificate",
+      form,
+    );
+  }
+
+  validateArcaCertificate(
+    environment: ArcaEnvironment,
+  ): Promise<ValidateCertificateResult> {
+    return this.request<ValidateCertificateResult>(
+      "POST",
+      "/arca/certificate/validate",
+      { body: { environment } },
+    );
+  }
+
+  deleteArcaCertificate(
+    input: DeleteArcaCertificateInput,
+  ): Promise<ArcaDashboard> {
+    return this.request<ArcaDashboard>("DELETE", "/arca/certificate", {
+      body: input,
+    });
+  }
+
+  testArcaConnection(
+    environment: ArcaEnvironment,
+  ): Promise<ConnectionTestResult> {
+    return this.request<ConnectionTestResult>("POST", "/arca/connection-test", {
+      body: { environment },
+    });
+  }
+
   getMigrationDataStatus(): Promise<MigrationDataStatus> {
     return this.request<MigrationDataStatus>(
       "GET",
@@ -1099,6 +1465,68 @@ export class WeldApiClient {
     );
   }
 
+  getInvoice(id: number): Promise<Invoice> {
+    return this.request<Invoice>("GET", `/billing/invoices/${id}`);
+  }
+
+  approveInvoice(id: number): Promise<Invoice> {
+    return this.request<Invoice>("POST", `/billing/invoices/${id}/approve`);
+  }
+
+  authorizeInvoice(id: number): Promise<Invoice> {
+    return this.request<Invoice>("POST", `/billing/invoices/${id}/authorize`);
+  }
+
+  issueInvoice(id: number): Promise<Invoice> {
+    return this.request<Invoice>("POST", `/billing/invoices/${id}/issue`);
+  }
+
+  getBillingSimulationMode(): Promise<ArcaSimulationMode> {
+    return this.request<ArcaSimulationMode>("GET", "/billing/simulation-mode");
+  }
+
+  resetSimulationInvoice(id: number): Promise<Invoice> {
+    return this.request<Invoice>(
+      "POST",
+      `/billing/invoices/${id}/reset-simulation`,
+    );
+  }
+
+  async downloadInvoicePdf(
+    id: number,
+  ): Promise<{ blob: Blob; filename: string }> {
+    const headers: Record<string, string> = { Accept: "application/pdf" };
+    const access = this.tokens.getAccessToken();
+    if (access) headers.Authorization = `Bearer ${access}`;
+    const response = await this.fetchImpl(
+      `${this.baseUrl}/billing/invoices/${id}/pdf`,
+      { method: "GET", headers },
+    );
+    if (!response.ok) {
+      const text = await response.text();
+      let json: unknown = null;
+      try {
+        json = text ? JSON.parse(text) : null;
+      } catch {
+        json = null;
+      }
+      const parsed = ErrorEnvelope.safeParse(json);
+      if (parsed.success) {
+        throw ApiClientError.fromEnvelope(response.status, parsed.data);
+      }
+      throw new ApiClientError(
+        "HTTP_ERROR",
+        `Request failed with ${response.status}`,
+        response.status,
+      );
+    }
+    const blob = await response.blob();
+    const disposition = response.headers.get("Content-Disposition") ?? "";
+    const match = /filename="([^"]+)"/.exec(disposition);
+    const filename = match?.[1] ?? `factura-${id}.pdf`;
+    return { blob, filename };
+  }
+
   private async request<T>(
     method: string,
     path: string,
@@ -1164,6 +1592,59 @@ export class WeldApiClient {
     }
 
     return json as T;
+  }
+
+  private async requestBlob(
+    method: string,
+    path: string,
+    options: { auth?: boolean; retried?: boolean } = {},
+  ): Promise<Blob> {
+    const headers: Record<string, string> = { Accept: "*/*" };
+    const useAuth = options.auth !== false;
+    if (useAuth) {
+      const access = this.tokens.getAccessToken();
+      if (access) headers.Authorization = `Bearer ${access}`;
+    }
+
+    const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
+      method,
+      headers,
+    });
+
+    if (
+      response.status === 401 &&
+      useAuth &&
+      !options.retried &&
+      this.tokens.getRefreshToken()
+    ) {
+      try {
+        await this.refresh();
+        return this.requestBlob(method, path, { ...options, retried: true });
+      } catch {
+        this.tokens.clearTokens();
+      }
+    }
+
+    if (!response.ok) {
+      const text = await response.text();
+      let json: unknown = null;
+      try {
+        json = text ? JSON.parse(text) : null;
+      } catch {
+        json = null;
+      }
+      const parsed = ErrorEnvelope.safeParse(json);
+      if (parsed.success) {
+        throw ApiClientError.fromEnvelope(response.status, parsed.data);
+      }
+      throw new ApiClientError(
+        "HTTP_ERROR",
+        `Request failed with ${response.status}`,
+        response.status,
+      );
+    }
+
+    return response.blob();
   }
 
   private async requestForm<T>(

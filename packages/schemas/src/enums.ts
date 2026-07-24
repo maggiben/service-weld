@@ -28,12 +28,89 @@ export type GasCode = zod.infer<typeof GasCode>;
 export const OwnershipBasis = zod.enum(["OURS", "SUPPLIER", "CUSTOMER"]);
 export type OwnershipBasis = zod.infer<typeof OwnershipBasis>;
 
-export const MovementKind = zod.enum(["RENTAL", "REFILL"]);
+export const MovementKind = zod.enum(["RENTAL", "REFILL", "SALE"]);
 export type MovementKind = zod.infer<typeof MovementKind>;
 
 /** Remito paper kind: outbound delivery vs return document. */
 export const DeliveryNoteKind = zod.enum(["DELIVERY", "RETURN"]);
 export type DeliveryNoteKind = zod.infer<typeof DeliveryNoteKind>;
+
+/** Full remito operational type (docs/specs/remitos.md §7). */
+export const RemitoType = zod.enum([
+  "DELIVERY",
+  "CYLINDER_RETURN",
+  "ACCESSORY_RETURN",
+  "TRANSFER_WAREHOUSE",
+  "INTERNAL_TRANSFER",
+  "CUSTOMER_PICKUP",
+  "ADJUSTMENT",
+  "RENTAL_PICKUP",
+  "RENTAL_DELIVERY",
+]);
+export type RemitoType = zod.infer<typeof RemitoType>;
+
+/** Remito document lifecycle status (docs/specs/remitos.md §5). */
+export const RemitoStatus = zod.enum([
+  "DRAFT",
+  "PREPARED",
+  "ASSIGNED",
+  "LOADED",
+  "IN_TRANSIT",
+  "DELIVERED",
+  "SIGNED",
+  "CLOSED",
+  "INVOICED",
+  "ARCHIVED",
+  "CANCELLED",
+]);
+export type RemitoStatus = zod.infer<typeof RemitoStatus>;
+
+export const RemitoPriority = zod.enum(["LOW", "NORMAL", "HIGH", "URGENT"]);
+export type RemitoPriority = zod.infer<typeof RemitoPriority>;
+
+export const PickingStatus = zod.enum([
+  "PENDING",
+  "PREPARING",
+  "COMPLETE",
+  "LOADED",
+]);
+export type PickingStatus = zod.infer<typeof PickingStatus>;
+
+export const RemitoLineKind = zod.enum(["CYLINDER", "ACCESSORY", "BATTERY"]);
+export type RemitoLineKind = zod.infer<typeof RemitoLineKind>;
+
+export const IncidentType = zod.enum([
+  "CUSTOMER_ABSENT",
+  "CYLINDER_DAMAGED",
+  "WRONG_QUANTITY",
+  "LEAK",
+  "WRONG_GAS",
+  "WRONG_SERIAL",
+  "DELIVERY_REJECTED",
+  "LATE_DELIVERY",
+  "OTHER",
+]);
+export type IncidentType = zod.infer<typeof IncidentType>;
+
+export const IncidentSeverity = zod.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]);
+export type IncidentSeverity = zod.infer<typeof IncidentSeverity>;
+
+export const IncidentStatus = zod.enum([
+  "OPEN",
+  "IN_REVIEW",
+  "RESOLVED",
+  "DISMISSED",
+]);
+export type IncidentStatus = zod.infer<typeof IncidentStatus>;
+
+/** Controlled remito PDF copy kinds (docs/specs/remitos.md §15.2). */
+export const PrintCopyKind = zod.enum([
+  "ORIGINAL",
+  "DUPLICADO",
+  "TRIPLICADO",
+  "REIMPRESION",
+]);
+export type PrintCopyKind = zod.infer<typeof PrintCopyKind>;
 
 export const MovementState = zod.enum([
   "OPEN",

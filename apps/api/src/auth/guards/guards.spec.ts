@@ -24,7 +24,7 @@ function httpContext(user?: ReturnType<typeof principal>, caps?: string[]) {
 describe("CapabilitiesGuard", () => {
   it("allows when no caps required", () => {
     const reflector = {
-      getAllAndOverride: jest.fn().mockReturnValue(undefined),
+      getAllAndOverride: vi.fn().mockReturnValue(undefined),
     };
     const guard = new CapabilitiesGuard(reflector as unknown as Reflector);
     expect(guard.canActivate(httpContext() as never)).toBe(true);
@@ -32,7 +32,7 @@ describe("CapabilitiesGuard", () => {
 
   it("requires auth and matching capabilities", () => {
     const reflector = {
-      getAllAndOverride: jest.fn().mockReturnValue(["clients:write"]),
+      getAllAndOverride: vi.fn().mockReturnValue(["clients:write"]),
     };
     const guard = new CapabilitiesGuard(reflector as unknown as Reflector);
 

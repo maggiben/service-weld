@@ -14,19 +14,19 @@ function packInfo(overrides: Record<string, unknown> = {}) {
 
 describe("BatteriesService", () => {
   const repository = {
-    list: jest.fn(),
-    getById: jest.fn(),
-    getCylinderPackInfo: jest.fn(),
-    create: jest.fn(),
-    addMember: jest.fn(),
-    removeMember: jest.fn(),
-    fill: jest.fn(),
-    empty: jest.fn(),
+    list: vi.fn(),
+    getById: vi.fn(),
+    getCylinderPackInfo: vi.fn(),
+    create: vi.fn(),
+    addMember: vi.fn(),
+    removeMember: vi.fn(),
+    fill: vi.fn(),
+    empty: vi.fn(),
   };
   const service = new BatteriesService(repository as never);
   const user = principal();
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => vi.clearAllMocks());
 
   it("lists and gets", async () => {
     repository.list.mockResolvedValue({ data: [] });

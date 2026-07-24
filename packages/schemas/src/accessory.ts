@@ -68,6 +68,8 @@ export const CreateAccessoryRentalInput = zod.object({
   quantity: zod.number().int().min(1).default(1),
   start_date: IsoDate,
   charge_basis: ChargeBasis.default("RENTAL"),
+  /** Prefer when remito Aggregate already exists (close side effects). */
+  remito_id: zod.number().int().nullable().optional(),
   remito_number: zod.string().nullable().optional(),
   note: zod.string().nullable().optional(),
 });

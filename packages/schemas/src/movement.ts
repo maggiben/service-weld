@@ -46,6 +46,8 @@ export const CreateMovementInput = zod.object({
   gas_code: GasCode.nullable().optional(),
   delivery_date: IsoDate,
   origin_party_id: zod.number().int().nullable().optional(),
+  /** Prefer when remito Aggregate already exists (close side effects). */
+  remito_id: zod.number().int().nullable().optional(),
   remito_number: zod.string().nullable().optional(),
   note: zod.string().nullable().optional(),
   request_id: zod.string().uuid().optional(),

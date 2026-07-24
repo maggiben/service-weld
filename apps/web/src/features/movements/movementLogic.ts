@@ -33,6 +33,26 @@ export function isRentalPickable(
   );
 }
 
+/** Cylinder we own, available to sell from plant stock. */
+export function isSellPickable(
+  item: Pick<
+    Cylinder,
+    | "state"
+    | "ownership_basis"
+    | "packaging"
+    | "current_movement_id"
+    | "current_holder_party_id"
+  >,
+): boolean {
+  return (
+    (item.state === "IN_STOCK_EMPTY" || item.state === "IN_STOCK_FULL") &&
+    item.ownership_basis === "OURS" &&
+    item.packaging !== "BATTERY_MEMBER" &&
+    item.current_movement_id == null &&
+    item.current_holder_party_id == null
+  );
+}
+
 /** Customer-owned cylinder available for refill. */
 export function isRefillPickable(
   item: Pick<Cylinder, "ownership_basis" | "state" | "packaging">,

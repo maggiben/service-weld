@@ -29,6 +29,7 @@ const SKIP_DIRS = new Set([
   ".next",
   "build",
   "out",
+  "vendor", // local/sandbox fallback installs (gitignored)
 ]);
 const SCAN_ROOTS = ["apps", "packages"];
 

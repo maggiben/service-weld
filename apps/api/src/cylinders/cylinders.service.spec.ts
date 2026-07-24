@@ -17,22 +17,22 @@ function cyl(overrides: Record<string, unknown> = {}) {
 
 describe("CylindersService", () => {
   const repository = {
-    list: jest.fn(),
-    getById: jest.fn(),
-    listHistory: jest.fn(),
-    getOwnerPartyType: jest.fn(),
-    gasExists: jest.fn(),
-    create: jest.fn(),
-    update: jest.fn(),
-    reportLoss: jest.fn(),
-    updateState: jest.fn(),
-    fill: jest.fn(),
-    empty: jest.fn(),
+    list: vi.fn(),
+    getById: vi.fn(),
+    listHistory: vi.fn(),
+    getOwnerPartyType: vi.fn(),
+    gasExists: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    reportLoss: vi.fn(),
+    updateState: vi.fn(),
+    fill: vi.fn(),
+    empty: vi.fn(),
   };
   const movementsRepository = {
-    hasOpenMovement: jest.fn(),
-    findOpenIdByCylinder: jest.fn(),
-    createDelivery: jest.fn(),
+    hasOpenMovement: vi.fn(),
+    findOpenIdByCylinder: vi.fn(),
+    createDelivery: vi.fn(),
   };
   const service = new CylindersService(
     repository as never,
@@ -40,7 +40,7 @@ describe("CylindersService", () => {
   );
   const user = principal();
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => vi.clearAllMocks());
 
   it("lists, gets, and history", async () => {
     repository.list.mockResolvedValue({ data: [] });

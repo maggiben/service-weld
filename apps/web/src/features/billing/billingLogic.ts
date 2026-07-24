@@ -5,6 +5,46 @@ type InvoiceLike = {
   charge_lines?: ChargeLine[] | null;
 };
 
+export type BillingInvoiceLocationFilter = {
+  clientPartyId?: number | null;
+  location?:
+    { kind: "locality"; id: number } | { kind: "territory"; id: number } | null;
+};
+
+type BillingInvoiceRow = {
+  client_party_id: number;
+  client_locality_id?: number | null;
+  client_territory_id?: number | null;
+};
+
+/**
+ * View filter for the billing invoice grid — mirrors the client picker
+ * (client / locality / territory) without regenerating the run.
+ */
+export function filterBillingInvoices<T extends BillingInvoiceRow>(
+  invoices: readonly T[],
+  filter: BillingInvoiceLocationFilter,
+): T[] {
+  if (filter.clientPartyId != null) {
+    return invoices.filter(
+      (invoice) => invoice.client_party_id === filter.clientPartyId,
+    );
+  }
+  if (filter.location?.kind === "locality") {
+    const localityId = filter.location.id;
+    return invoices.filter(
+      (invoice) => invoice.client_locality_id === localityId,
+    );
+  }
+  if (filter.location?.kind === "territory") {
+    const territoryId = filter.location.id;
+    return invoices.filter(
+      (invoice) => invoice.client_territory_id === territoryId,
+    );
+  }
+  return [...invoices];
+}
+
 export function invoiceTotalDays(invoice: InvoiceLike): number {
   if (invoice.total_days != null) return invoice.total_days;
   return (invoice.charge_lines ?? []).reduce(

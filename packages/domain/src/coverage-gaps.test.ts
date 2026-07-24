@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
 import {
   DomainError,
   DomainErrors,
@@ -25,10 +24,12 @@ import {
   assertKindBasisConsistency,
   assertCylinderTransition,
   assertDeliverable,
+  assertSellable,
   assertCanReportLoss,
   stateAfterReturn,
   stateAfterDelivery,
   stateAfterLoss,
+  stateAfterSale,
   isTerminalCylinderState,
 } from "./index";
 import { movementKindForBasis } from "./ownership";
@@ -59,6 +60,20 @@ describe("DomainErrors factories", () => {
       DomainErrors.accessoryOnLoanBlocksClose(),
       DomainErrors.invalidCapacity(),
       DomainErrors.invalidMoney(),
+      DomainErrors.illegalRemitoTransition("DRAFT", "CLOSED"),
+      DomainErrors.remitoNotEditable("PREPARED"),
+      DomainErrors.cancelReasonRequired(),
+      DomainErrors.remitoAssignRequiresSchedule(),
+      DomainErrors.illegalArcaTransition("NOT_STARTED", "VALIDATED"),
+      DomainErrors.arcaCuitRequired(),
+      DomainErrors.arcaRegenerateRequiresConfirm(),
+      DomainErrors.arcaCertificateExpired(),
+      DomainErrors.arcaGoLiveRequiresConfirm(),
+      DomainErrors.arcaGoLiveRequiresProduction(),
+      DomainErrors.arcaEncryptionKeyMissing(),
+      DomainErrors.simulationModeRequired(),
+      DomainErrors.invoiceNothingToReset(),
+      DomainErrors.invoiceCannotVoidWithArca(),
     ];
     for (const err of samples) {
       assert.ok(err instanceof DomainError);
@@ -220,7 +235,9 @@ describe("ownership + reports + cylinder transitions", () => {
     assertKindBasisConsistency("REFILL", "CUSTOMER");
     assertKindBasisConsistency("RENTAL", "OURS");
     assertKindBasisConsistency("RENTAL", "SUPPLIER");
+    assertKindBasisConsistency("SALE", "OURS");
     assert.throws(() => assertKindBasisConsistency("RENTAL", "CUSTOMER"));
+    assert.throws(() => assertKindBasisConsistency("SALE", "SUPPLIER"));
     assert.equal(movementKindForBasis("CUSTOMER"), "REFILL");
     assert.equal(movementKindForBasis("OURS"), "RENTAL");
   });
@@ -239,6 +256,7 @@ describe("ownership + reports + cylinder transitions", () => {
   it("extra cylinder transitions", () => {
     assert.equal(isTerminalCylinderState("SOLD"), true);
     assertCylinderTransition("IN_STOCK_EMPTY", "IN_STOCK_EMPTY");
+    assertCylinderTransition("IN_STOCK_EMPTY", "SOLD");
     assertCylinderTransition("IN_STOCK_FULL", "AT_SUPPLIER");
     assertCylinderTransition("AT_SUPPLIER", "IN_STOCK_EMPTY");
     assert.throws(() => assertCylinderTransition("LOST", "AT_CLIENT"));
@@ -249,6 +267,11 @@ describe("ownership + reports + cylinder transitions", () => {
     assertDeliverable("AT_CLIENT", { forRefill: true });
     assert.throws(() => assertDeliverable("AT_CLIENT"));
     assert.throws(() => assertDeliverable("SOLD"));
+    assertSellable("IN_STOCK_FULL");
+    assertSellable("IN_STOCK_EMPTY");
+    assert.throws(() => assertSellable("AT_CLIENT"));
+    assert.throws(() => assertSellable("SOLD"));
+    assert.equal(stateAfterSale(), "SOLD");
     assert.equal(stateAfterReturn(), "IN_STOCK_EMPTY");
     assert.equal(stateAfterDelivery(), "AT_CLIENT");
     assert.equal(stateAfterLoss("BROKEN"), "BROKEN");

@@ -12,16 +12,16 @@ function client(overrides: Record<string, unknown> = {}) {
 
 describe("ClientsService", () => {
   const repository = {
-    list: jest.fn(),
-    getById: jest.fn(),
-    getAccount: jest.fn(),
-    create: jest.fn(),
-    update: jest.fn(),
-    softDelete: jest.fn(),
+    list: vi.fn(),
+    getById: vi.fn(),
+    getAccount: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    softDelete: vi.fn(),
   };
   const service = new ClientsService(repository as never);
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => vi.clearAllMocks());
 
   it("lists with territory scope for clerks", async () => {
     repository.list.mockResolvedValue({ data: [] });

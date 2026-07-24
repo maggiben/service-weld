@@ -4,18 +4,18 @@ import { SupplierLoansService } from "./supplier-loans.service";
 
 describe("SupplierLoansService", () => {
   const repository = {
-    list: jest.fn(),
-    getById: jest.fn(),
-    getPartyType: jest.fn(),
-    getCylinder: jest.fn(),
-    create: jest.fn(),
-    clientExists: jest.fn(),
-    advance: jest.fn(),
+    list: vi.fn(),
+    getById: vi.fn(),
+    getPartyType: vi.fn(),
+    getCylinder: vi.fn(),
+    create: vi.fn(),
+    clientExists: vi.fn(),
+    advance: vi.fn(),
   };
   const service = new SupplierLoansService(repository as never);
   const user = principal();
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => vi.clearAllMocks());
 
   it("lists and gets", async () => {
     repository.list.mockResolvedValue({ data: [] });

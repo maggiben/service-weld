@@ -3,20 +3,20 @@ import { RefillRatesService } from "./refill-rates.service";
 
 describe("RefillRatesService", () => {
   const repository = {
-    list: jest.fn(),
-    getById: jest.fn(),
-    create: jest.fn(),
-    update: jest.fn(),
+    list: vi.fn(),
+    getById: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
   };
   const billingService = {
-    createDraft: jest.fn(),
+    createDraft: vi.fn(),
   };
   const service = new RefillRatesService(
     repository as never,
     billingService as never,
   );
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => vi.clearAllMocks());
 
   it("rejects inverted effective dates on create/update", async () => {
     await expect(

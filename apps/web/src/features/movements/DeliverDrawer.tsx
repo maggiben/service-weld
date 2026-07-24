@@ -38,6 +38,7 @@ import { formatCapacity } from "../../lib/format";
 import {
   isRentalPickable,
   isRefillPickable,
+  isSellPickable,
   cylinderPickerLabel,
   prefillMovementFromCylinder,
 } from "./movementLogic";
@@ -109,14 +110,16 @@ export function DeliverDrawer({
           page: res.page,
         };
       }
-      // Rental: only cylinders available to rent (in plant stock, not with a client).
+      // Rental & sale draw from the same pool: in plant stock, not with a client.
       const res = await api.listCylinders({
         q: query,
         limit: 30,
         "filter[available_for_rental]": true,
       });
       return {
-        data: res.data.filter(isRentalPickable),
+        data: res.data.filter(
+          movementKind === "SALE" ? isSellPickable : isRentalPickable,
+        ),
         page: res.page,
       };
     },
@@ -126,7 +129,7 @@ export function DeliverDrawer({
   const clientsSearch = useQuery({
     queryKey: ["clients", "picker", clientQuery],
     queryFn: () => api.listClients({ q: clientQuery || undefined, limit: 20 }),
-    enabled: open && movementKind === "RENTAL",
+    enabled: open && (movementKind === "RENTAL" || movementKind === "SALE"),
   });
 
   const cylinderOptions = useMemo(() => {
@@ -135,7 +138,9 @@ export function DeliverDrawer({
       selectedCylinder &&
       (movementKind === "RENTAL"
         ? isRentalPickable(selectedCylinder)
-        : isRefillPickable(selectedCylinder));
+        : movementKind === "SALE"
+          ? isSellPickable(selectedCylinder)
+          : isRefillPickable(selectedCylinder));
     if (
       selectedStillValid &&
       !fromSearch.some((item) => item.id === selectedCylinder.id)
@@ -273,7 +278,9 @@ export function DeliverDrawer({
         <Typography variant="h6" sx={{ mb: 1 }}>
           {movementKind === "REFILL"
             ? translate("movements.form.title_refill")
-            : translate("movements.form.title_rental")}
+            : movementKind === "SALE"
+              ? translate("movements.form.title_sale")
+              : translate("movements.form.title_rental")}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           {translate("movements.form.kind_subtitle", {
@@ -311,6 +318,9 @@ export function DeliverDrawer({
                   <ToggleButton value="REFILL">
                     {translate("enums.movement_kind.REFILL")}
                   </ToggleButton>
+                  <ToggleButton value="SALE">
+                    {translate("enums.movement_kind.SALE")}
+                  </ToggleButton>
                 </ToggleButtonGroup>
               </FormControl>
             )}
@@ -319,7 +329,9 @@ export function DeliverDrawer({
           <Alert severity="info" sx={{ py: 0.5 }}>
             {movementKind === "REFILL"
               ? translate("movements.form.hint_refill")
-              : translate("movements.form.hint_rental")}
+              : movementKind === "SALE"
+                ? translate("movements.form.hint_sale")
+                : translate("movements.form.hint_rental")}
           </Alert>
 
           <Controller
@@ -337,7 +349,9 @@ export function DeliverDrawer({
                 getOptionDisabled={(option) =>
                   movementKind === "RENTAL"
                     ? !isRentalPickable(option)
-                    : !isRefillPickable(option)
+                    : movementKind === "SALE"
+                      ? !isSellPickable(option)
+                      : !isRefillPickable(option)
                 }
                 loading={cylindersSearch.isFetching}
                 filterOptions={(opts) => opts}
@@ -359,7 +373,9 @@ export function DeliverDrawer({
                       errors.cylinder_id?.message ??
                       (movementKind === "REFILL"
                         ? translate("movements.form.cylinder_hint_refill")
-                        : translate("movements.form.cylinder_hint_rental"))
+                        : movementKind === "SALE"
+                          ? translate("movements.form.cylinder_hint_sale")
+                          : translate("movements.form.cylinder_hint_rental"))
                     }
                   />
                 )}
@@ -485,7 +501,9 @@ export function DeliverDrawer({
                 label={
                   movementKind === "REFILL"
                     ? translate("movements.form.refill_date")
-                    : translate("movements.form.delivery_date")
+                    : movementKind === "SALE"
+                      ? translate("movements.form.sale_date")
+                      : translate("movements.form.delivery_date")
                 }
                 value={field.value ? dayjs(field.value) : null}
                 onChange={(value: Dayjs | null) =>

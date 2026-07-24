@@ -22,7 +22,8 @@
     "audit": "Audit log",
     "data_migration": "Import / export data",
     "refills": "Refills",
-    "dashboard": "Tablero"
+    "dashboard": "Dashboard",
+    "arca": "ARCA"
   },
   "shell": {
     "signed_in_as": "Signed in as {{username}}",
@@ -31,7 +32,8 @@
       "settings": "Configuration",
       "users": "Users & permissions",
       "audit": "Audit log",
-      "data_migration": "Import / export data"
+      "data_migration": "Import / export data",
+      "arca": "ARCA"
     }
   },
   "login": {
@@ -328,6 +330,7 @@
       "title_deliver": "New delivery / refill",
       "title_rental": "New delivery (rental)",
       "title_refill": "New refill",
+      "title_sale": "New sale",
       "kind_subtitle": "Movement type: {{kind}}",
       "unsaved_confirm": "You have unsaved changes. Close anyway?",
       "cylinder": "Cylinder",
@@ -342,13 +345,16 @@
       "gas_hint_empty": "Empty cylinder: pick gas if needed (capacity shown when known).",
       "delivery_date": "Delivery date",
       "refill_date": "Refill date",
+      "sale_date": "Sale date",
       "remito_number": "Remito #",
       "remito_hint": "Optional. Creates or links the delivery note by number.",
       "note": "Note",
       "hint_rental": "Rental: only our or supplier cylinders available in plant stock (not ones already with another client).",
       "hint_refill": "Refill (customer-owned): the client is the cylinder owner — no separate picker.",
+      "hint_sale": "Sale: only our own cylinders in plant stock. The unit leaves our fleet permanently (marked sold).",
       "cylinder_hint_rental": "Rentable only: in-stock empty/full, not held by a client.",
       "cylinder_hint_refill": "Customer-owned cylinders only (not sold/lost).",
+      "cylinder_hint_sale": "Sellable only: our in-stock empty/full cylinders.",
       "owner_client": "Client (owner)",
       "owner_client_hint": "Taken from the cylinder owner.",
       "owner_client_placeholder": "Pick a cylinder to see the owner"
@@ -457,11 +463,77 @@
     "movement_kind": {
       "RENTAL": "Rental",
       "REFILL": "Refill",
+      "SALE": "Sale",
       "SUPPLIER_LOAN": "Supplier loan"
     },
     "delivery_note_kind": {
       "DELIVERY": "Delivery",
       "RETURN": "Return"
+    },
+    "remito_type": {
+      "DELIVERY": "Delivery",
+      "CYLINDER_RETURN": "Cylinder return",
+      "ACCESSORY_RETURN": "Accessory return",
+      "TRANSFER_WAREHOUSE": "Warehouse transfer",
+      "INTERNAL_TRANSFER": "Internal transfer",
+      "CUSTOMER_PICKUP": "Customer pickup",
+      "ADJUSTMENT": "Adjustment",
+      "RENTAL_PICKUP": "Rental pickup",
+      "RENTAL_DELIVERY": "Rental delivery"
+    },
+    "remito_status": {
+      "DRAFT": "Draft",
+      "PREPARED": "Prepared",
+      "ASSIGNED": "Assigned",
+      "LOADED": "Loaded",
+      "IN_TRANSIT": "In transit",
+      "DELIVERED": "Delivered",
+      "SIGNED": "Signed",
+      "CLOSED": "Closed",
+      "INVOICED": "Invoiced",
+      "ARCHIVED": "Archived",
+      "CANCELLED": "Cancelled"
+    },
+    "remito_priority": {
+      "LOW": "Low",
+      "NORMAL": "Normal",
+      "HIGH": "High",
+      "URGENT": "Urgent"
+    },
+    "picking_status": {
+      "PENDING": "Pending",
+      "PREPARING": "Preparing",
+      "COMPLETE": "Complete",
+      "LOADED": "Loaded"
+    },
+    "incident_type": {
+      "CUSTOMER_ABSENT": "Customer absent",
+      "CYLINDER_DAMAGED": "Cylinder damaged",
+      "WRONG_QUANTITY": "Wrong quantity",
+      "LEAK": "Leak",
+      "WRONG_GAS": "Wrong gas",
+      "WRONG_SERIAL": "Wrong serial",
+      "DELIVERY_REJECTED": "Delivery rejected",
+      "LATE_DELIVERY": "Late delivery",
+      "OTHER": "Other"
+    },
+    "incident_severity": {
+      "LOW": "Low",
+      "MEDIUM": "Medium",
+      "HIGH": "High",
+      "CRITICAL": "Critical"
+    },
+    "incident_status": {
+      "OPEN": "Open",
+      "IN_REVIEW": "In review",
+      "RESOLVED": "Resolved",
+      "DISMISSED": "Dismissed"
+    },
+    "print_copy_kind": {
+      "ORIGINAL": "Original",
+      "DUPLICADO": "Duplicate",
+      "TRIPLICADO": "Triplicate",
+      "REIMPRESION": "Reprint"
     },
     "movement_state": {
       "OPEN": "Open",
@@ -678,10 +750,16 @@
   },
   "delivery_notes": {
     "title": "Delivery notes",
+    "subtitle": "Operational document for every physical movement — draft → closed",
     "empty": "No delivery notes yet",
     "columns": {
       "number": "Remito #",
+      "status": "Status",
+      "picking": "Picking",
+      "type": "Type",
       "kind": "Kind",
+      "priority": "Priority",
+      "lines": "Lines",
       "issued": "Issued",
       "client": "Client",
       "movements": "Movements",
@@ -690,24 +768,73 @@
     "filters": {
       "q": "Search remito or client",
       "kind": "Kind",
+      "type": "Type",
+      "status": "Status",
       "group_remitos": "Remitos",
       "group_clients": "Clients",
       "no_client": "No client"
     },
     "actions": {
-      "new": "New remito"
+      "new": "New remito",
+      "add_line": "Add line",
+      "add_incident": "Log incident",
+      "print": "Print",
+      "print_now": "Generate PDF"
+    },
+    "print": {
+      "title": "Print remito",
+      "copy": "Copy",
+      "reason": "Reprint reason"
+    },
+    "lifecycle": {
+      "prepare": "Prepare",
+      "assign": "Assign",
+      "load": "Mark loaded",
+      "dispatch": "Dispatch",
+      "deliver": "Mark delivered",
+      "sign": "Capture signature",
+      "close": "Close",
+      "cancel": "Cancel",
+      "confirm_cancel": "Confirm cancel",
+      "pick_start": "Start picking",
+      "pick_complete": "Picking complete"
     },
     "form": {
-      "title": "Register remito",
+      "title": "New remito (draft)",
       "number": "Remito #",
+      "number_hint": "Assigned automatically from series A (unique, collision-safe)",
+      "number_loading": "Assigning…",
       "kind": "Kind",
+      "type": "Type",
+      "priority": "Priority",
       "issued": "Issued date",
-      "client": "Client"
+      "scheduled": "Scheduled delivery",
+      "client": "Client",
+      "observations": "Observations",
+      "cancel_reason": "Cancellation reason",
+      "driver": "Driver",
+      "helper": "Helper",
+      "vehicle": "Truck",
+      "add_cylinder": "Cylinder",
+      "incident_type": "Incident type",
+      "incident_description": "Description"
     },
     "detail": {
       "title": "Remito {{number}}",
       "loading": "Loading…",
       "no_date": "No issued date",
+      "scheduled": "Scheduled: {{at}}",
+      "cancel_reason": "Cancelled: {{reason}}",
+      "assign_fleet": "Assign fleet",
+      "truck": "Truck {{plate}}",
+      "driver": "Driver {{name}}",
+      "lines": "Lines ({{count}})",
+      "no_lines": "No lines — add cylinders before preparing",
+      "rental": "Rental",
+      "incidents": "Incidents ({{count}})",
+      "no_incidents": "No incidents",
+      "history": "Status history",
+      "no_history": "No transitions recorded",
       "open_movements": "Open in movements",
       "open_rentals": "Open in accessories",
       "movements": "Movements ({{count}})",
@@ -1082,14 +1209,14 @@
   },
   "billing": {
     "title": "Billing",
-    "subtitle": "Draft → approve → export. From/To apply only to Generate draft. History ignores those filters and bills each open rental from its delivery date through today, at the effective rate.",
-    "period_start": "From (draft)",
-    "period_end": "To (draft)",
-    "period_hint": "These dates apply only to Generate draft.",
-    "history_hint": "Ignores From/To. Uses each open loan’s delivery date → today.",
+    "subtitle": "Draft → approve → authorize with ARCA → print. You can also export for accounting. Generate draft uses From/To. History bills each open rental from its delivery date through today and updates those dates.",
+    "period_start": "From",
+    "period_end": "To",
+    "period_hint": "Generate draft uses these dates.",
+    "history_hint": "History bills each open loan from its delivery → today and updates From/To.",
     "empty": "No draft for this period yet",
     "run_summary": "Draft #{{id}} ({{status}}): {{invoices}} invoices · {{lines}} cylinders · {{days}} cylinder-days · total {{total}} ARS · period {{from}} → {{to}}",
-    "run_summary_history": "History #{{id}} ({{status}}): {{invoices}} invoices · {{lines}} cylinders · {{days}} cylinder-days · total {{total}} ARS · from oldest delivery {{from}} → {{to}} (date filter not used)",
+    "run_summary_history": "History #{{id}} ({{status}}): {{invoices}} invoices · {{lines}} cylinders · {{days}} cylinder-days · total {{total}} ARS · from oldest delivery {{from}} → {{to}}",
     "days_hint": "Cylinder-days = sum of each cylinder’s days in the period (e.g. 22 cylinders × 30 d = 660), not calendar days in the month.",
     "skipped_no_rate": "{{count}} rentals were skipped — no matching rate (and no client daily default). Configure rates, then regenerate the draft.",
     "configure_rates": "Go to Rates",
@@ -1113,6 +1240,8 @@
     },
     "ledger": {
       "subtitle": "Cylinders on hand, delivery/return history and rentals — independent of the invoice.",
+      "subtitle_with_invoice": "Client ledger + billing actions for the current draft invoice.",
+      "invoice_actions": "Invoice for this client",
       "open_full": "Full client page"
     },
     "columns": {
@@ -1127,7 +1256,29 @@
       "daily_rate_value": "{{price}} ARS",
       "daily_rate_mixed": "{{min}}–{{max}} ARS",
       "total": "Total (ARS)",
-      "status": "Status"
+      "status": "Status",
+      "arca": "ARCA",
+      "arca_ok": "CAE",
+      "arca_pending": "No CAE"
+    },
+    "invoice_drawer": {
+      "title": "Invoice · {{client}}",
+      "subtitle": "Period {{from}} → {{to}} · Total {{total}}",
+      "unit": "Unit",
+      "lines_title": "Line items ({{count}})",
+      "authorize": "Authorize with ARCA",
+      "approve_only": "Approve only",
+      "approve_and_issue": "Approve and issue invoice",
+      "print": "Print invoice",
+      "reset_simulation": "Undo (simulation)",
+      "reset_simulation_with_cae": "Void CAE and undo",
+      "reset_simulation_hint": "Simulation mode: if a CAE exists, a Nota de Crédito B is issued via ARCA first (fiscal cancel), then the invoice returns to draft for more testing.",
+      "draft_hint": "This invoice is still a draft. You can approve just this client, or approve and authorize with ARCA to get a CAE.",
+      "cae_ready": "CAE ready",
+      "cae_pending": "Not authorized",
+      "cae_detail": "Invoice {{number}} · CAE {{cae}} · Due {{due}} · {{env}}",
+      "env_homo": "Homologation",
+      "env_prod": "Production"
     }
   },
   "reports": {
@@ -1154,7 +1305,10 @@
       "period_end": "To",
       "client": "Client",
       "cylinder": "Cylinder",
-      "territory": "Territory"
+      "territory": "Territory",
+      "location": "Location",
+      "territories": "Territories",
+      "cities": "Cities with cylinders"
     },
     "group": {
       "state": "State",
@@ -1376,5 +1530,131 @@
     "purge_type_prompt": "To confirm, type exactly: {{phrase}}",
     "purge_type_label": "Confirmation phrase",
     "purge_ok": "Business data wiped"
+  },
+  "arca": {
+    "title": "ARCA Configuration",
+    "subtitle": "Connect the ERP to ARCA for electronic invoicing. The only manual steps are on the ARCA portal.",
+    "testing_banner": {
+      "title": "TESTING MODE ENABLED",
+      "body": "No real fiscal invoices will be generated."
+    },
+    "simulation_banner": {
+      "title": "SIMULATION MODE ENABLED",
+      "body": "ARCA is not called. The ERP behaves as if connected (for development)."
+    },
+    "simulation": {
+      "title": "Simulation (development)",
+      "help": "Turn this on to keep working without WSASS certificates or WSAA/WSFE calls. Invoice authorizations use a fake CAE.",
+      "enable": "Enable simulation mode",
+      "enabled_done": "Simulation mode enabled",
+      "disabled_done": "Simulation mode disabled — real credentials are required",
+      "testing_locked": "While simulation is on, the fiscal testing-mode switch does not apply."
+    },
+    "company": {
+      "title": "Company details",
+      "cuit": "CUIT",
+      "cuit_help": "Format NN-NNNNNNNN-N. Used in the Access Request.",
+      "legal_name": "Legal name",
+      "alias": "Short name / alias",
+      "point_of_sale": "Point of sale",
+      "save": "Save details",
+      "saved": "Company details saved",
+      "clear": "Clear details",
+      "cleared": "Company details cleared and ARCA setup reset",
+      "clear_confirm": "Clear CUIT, legal name, and alias? This also resets wizard progress (keys and certificate)."
+    },
+    "environment": {
+      "title": "Environment",
+      "homologation": "Testing (Homologation)",
+      "production": "Live (Production)"
+    },
+    "status": {
+      "title": "Status",
+      "checks": {
+        "has_private_key": "Secret key",
+        "has_csr": "Access Request",
+        "has_certificate": "Certificate",
+        "is_validated": "Validation"
+      }
+    },
+    "actions": {
+      "title": "Steps",
+      "subtitle": "Follow the order. The suggested step is highlighted.",
+      "generate_keys": "Generate Keys",
+      "download_csr": "Download Access Request",
+      "upload_certificate": "Upload Certificate",
+      "validate_certificate": "Validate Certificate",
+      "test_connection": "Test Connection",
+      "delete_certificate": "Delete Certificate",
+      "danger_zone": "Danger zone",
+      "danger_hint": "Removes the certificate and keys for this environment. You will need to start over.",
+      "regenerate_confirm": "Generating a new key will invalidate the current certificate. Continue?",
+      "delete_reason": "Reason for deletion",
+      "generate_done": "Keys and Access Request generated",
+      "download_done": "Access Request downloaded",
+      "upload_done": "Certificate uploaded",
+      "validate_ok": "Certificate validated",
+      "connection_ok": "Connection successful",
+      "delete_done": "Certificate deleted",
+      "hints": {
+        "generate_keys": "Creates the private key and the request you will paste into WSASS.",
+        "download_csr": "Download the .csr file to paste into the ARCA portal.",
+        "upload_certificate": "Upload the .crt / .pem issued by ARCA.",
+        "validate_certificate": "Check that the certificate matches the key and CUIT.",
+        "test_connection": "Authenticate against WSAA/WSFE with the configured point of sale."
+      }
+    },
+    "instructions": {
+      "title": "ARCA instructions",
+      "homologation": [
+        "Sign in to ARCA with your personal Fiscal Key (individual, not company)",
+        "In My Services open WSASS (if missing, enable it in Fiscal Key Relationships Admin)",
+        "Create a new certificate and paste the Access Request downloaded here",
+        "Download the issued certificate (.crt / .pem)",
+        "Return to the ERP and upload it with «Upload Certificate»"
+      ],
+      "production": [
+        "Sign in to ARCA with Fiscal Key",
+        "Open Digital Certificate Administrator",
+        "Create a new certificate and paste the Access Request",
+        "Authorize the electronic invoicing service (WSFE) in Fiscal Key Relationships Admin",
+        "Download the certificate and upload it to the ERP"
+      ]
+    },
+    "links": {
+      "open_arca": "Open ARCA portal",
+      "open_wsass": "WSASS guide (create certificate)",
+      "wsass_join": "How to enable WSASS",
+      "production_certs": "Certificates documentation",
+      "homologation_hint": "WSASS only appears under My Services after sign-in. Use the buttons to open the portal and the certificate creation guide.",
+      "production_hint": "Live certificates are managed in the ARCA portal (Digital Certificate Administrator) after sign-in."
+    },
+    "testing": {
+      "title": "Testing",
+      "enable": "Enable Testing Mode"
+    },
+    "connection": {
+      "not_configured": "Not configured",
+      "connected": "Connected",
+      "failed": "Failed"
+    },
+    "dashboard": {
+      "title": "Summary",
+      "status": "Certificate status",
+      "environment": "Environment",
+      "cuit": "CUIT",
+      "fingerprint": "Certificate ID",
+      "valid_until": "Expiration",
+      "last_validation": "Last validation",
+      "last_authentication": "Last authentication",
+      "connection": "Connection status",
+      "last_invoice": "Last invoice",
+      "last_cae": "Last CAE",
+      "point_of_sale": "Point of sale"
+    },
+    "errors": {
+      "generic": "Could not complete the action",
+      "read_only": "Read only"
+    }
   }
 }

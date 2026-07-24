@@ -4,17 +4,17 @@ import { TransfersService } from "./transfers.service";
 
 describe("TransfersService", () => {
   const repository = {
-    list: jest.fn(),
-    getById: jest.fn(),
-    getCylinder: jest.fn(),
-    getParty: jest.fn(),
-    create: jest.fn(),
-    close: jest.fn(),
+    list: vi.fn(),
+    getById: vi.fn(),
+    getCylinder: vi.fn(),
+    getParty: vi.fn(),
+    create: vi.fn(),
+    close: vi.fn(),
   };
   const service = new TransfersService(repository as never);
   const user = principal();
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => vi.clearAllMocks());
 
   it("lists and gets", async () => {
     repository.list.mockResolvedValue({ data: [] });

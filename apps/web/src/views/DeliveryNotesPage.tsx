@@ -6,12 +6,7 @@ import Autocomplete from "@mui/material/Autocomplete";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
-import Divider from "@mui/material/Divider";
 import Drawer from "@mui/material/Drawer";
-import Link from "@mui/material/Link";
-import List from "@mui/material/List";
-import ListItem from "@mui/material/ListItem";
-import ListItemText from "@mui/material/ListItemText";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
@@ -23,14 +18,27 @@ import {
   gridClasses,
 } from "@mui/x-data-grid";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import dayjs, { type Dayjs } from "dayjs";
-import NextLink from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { Client, DeliveryNote, DeliveryNoteKind } from "@weld/schemas";
+import type {
+  Client,
+  DeliveryNote,
+  RemitoPriority,
+  RemitoStatus,
+  RemitoType,
+} from "@weld/schemas";
 import { ApiClientError } from "@weld/api-client";
 import { api } from "../api/client";
+import { RemitoDetailPanel } from "../features/delivery-notes/RemitoDetailPanel";
+import {
+  REMITO_STATUSES,
+  REMITO_TYPES,
+  remitoPriorityChipColor,
+  remitoStatusChipColor,
+} from "../features/delivery-notes/remitoLogic";
 import {
   stashNextCursor,
   cursorPageRowCount,
@@ -65,10 +73,13 @@ export default function DeliveryNotesPage() {
   );
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [detailId, setDetailId] = useState<number | null>(null);
-  const [remitoNumber, setRemitoNumber] = useState("");
-  const [noteKind, setNoteKind] = useState<DeliveryNoteKind>("DELIVERY");
+  const [remitoType, setRemitoType] = useState<RemitoType>("DELIVERY");
+  const [priority, setPriority] = useState<RemitoPriority>("NORMAL");
   const [issuedDate, setIssuedDate] = useState(todayIso());
-  const [kindFilter, setKindFilter] = useState<DeliveryNoteKind | "">("");
+  const [scheduledAt, setScheduledAt] = useState<string | null>(null);
+  const [observations, setObservations] = useState("");
+  const [typeFilter, setTypeFilter] = useState<RemitoType | "">("");
+  const [statusFilter, setStatusFilter] = useState<RemitoStatus | "">("");
   const [clientQuery, setClientQuery] = useState("");
   const [client, setClient] = useState<Client | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -105,7 +116,8 @@ export default function DeliveryNotesPage() {
       ...(clientPartyFilter != null
         ? { "filter[client_party_id]": clientPartyFilter }
         : {}),
-      ...(kindFilter ? { "filter[kind]": kindFilter } : {}),
+      ...(typeFilter ? { "filter[remito_type]": typeFilter } : {}),
+      ...(statusFilter ? { "filter[status]": statusFilter } : {}),
     }),
     [
       paginationModel.pageSize,
@@ -113,7 +125,8 @@ export default function DeliveryNotesPage() {
       debouncedSearch,
       remitoFilter,
       clientPartyFilter,
-      kindFilter,
+      typeFilter,
+      statusFilter,
     ],
   );
 
@@ -125,13 +138,13 @@ export default function DeliveryNotesPage() {
 
   const suggestQuery = searchInput.trim();
   const remitoSuggest = useQuery({
-    queryKey: ["delivery-notes", "suggest", suggestQuery, kindFilter],
+    queryKey: ["delivery-notes", "suggest", suggestQuery, typeFilter],
     queryFn: () =>
       api.listDeliveryNotes({
         q: suggestQuery || undefined,
         limit: 8,
         sort: "-issued_date",
-        ...(kindFilter ? { "filter[kind]": kindFilter } : {}),
+        ...(typeFilter ? { "filter[remito_type]": typeFilter } : {}),
       }),
     enabled: suggestQuery.length >= 1,
   });
@@ -147,16 +160,10 @@ export default function DeliveryNotesPage() {
       (note) => ({ type: "remito", note }),
     );
     const clients: SearchOption[] = (clientSuggest.data?.data ?? []).map(
-      (client) => ({ type: "client", client }),
+      (clientRow) => ({ type: "client", client: clientRow }),
     );
     return [...remitos, ...clients];
   }, [remitoSuggest.data, clientSuggest.data]);
-
-  const detailQuery = useQuery({
-    queryKey: ["delivery-notes", "detail", detailId],
-    queryFn: () => api.getDeliveryNote(detailId!),
-    enabled: detailId != null,
-  });
 
   const rows = notesQuery.data?.data ?? [];
   const pageMeta = notesQuery.data?.page;
@@ -184,23 +191,44 @@ export default function DeliveryNotesPage() {
     enabled: drawerOpen,
   });
 
+  const seriesQuery = useQuery({
+    queryKey: ["remito-series", "create"],
+    queryFn: () => api.listRemitoSeries({ limit: 20 }),
+    enabled: drawerOpen,
+  });
+
+  const nextRemitoNumber = useMemo(() => {
+    const series =
+      seriesQuery.data?.data.find((row) => row.code === "A") ??
+      seriesQuery.data?.data[0];
+    if (!series) return null;
+    return `${series.code}-${String(series.next_number).padStart(series.pad_width, "0")}`;
+  }, [seriesQuery.data]);
+
   const create = useMutation({
     mutationFn: () =>
       api.createDeliveryNote({
-        remito_number: remitoNumber.trim(),
-        kind: noteKind,
+        series_code: "A",
+        remito_type: remitoType,
+        priority,
         issued_date: issuedDate || null,
+        scheduled_delivery_at: scheduledAt,
         client_party_id: client?.id ?? null,
+        observations: observations.trim() || null,
       }),
-    onSuccess: async () => {
+    onSuccess: async (created) => {
       await queryClient.invalidateQueries({ queryKey: ["delivery-notes"] });
+      await queryClient.invalidateQueries({ queryKey: ["remito-series"] });
       setDrawerOpen(false);
-      setRemitoNumber("");
-      setNoteKind("DELIVERY");
+      setRemitoType("DELIVERY");
+      setPriority("NORMAL");
       setIssuedDate(todayIso());
+      setScheduledAt(null);
+      setObservations("");
       setClient(null);
       setClientQuery("");
       setError(null);
+      setDetailId(created.id);
     },
     onError: (err) => {
       if (err instanceof ApiClientError && err.code === "DUPLICATE_REMITO") {
@@ -224,16 +252,53 @@ export default function DeliveryNotesPage() {
         minWidth: 120,
       },
       {
-        field: "kind",
-        headerName: translate("delivery_notes.columns.kind"),
+        field: "status",
+        headerName: translate("delivery_notes.columns.status"),
+        width: 130,
+        renderCell: (params) => (
+          <Chip
+            size="small"
+            color={remitoStatusChipColor(params.row.status)}
+            label={translate(`enums.remito_status.${params.row.status}`)}
+          />
+        ),
+      },
+      {
+        field: "picking_status",
+        headerName: translate("delivery_notes.columns.picking"),
         width: 120,
-        valueFormatter: (value: DeliveryNoteKind) =>
-          translate(`enums.delivery_note_kind.${value}`),
+        valueFormatter: (value: string) =>
+          translate(`enums.picking_status.${value}`),
+      },
+      {
+        field: "remito_type",
+        headerName: translate("delivery_notes.columns.type"),
+        width: 150,
+        valueFormatter: (value: RemitoType) =>
+          translate(`enums.remito_type.${value}`),
+      },
+      {
+        field: "priority",
+        headerName: translate("delivery_notes.columns.priority"),
+        width: 110,
+        renderCell: (params) => (
+          <Chip
+            size="small"
+            color={remitoPriorityChipColor(params.row.priority)}
+            label={translate(`enums.remito_priority.${params.row.priority}`)}
+          />
+        ),
+      },
+      {
+        field: "line_count",
+        headerName: translate("delivery_notes.columns.lines"),
+        width: 90,
+        valueGetter: (_value, row) => row.line_count ?? 0,
       },
       {
         field: "issued_date",
         headerName: translate("delivery_notes.columns.issued"),
-        width: 140,
+        width: 120,
         valueFormatter: (value: string | null) => value ?? "—",
       },
       {
@@ -243,23 +308,9 @@ export default function DeliveryNotesPage() {
         minWidth: 160,
         valueGetter: (_value, row) => row.client_name ?? "—",
       },
-      {
-        field: "movement_count",
-        headerName: translate("delivery_notes.columns.movements"),
-        width: 110,
-        valueGetter: (_value, row) => row.movement_count ?? 0,
-      },
-      {
-        field: "accessory_rental_count",
-        headerName: translate("delivery_notes.columns.rentals"),
-        width: 110,
-        valueGetter: (_value, row) => row.accessory_rental_count ?? 0,
-      },
     ],
     [translate],
   );
-
-  const detail = detailQuery.data;
 
   return (
     <Box
@@ -271,9 +322,14 @@ export default function DeliveryNotesPage() {
         alignItems={{ sm: "center" }}
         justifyContent="space-between"
       >
-        <Typography variant="h5">
-          {translate("delivery_notes.title")}
-        </Typography>
+        <Box>
+          <Typography variant="h5">
+            {translate("delivery_notes.title")}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {translate("delivery_notes.subtitle")}
+          </Typography>
+        </Box>
         {canWrite && (
           <Button
             variant="contained"
@@ -359,9 +415,7 @@ export default function DeliveryNotesPage() {
                       {option.note.client_name ??
                         translate("delivery_notes.filters.no_client")}
                       {" · "}
-                      {translate(
-                        `enums.delivery_note_kind.${option.note.kind}`,
-                      )}
+                      {translate(`enums.remito_status.${option.note.status}`)}
                     </Typography>
                   </Stack>
                 </li>
@@ -383,21 +437,38 @@ export default function DeliveryNotesPage() {
         <TextField
           select
           size="small"
-          label={translate("delivery_notes.filters.kind")}
-          value={kindFilter}
+          label={translate("delivery_notes.filters.type")}
+          value={typeFilter}
           onChange={(event) => {
-            setKindFilter(event.target.value as DeliveryNoteKind | "");
+            setTypeFilter(event.target.value as RemitoType | "");
+            resetPaging();
+          }}
+          sx={{ minWidth: 180 }}
+        >
+          <MenuItem value="">{translate("clients.filters.all")}</MenuItem>
+          {REMITO_TYPES.map((type) => (
+            <MenuItem key={type} value={type}>
+              {translate(`enums.remito_type.${type}`)}
+            </MenuItem>
+          ))}
+        </TextField>
+        <TextField
+          select
+          size="small"
+          label={translate("delivery_notes.filters.status")}
+          value={statusFilter}
+          onChange={(event) => {
+            setStatusFilter(event.target.value as RemitoStatus | "");
             resetPaging();
           }}
           sx={{ minWidth: 160 }}
         >
           <MenuItem value="">{translate("clients.filters.all")}</MenuItem>
-          <MenuItem value="DELIVERY">
-            {translate("enums.delivery_note_kind.DELIVERY")}
-          </MenuItem>
-          <MenuItem value="RETURN">
-            {translate("enums.delivery_note_kind.RETURN")}
-          </MenuItem>
+          {REMITO_STATUSES.map((status) => (
+            <MenuItem key={status} value={status}>
+              {translate(`enums.remito_status.${status}`)}
+            </MenuItem>
+          ))}
         </TextField>
       </Stack>
 
@@ -438,7 +509,9 @@ export default function DeliveryNotesPage() {
         anchor="right"
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        PaperProps={{ sx: { width: { xs: "100%", sm: 420 } } }}
+        // Above the fixed AppBar (shell uses drawer + 1) so the title/labels are not clipped.
+        sx={{ zIndex: (theme) => theme.zIndex.modal }}
+        PaperProps={{ sx: { width: { xs: "100%", sm: 440 } } }}
       >
         <Box
           component="form"
@@ -461,36 +534,63 @@ export default function DeliveryNotesPage() {
               {error}
             </Alert>
           )}
-          <Stack spacing={2} sx={{ flex: 1 }}>
+          <Stack spacing={2} sx={{ flex: 1, overflow: "auto", pt: 0.5 }}>
             <TextField
               label={translate("delivery_notes.form.number")}
-              value={remitoNumber}
-              onChange={(event) => setRemitoNumber(event.target.value)}
-              required
+              value={
+                nextRemitoNumber ??
+                translate("delivery_notes.form.number_loading")
+              }
               fullWidth
-              autoFocus
+              InputProps={{ readOnly: true }}
+              helperText={translate("delivery_notes.form.number_hint")}
             />
             <TextField
               select
-              label={translate("delivery_notes.form.kind")}
-              value={noteKind}
+              label={translate("delivery_notes.form.type")}
+              value={remitoType}
               onChange={(event) =>
-                setNoteKind(event.target.value as DeliveryNoteKind)
+                setRemitoType(event.target.value as RemitoType)
+              }
+              fullWidth
+              autoFocus
+            >
+              {REMITO_TYPES.map((type) => (
+                <MenuItem key={type} value={type}>
+                  {translate(`enums.remito_type.${type}`)}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              label={translate("delivery_notes.form.priority")}
+              value={priority}
+              onChange={(event) =>
+                setPriority(event.target.value as RemitoPriority)
               }
               fullWidth
             >
-              <MenuItem value="DELIVERY">
-                {translate("enums.delivery_note_kind.DELIVERY")}
-              </MenuItem>
-              <MenuItem value="RETURN">
-                {translate("enums.delivery_note_kind.RETURN")}
-              </MenuItem>
+              {(["LOW", "NORMAL", "HIGH", "URGENT"] as RemitoPriority[]).map(
+                (value) => (
+                  <MenuItem key={value} value={value}>
+                    {translate(`enums.remito_priority.${value}`)}
+                  </MenuItem>
+                ),
+              )}
             </TextField>
             <DatePicker
               label={translate("delivery_notes.form.issued")}
               value={issuedDate ? dayjs(issuedDate) : null}
               onChange={(value: Dayjs | null) =>
                 setIssuedDate(value ? value.format("YYYY-MM-DD") : "")
+              }
+              slotProps={{ textField: { fullWidth: true } }}
+            />
+            <DateTimePicker
+              label={translate("delivery_notes.form.scheduled")}
+              value={scheduledAt ? dayjs(scheduledAt) : null}
+              onChange={(value: Dayjs | null) =>
+                setScheduledAt(value ? value.toISOString() : null)
               }
               slotProps={{ textField: { fullWidth: true } }}
             />
@@ -509,6 +609,14 @@ export default function DeliveryNotesPage() {
                 />
               )}
             />
+            <TextField
+              label={translate("delivery_notes.form.observations")}
+              value={observations}
+              onChange={(event) => setObservations(event.target.value)}
+              fullWidth
+              multiline
+              minRows={2}
+            />
           </Stack>
           <Stack
             direction="row"
@@ -522,7 +630,7 @@ export default function DeliveryNotesPage() {
             <Button
               type="submit"
               variant="contained"
-              disabled={!remitoNumber.trim() || create.isPending}
+              disabled={create.isPending}
             >
               {translate("actions.save")}
             </Button>
@@ -534,118 +642,16 @@ export default function DeliveryNotesPage() {
         anchor="right"
         open={detailId != null}
         onClose={() => setDetailId(null)}
-        PaperProps={{ sx: { width: { xs: "100%", sm: 480 } } }}
+        // Above the fixed AppBar (shell uses drawer + 1) so the title/labels are not clipped.
+        sx={{ zIndex: (theme) => theme.zIndex.modal }}
+        PaperProps={{ sx: { width: { xs: "100%", sm: 560 } } }}
       >
         <Box sx={{ p: 3 }}>
-          {detailQuery.isLoading && (
-            <Typography color="text.secondary">
-              {translate("delivery_notes.detail.loading")}
-            </Typography>
-          )}
-          {detailQuery.isError && (
-            <Alert severity="error">{translate("errors.generic")}</Alert>
-          )}
-          {detail && (
-            <Stack spacing={2}>
-              <Typography variant="h6">
-                {translate("delivery_notes.detail.title", {
-                  number: detail.remito_number,
-                })}
-              </Typography>
-              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                <Chip
-                  size="small"
-                  label={translate(`enums.delivery_note_kind.${detail.kind}`)}
-                />
-                <Chip
-                  size="small"
-                  label={
-                    detail.issued_date ??
-                    translate("delivery_notes.detail.no_date")
-                  }
-                />
-                {detail.client_name && (
-                  <Chip size="small" label={detail.client_name} />
-                )}
-              </Stack>
-
-              <Stack direction="row" spacing={1}>
-                <Button
-                  component={NextLink}
-                  href={`/movements?remito_id=${detail.id}`}
-                  size="small"
-                  variant="outlined"
-                >
-                  {translate("delivery_notes.detail.open_movements")}
-                </Button>
-                <Button
-                  component={NextLink}
-                  href={`/accessories?remito_id=${detail.id}`}
-                  size="small"
-                  variant="outlined"
-                >
-                  {translate("delivery_notes.detail.open_rentals")}
-                </Button>
-              </Stack>
-
-              <Divider />
-              <Typography variant="subtitle2">
-                {translate("delivery_notes.detail.movements", {
-                  count: detail.movements.length,
-                })}
-              </Typography>
-              {detail.movements.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">
-                  {translate("delivery_notes.detail.no_movements")}
-                </Typography>
-              ) : (
-                <List dense disablePadding>
-                  {detail.movements.map((movement) => (
-                    <ListItem key={movement.id} disableGutters>
-                      <ListItemText
-                        primary={`${movement.cylinder_serial ?? movement.cylinder_id} · ${movement.holder_name ?? movement.holder_party_id}`}
-                        secondary={`${movement.delivery_date} · ${translate(`enums.movement_state.${movement.state}`)}`}
-                      />
-                      <Link
-                        component={NextLink}
-                        href={`/movements?remito_id=${detail.id}`}
-                        underline="hover"
-                        variant="body2"
-                      >
-                        {translate("delivery_notes.detail.view")}
-                      </Link>
-                    </ListItem>
-                  ))}
-                </List>
-              )}
-
-              <Divider />
-              <Typography variant="subtitle2">
-                {translate("delivery_notes.detail.rentals", {
-                  count: detail.accessory_rentals.length,
-                })}
-              </Typography>
-              {detail.accessory_rentals.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">
-                  {translate("delivery_notes.detail.no_rentals")}
-                </Typography>
-              ) : (
-                <List dense disablePadding>
-                  {detail.accessory_rentals.map((rental) => (
-                    <ListItem key={rental.id} disableGutters>
-                      <ListItemText
-                        primary={`${rental.accessory_type ? translate(`enums.accessory_type.${rental.accessory_type}`) : rental.accessory_id}${rental.accessory_identifier ? ` · ${rental.accessory_identifier}` : ""}`}
-                        secondary={`${rental.client_name ?? rental.client_party_id} · ${rental.start_date}`}
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              )}
-
-              <Button onClick={() => setDetailId(null)}>
-                {translate("actions.close")}
-              </Button>
-            </Stack>
+          {detailId != null && (
+            <RemitoDetailPanel
+              detailId={detailId}
+              onClose={() => setDetailId(null)}
+            />
           )}
         </Box>
       </Drawer>

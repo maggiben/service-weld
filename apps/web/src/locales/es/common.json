@@ -22,7 +22,8 @@
     "audit": "Registro de auditoría",
     "data_migration": "Importar / exportar datos",
     "refills": "Recargas",
-    "dashboard": "Tablero"
+    "dashboard": "Tablero",
+    "arca": "ARCA"
   },
   "shell": {
     "signed_in_as": "Sesión: {{username}}",
@@ -31,7 +32,8 @@
       "settings": "Configuración",
       "users": "Usuarios y permisos",
       "audit": "Registro de auditoría",
-      "data_migration": "Importar / exportar datos"
+      "data_migration": "Importar / exportar datos",
+      "arca": "ARCA"
     }
   },
   "login": {
@@ -328,6 +330,7 @@
       "title_deliver": "Nueva entrega / recarga",
       "title_rental": "Nueva entrega (alquiler)",
       "title_refill": "Nueva recarga",
+      "title_sale": "Nueva venta",
       "kind_subtitle": "Tipo de movimiento: {{kind}}",
       "unsaved_confirm": "Hay cambios sin guardar. ¿Cerrar de todos modos?",
       "cylinder": "Cilindro",
@@ -342,13 +345,16 @@
       "gas_hint_empty": "Cilindro vacío: elegí el gas si corresponde (capacidad se muestra si se conoce).",
       "delivery_date": "Fecha de entrega",
       "refill_date": "Fecha de recarga",
+      "sale_date": "Fecha de venta",
       "remito_number": "Nº remito",
       "remito_hint": "Opcional. Crea o vincula el remito por número.",
       "note": "Nota",
       "hint_rental": "Alquiler: solo cilindros nuestros o de proveedor disponibles en planta (no los que ya tiene otro cliente).",
       "hint_refill": "Recarga (Su Propiedad): el cliente es el dueño del cilindro; no hace falta elegirlo aparte.",
+      "hint_sale": "Venta: solo cilindros propios en stock de planta. El envase sale definitivamente de nuestra flota (queda vendido).",
       "cylinder_hint_rental": "Solo disponibles para alquilar: stock vacío/lleno, sin posesión de cliente.",
       "cylinder_hint_refill": "Solo cilindros con propiedad Cliente (no vendidos/perdidos).",
+      "cylinder_hint_sale": "Solo vendibles: nuestros cilindros en stock vacío/lleno.",
       "owner_client": "Cliente (dueño)",
       "owner_client_hint": "Se toma del propietario del cilindro.",
       "owner_client_placeholder": "Elegí un cilindro para ver el dueño"
@@ -457,11 +463,77 @@
     "movement_kind": {
       "RENTAL": "Alquiler",
       "REFILL": "Recarga",
+      "SALE": "Venta",
       "SUPPLIER_LOAN": "Préstamo proveedor"
     },
     "delivery_note_kind": {
       "DELIVERY": "Entrega",
       "RETURN": "Devolución"
+    },
+    "remito_type": {
+      "DELIVERY": "Entrega",
+      "CYLINDER_RETURN": "Devolución de cilindros",
+      "ACCESSORY_RETURN": "Devolución de accesorios",
+      "TRANSFER_WAREHOUSE": "Transferencia entre depósitos",
+      "INTERNAL_TRANSFER": "Transferencia interna",
+      "CUSTOMER_PICKUP": "Retiro en depósito",
+      "ADJUSTMENT": "Ajuste",
+      "RENTAL_PICKUP": "Retiro de alquiler",
+      "RENTAL_DELIVERY": "Entrega de alquiler"
+    },
+    "remito_status": {
+      "DRAFT": "Borrador",
+      "PREPARED": "Preparado",
+      "ASSIGNED": "Asignado",
+      "LOADED": "Cargado",
+      "IN_TRANSIT": "En tránsito",
+      "DELIVERED": "Entregado",
+      "SIGNED": "Firmado",
+      "CLOSED": "Cerrado",
+      "INVOICED": "Facturado",
+      "ARCHIVED": "Archivado",
+      "CANCELLED": "Anulado"
+    },
+    "remito_priority": {
+      "LOW": "Baja",
+      "NORMAL": "Normal",
+      "HIGH": "Alta",
+      "URGENT": "Urgente"
+    },
+    "picking_status": {
+      "PENDING": "Pendiente",
+      "PREPARING": "Preparando",
+      "COMPLETE": "Completo",
+      "LOADED": "Cargado"
+    },
+    "incident_type": {
+      "CUSTOMER_ABSENT": "Cliente ausente",
+      "CYLINDER_DAMAGED": "Cilindro dañado",
+      "WRONG_QUANTITY": "Cantidad incorrecta",
+      "LEAK": "Fuga",
+      "WRONG_GAS": "Gas incorrecto",
+      "WRONG_SERIAL": "Serie incorrecta",
+      "DELIVERY_REJECTED": "Entrega rechazada",
+      "LATE_DELIVERY": "Entrega tardía",
+      "OTHER": "Otro"
+    },
+    "incident_severity": {
+      "LOW": "Baja",
+      "MEDIUM": "Media",
+      "HIGH": "Alta",
+      "CRITICAL": "Crítica"
+    },
+    "incident_status": {
+      "OPEN": "Abierta",
+      "IN_REVIEW": "En revisión",
+      "RESOLVED": "Resuelta",
+      "DISMISSED": "Descartada"
+    },
+    "print_copy_kind": {
+      "ORIGINAL": "Original",
+      "DUPLICADO": "Duplicado",
+      "TRIPLICADO": "Triplicado",
+      "REIMPRESION": "Reimpresión"
     },
     "movement_state": {
       "OPEN": "Abierto",
@@ -678,10 +750,16 @@
   },
   "delivery_notes": {
     "title": "Remitos",
+    "subtitle": "Documento operativo de cada movimiento físico — borrador → cerrado",
     "empty": "No hay remitos",
     "columns": {
       "number": "Nº remito",
+      "status": "Estado",
+      "picking": "Picking",
+      "type": "Tipo",
       "kind": "Tipo",
+      "priority": "Prioridad",
+      "lines": "Líneas",
       "issued": "Emisión",
       "client": "Cliente",
       "movements": "Movimientos",
@@ -690,24 +768,73 @@
     "filters": {
       "q": "Buscar remito o cliente",
       "kind": "Tipo",
+      "type": "Tipo",
+      "status": "Estado",
       "group_remitos": "Remitos",
       "group_clients": "Clientes",
       "no_client": "Sin cliente"
     },
     "actions": {
-      "new": "Nuevo remito"
+      "new": "Nuevo remito",
+      "add_line": "Agregar línea",
+      "add_incident": "Registrar incidencia",
+      "print": "Imprimir",
+      "print_now": "Generar PDF"
+    },
+    "print": {
+      "title": "Imprimir remito",
+      "copy": "Ejemplar",
+      "reason": "Motivo de reimpresión"
+    },
+    "lifecycle": {
+      "prepare": "Preparar",
+      "assign": "Asignar",
+      "load": "Marcar cargado",
+      "dispatch": "Despachar",
+      "deliver": "Marcar entregado",
+      "sign": "Registrar firma",
+      "close": "Cerrar",
+      "cancel": "Anular",
+      "confirm_cancel": "Confirmar anulación",
+      "pick_start": "Iniciar picking",
+      "pick_complete": "Picking completo"
     },
     "form": {
-      "title": "Registrar remito",
+      "title": "Nuevo remito (borrador)",
       "number": "Nº remito",
+      "number_hint": "Asignado automáticamente de la serie A (único, sin colisiones)",
+      "number_loading": "Asignando…",
       "kind": "Tipo",
+      "type": "Tipo",
+      "priority": "Prioridad",
       "issued": "Fecha de emisión",
-      "client": "Cliente"
+      "scheduled": "Entrega prevista",
+      "client": "Cliente",
+      "observations": "Observaciones",
+      "cancel_reason": "Motivo de anulación",
+      "driver": "Chofer",
+      "helper": "Ayudante",
+      "vehicle": "Camión",
+      "add_cylinder": "Cilindro",
+      "incident_type": "Tipo de incidencia",
+      "incident_description": "Descripción"
     },
     "detail": {
       "title": "Remito {{number}}",
       "loading": "Cargando…",
       "no_date": "Sin fecha de emisión",
+      "scheduled": "Previsto: {{at}}",
+      "cancel_reason": "Anulado: {{reason}}",
+      "assign_fleet": "Asignar flota",
+      "truck": "Camión {{plate}}",
+      "driver": "Chofer {{name}}",
+      "lines": "Líneas ({{count}})",
+      "no_lines": "Sin líneas — agregá cilindros antes de preparar",
+      "rental": "Alquiler",
+      "incidents": "Incidencias ({{count}})",
+      "no_incidents": "Sin incidencias",
+      "history": "Historial de estados",
+      "no_history": "Sin transiciones registradas",
       "open_movements": "Ver en movimientos",
       "open_rentals": "Ver en accesorios",
       "movements": "Movimientos ({{count}})",
@@ -1082,14 +1209,14 @@
   },
   "billing": {
     "title": "Facturación",
-    "subtitle": "Borrador → aprobar → exportar. Desde/Hasta aplican solo a Generar borrador. Histórico ignora esos filtros y cobra cada alquiler abierto desde su fecha de entrega hasta hoy, a la tarifa vigente.",
-    "period_start": "Desde (borrador)",
-    "period_end": "Hasta (borrador)",
-    "period_hint": "Estas fechas aplican solo a Generar borrador.",
-    "history_hint": "Ignora Desde/Hasta. Usa la fecha de entrega de cada préstamo abierto → hoy.",
+    "subtitle": "Borrador → aprobar → autorizar ARCA → imprimir. También podés exportar a contabilidad. Generar borrador usa Desde/Hasta. Histórico cobra cada alquiler abierto desde su entrega hasta hoy y actualiza esas fechas.",
+    "period_start": "Desde",
+    "period_end": "Hasta",
+    "period_hint": "Generar borrador usa estas fechas.",
+    "history_hint": "Histórico cobra cada préstamo abierto desde su entrega → hoy y actualiza Desde/Hasta.",
     "empty": "Todavía no hay borrador para este período",
     "run_summary": "Borrador #{{id}} ({{status}}): {{invoices}} facturas · {{lines}} cilindros · {{days}} días-cilindro · total {{total}} ARS · período {{from}} → {{to}}",
-    "run_summary_history": "Histórico #{{id}} ({{status}}): {{invoices}} facturas · {{lines}} cilindros · {{days}} días-cilindro · total {{total}} ARS · desde entrega más antigua {{from}} → {{to}} (no usa el filtro de fechas)",
+    "run_summary_history": "Histórico #{{id}} ({{status}}): {{invoices}} facturas · {{lines}} cilindros · {{days}} días-cilindro · total {{total}} ARS · desde entrega más antigua {{from}} → {{to}}",
     "days_hint": "Días-cilindro = suma de días de cada cilindro en el período (ej. 22 cilindros × 30 d = 660), no los días calendario del mes.",
     "skipped_no_rate": "Se omitieron {{count}} alquileres — no hay tarifa coincidente (ni default diario del cliente). Configurá tarifas y volvé a generar el borrador.",
     "configure_rates": "Ir a Tarifas",
@@ -1113,6 +1240,8 @@
     },
     "ledger": {
       "subtitle": "Cilindros en poder, historial de entradas/salidas y alquileres — independiente de la factura.",
+      "subtitle_with_invoice": "Ledger del cliente + acciones de facturación del borrador actual.",
+      "invoice_actions": "Factura de este cliente",
       "open_full": "Ficha completa"
     },
     "columns": {
@@ -1127,7 +1256,29 @@
       "daily_rate_value": "{{price}} ARS",
       "daily_rate_mixed": "{{min}}–{{max}} ARS",
       "total": "Total (ARS)",
-      "status": "Estado"
+      "status": "Estado",
+      "arca": "ARCA",
+      "arca_ok": "CAE",
+      "arca_pending": "Sin CAE"
+    },
+    "invoice_drawer": {
+      "title": "Factura · {{client}}",
+      "subtitle": "Período {{from}} → {{to}} · Total {{total}}",
+      "unit": "Unidad",
+      "lines_title": "Ítems ({{count}})",
+      "authorize": "Autorizar en ARCA",
+      "approve_only": "Solo aprobar",
+      "approve_and_issue": "Aprobar y generar factura",
+      "print": "Imprimir factura",
+      "reset_simulation": "Deshacer (simulación)",
+      "reset_simulation_with_cae": "Anular CAE y deshacer",
+      "reset_simulation_hint": "Modo simulación: si hay CAE, primero se emite una Nota de Crédito B en ARCA (anulación fiscal) y después se vuelve la factura a borrador para seguir probando.",
+      "draft_hint": "Esta factura es borrador. Podés aprobar solo este cliente o aprobar y autorizar en ARCA para emitir el CAE.",
+      "cae_ready": "CAE listo",
+      "cae_pending": "Sin autorizar",
+      "cae_detail": "Factura {{number}} · CAE {{cae}} · Vto. {{due}} · {{env}}",
+      "env_homo": "Homologación",
+      "env_prod": "Producción"
     }
   },
   "reports": {
@@ -1154,7 +1305,10 @@
       "period_end": "Hasta",
       "client": "Cliente",
       "cylinder": "Cilindro",
-      "territory": "Territorio"
+      "territory": "Territorio",
+      "location": "Ubicación",
+      "territories": "Territorios",
+      "cities": "Ciudades con cilindros"
     },
     "group": {
       "state": "Estado",
@@ -1376,5 +1530,131 @@
     "purge_type_prompt": "Para confirmar, escribí exactamente: {{phrase}}",
     "purge_type_label": "Frase de confirmación",
     "purge_ok": "Datos de negocio vaciados"
+  },
+  "arca": {
+    "title": "Configuración ARCA",
+    "subtitle": "Conectá el ERP con ARCA para facturación electrónica. Solo se requieren pasos manuales en el portal de ARCA.",
+    "testing_banner": {
+      "title": "MODO DE PRUEBA ACTIVADO",
+      "body": "No se generarán facturas fiscales reales."
+    },
+    "simulation_banner": {
+      "title": "MODO SIMULACIÓN ACTIVADO",
+      "body": "No se llama a ARCA. El ERP se comporta como si estuviera conectado (útil para desarrollo)."
+    },
+    "simulation": {
+      "title": "Simulación (desarrollo)",
+      "help": "Activá esto para seguir trabajando sin certificados WSASS ni llamadas a WSAA/WSFE. Las autorizaciones de factura usan un CAE ficticio.",
+      "enable": "Activar modo simulación",
+      "enabled_done": "Modo simulación activado",
+      "disabled_done": "Modo simulación desactivado — se requieren credenciales reales",
+      "testing_locked": "Con simulación activa, el modo de prueba fiscal no aplica."
+    },
+    "company": {
+      "title": "Datos de la empresa",
+      "cuit": "CUIT",
+      "cuit_help": "Formato NN-NNNNNNNN-N. Se usa en la solicitud de acceso.",
+      "legal_name": "Razón social",
+      "alias": "Nombre corto / alias",
+      "point_of_sale": "Punto de venta",
+      "save": "Guardar datos",
+      "saved": "Datos de empresa guardados",
+      "clear": "Limpiar datos",
+      "cleared": "Datos de empresa limpiados y configuración ARCA reiniciada",
+      "clear_confirm": "¿Borrar CUIT, razón social y alias? También se reinicia el estado del asistente (claves y certificado)."
+    },
+    "environment": {
+      "title": "Entorno",
+      "homologation": "Prueba (Homologación)",
+      "production": "En vivo (Producción)"
+    },
+    "status": {
+      "title": "Estado",
+      "checks": {
+        "has_private_key": "Clave secreta",
+        "has_csr": "Solicitud de acceso",
+        "has_certificate": "Certificado",
+        "is_validated": "Validación"
+      }
+    },
+    "actions": {
+      "title": "Pasos",
+      "subtitle": "Seguí el orden. El paso sugerido queda resaltado.",
+      "generate_keys": "Generar claves",
+      "download_csr": "Descargar solicitud de acceso",
+      "upload_certificate": "Subir certificado",
+      "validate_certificate": "Validar certificado",
+      "test_connection": "Probar conexión",
+      "delete_certificate": "Eliminar certificado",
+      "danger_zone": "Zona de peligro",
+      "danger_hint": "Borra el certificado y las claves de este entorno. Tendrás que empezar de nuevo.",
+      "regenerate_confirm": "Generar una nueva clave invalidará el certificado actual. ¿Continuar?",
+      "delete_reason": "Motivo de la eliminación",
+      "generate_done": "Claves y solicitud de acceso generadas",
+      "download_done": "Solicitud descargada",
+      "upload_done": "Certificado subido",
+      "validate_ok": "Certificado validado",
+      "connection_ok": "Conexión exitosa",
+      "delete_done": "Certificado eliminado",
+      "hints": {
+        "generate_keys": "Crea la clave privada y la solicitud que vas a pegar en WSASS.",
+        "download_csr": "Descargá el archivo .csr para pegarlo en el portal ARCA.",
+        "upload_certificate": "Subí el .crt / .pem que te emitió ARCA.",
+        "validate_certificate": "Comprobá que el certificado coincide con la clave y el CUIT.",
+        "test_connection": "Autenticá contra WSAA/WSFE con el punto de venta configurado."
+      }
+    },
+    "instructions": {
+      "title": "Instrucciones en ARCA",
+      "homologation": [
+        "Iniciá sesión en ARCA con tu Clave Fiscal personal (persona física)",
+        "En Mis Servicios abrí WSASS (si no está, adherilo desde Administrador de Relaciones de Clave Fiscal)",
+        "Creá un certificado nuevo y pegá la solicitud de acceso descargada acá",
+        "Descargá el certificado emitido (.crt / .pem)",
+        "Volvé al ERP y subilo con «Subir certificado»"
+      ],
+      "production": [
+        "Iniciá sesión en ARCA con Clave Fiscal",
+        "Abrí Administrador de Certificados Digitales",
+        "Creá un certificado nuevo y pegá la solicitud de acceso",
+        "Autorizá el servicio de facturación electrónica (WSFE) en Administrador de Relaciones de Clave Fiscal",
+        "Descargá el certificado y subilo al ERP"
+      ]
+    },
+    "links": {
+      "open_arca": "Abrir portal ARCA",
+      "open_wsass": "Guía WSASS (crear certificado)",
+      "wsass_join": "Cómo adherir WSASS",
+      "production_certs": "Documentación de certificados",
+      "homologation_hint": "WSASS solo aparece en Mis Servicios después de iniciar sesión. Usá los botones para ir al portal y a la guía de creación del certificado.",
+      "production_hint": "Los certificados en vivo se gestionan desde el portal ARCA (Administrador de Certificados Digitales) tras iniciar sesión."
+    },
+    "testing": {
+      "title": "Pruebas",
+      "enable": "Activar modo de prueba"
+    },
+    "connection": {
+      "not_configured": "No configurado",
+      "connected": "Conectado",
+      "failed": "Falló"
+    },
+    "dashboard": {
+      "title": "Resumen",
+      "status": "Estado del certificado",
+      "environment": "Entorno",
+      "cuit": "CUIT",
+      "fingerprint": "ID del certificado",
+      "valid_until": "Vencimiento",
+      "last_validation": "Última validación",
+      "last_authentication": "Última autenticación",
+      "connection": "Estado de conexión",
+      "last_invoice": "Última factura",
+      "last_cae": "Último CAE",
+      "point_of_sale": "Punto de venta"
+    },
+    "errors": {
+      "generic": "No se pudo completar la acción",
+      "read_only": "Solo lectura"
+    }
   }
 }

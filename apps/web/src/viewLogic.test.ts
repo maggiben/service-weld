@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
 import { ApiClientError } from "@weld/api-client";
 import type { Client, MovementEvent } from "@weld/schemas";
 
@@ -33,6 +32,7 @@ import {
   cylinderPickerLabel,
   isRefillPickable,
   isRentalPickable,
+  isSellPickable,
   prefillMovementFromCylinder,
 } from "./features/movements/movementLogic";
 import { partyTypeLabel } from "./features/transfers/transferLogic";
@@ -41,6 +41,7 @@ import {
   nextLoanStage,
 } from "./features/supplier-loans/loanLogic";
 import {
+  filterBillingInvoices,
   formatInvoiceDailyRate,
   formatInvoiceDaysBreakdown,
   invoiceDaysBreakdownParams,
@@ -353,6 +354,46 @@ describe("movementLogic", () => {
     );
   });
 
+  it("evaluates sale pickability (our in-stock stock only)", () => {
+    assert.equal(isSellPickable({ ...base, ownership_basis: "OURS" }), true);
+    assert.equal(
+      isSellPickable({
+        ...base,
+        ownership_basis: "OURS",
+        state: "IN_STOCK_EMPTY",
+      }),
+      true,
+    );
+    assert.equal(
+      isSellPickable({ ...base, ownership_basis: "SUPPLIER" }),
+      false,
+    );
+    assert.equal(
+      isSellPickable({ ...base, ownership_basis: "CUSTOMER" }),
+      false,
+    );
+    assert.equal(
+      isSellPickable({ ...base, ownership_basis: "OURS", state: "AT_CLIENT" }),
+      false,
+    );
+    assert.equal(
+      isSellPickable({
+        ...base,
+        ownership_basis: "OURS",
+        packaging: "BATTERY_MEMBER",
+      }),
+      false,
+    );
+    assert.equal(
+      isSellPickable({
+        ...base,
+        ownership_basis: "OURS",
+        current_movement_id: 1,
+      }),
+      false,
+    );
+  });
+
   it("prefills gas only when full; always keeps known capacity", () => {
     assert.deepEqual(
       prefillMovementFromCylinder({
@@ -515,6 +556,50 @@ describe("billingLogic", () => {
       ),
       /daily_rate_mixed/,
     );
+  });
+
+  it("filters billing invoices by client, locality, or territory", () => {
+    const invoices = [
+      {
+        client_party_id: 1,
+        client_locality_id: 10,
+        client_territory_id: 100,
+      },
+      {
+        client_party_id: 2,
+        client_locality_id: 20,
+        client_territory_id: 200,
+      },
+      {
+        client_party_id: 3,
+        client_locality_id: 10,
+        client_territory_id: 100,
+      },
+      {
+        client_party_id: 4,
+        client_locality_id: null,
+        client_territory_id: 100,
+      },
+    ];
+    assert.deepEqual(
+      filterBillingInvoices(invoices, { clientPartyId: 2 }).map(
+        (row) => row.client_party_id,
+      ),
+      [2],
+    );
+    assert.deepEqual(
+      filterBillingInvoices(invoices, {
+        location: { kind: "locality", id: 10 },
+      }).map((row) => row.client_party_id),
+      [1, 3],
+    );
+    assert.deepEqual(
+      filterBillingInvoices(invoices, {
+        location: { kind: "territory", id: 100 },
+      }).map((row) => row.client_party_id),
+      [1, 3, 4],
+    );
+    assert.deepEqual(filterBillingInvoices(invoices, {}), invoices);
   });
 });
 

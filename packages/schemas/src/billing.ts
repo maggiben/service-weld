@@ -15,14 +15,39 @@ export const ChargeLine = zod.object({
 });
 export type ChargeLine = zod.infer<typeof ChargeLine>;
 
+export const InvoiceArcaAuthorization = zod.object({
+  cae: zod.string().nullable(),
+  cae_due_date: IsoDate.nullable(),
+  cbte_tipo: zod.number().int().nullable(),
+  pto_vta: zod.number().int().nullable(),
+  cbte_nro: zod.number().int().nullable(),
+  cbte_fch: IsoDate.nullable(),
+  doc_tipo: zod.number().int().nullable(),
+  doc_nro: zod.number().int().nullable(),
+  condicion_iva_receptor: zod.number().int().nullable(),
+  imp_neto: zod.number().nullable(),
+  imp_iva: zod.number().nullable(),
+  imp_total: zod.number().nullable(),
+  arca_environment: zod.enum(["HOMOLOGATION", "PRODUCTION"]).nullable(),
+  arca_qr_url: zod.string().nullable(),
+  authorized_at: zod.string().datetime().nullable(),
+});
+export type InvoiceArcaAuthorization = zod.infer<
+  typeof InvoiceArcaAuthorization
+>;
+
 export const Invoice = zod.object({
   id: zod.number().int(),
   billing_run_id: zod.number().int().nullable().optional(),
   client_party_id: zod.number().int(),
   client_name: zod.string().optional(),
+  client_cuit: zod.string().nullable().optional(),
+  client_address: zod.string().nullable().optional(),
   /** Locality where the client (and thus stock in their custody) is located. */
   client_locality_id: zod.number().int().nullable().optional(),
   client_locality_name: zod.string().nullable().optional(),
+  /** Client dispatch territory — used by billing location filters. */
+  client_territory_id: zod.number().int().nullable().optional(),
   period_start: IsoDate,
   period_end: IsoDate,
   status: InvoiceStatus,
@@ -33,6 +58,8 @@ export const Invoice = zod.object({
   created_at: zod.string().datetime(),
   version: zod.number().int(),
   charge_lines: zod.array(ChargeLine).optional(),
+  /** Present after successful ARCA FECAE authorization. */
+  arca: InvoiceArcaAuthorization.optional(),
 });
 export type Invoice = zod.infer<typeof Invoice>;
 

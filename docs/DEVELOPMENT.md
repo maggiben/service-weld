@@ -152,7 +152,7 @@ Local hooks and CI enforce the same intent. **Never commit without the pre-commi
 
 **Identifier length:** value bindings in `apps/` and `packages/` must be ≥2 characters (`pnpm run check:id-length` / `scripts/check-id-length.mjs`). Single-letter names are forbidden — choose a name that matches the value (`event`, `row`, `state`). Two-letter idioms (`id`, `db`, `qb`, `eb`) are fine; do not invent numbered clones (`database2`). Only `_` is allowed short (unused placeholder). Type-only names are exempt. **IDE:** ESLint `id-length` in `eslint.config.mjs` (install the ESLint extension — see `docs/ESLINT.md`).
 
-Coverage is global per workspace package (`apps/api`, `apps/web`, `apps/field`, `apps/www`, `packages/domain`, `packages/schemas`, `packages/api-client`), enforced by `scripts/check-coverage.mjs` (default threshold `80`, overridable only via `COVERAGE_THRESHOLD`). Specs: `010` R9–R10 / AC7–AC8, `012` R8 / AC6–AC7, `000` commit policy.
+Coverage is global per workspace package (`apps/api`, `apps/web`, `apps/field`, `apps/www`, `packages/domain`, `packages/schemas`, `packages/api-client`), enforced by `scripts/check-coverage.mjs` via **Vitest** + `@vitest/coverage-v8` (default threshold `80`, overridable only via `COVERAGE_THRESHOLD`). First-party suites MUST use Vitest (`010` R0) — not Jest or `node:test`. Specs: `010` R0 / R9–R10 / AC7–AC9, `012` R8 / AC6–AC7, `000` commit policy, D-16.
 
 Hooks live in `.husky/` (`core.hooksPath=.husky`, installed on `pnpm install` via Husky `prepare`). Manual reinstall: `node scripts/install-hooks.mjs`.
 

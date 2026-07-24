@@ -370,13 +370,16 @@ export class AccessoriesRepository {
   ): Promise<AccessoryRental> {
     const db = resolveDb(this.db);
 
-    const remitoId = input.remito_number
-      ? await resolveDeliveryNote(db, {
-          remito_number: input.remito_number,
-          issued_date: input.start_date,
-          client_party_id: input.client_party_id,
-        })
-      : null;
+    const remitoId =
+      input.remito_id != null
+        ? input.remito_id
+        : input.remito_number
+          ? await resolveDeliveryNote(db, {
+              remito_number: input.remito_number,
+              issued_date: input.start_date,
+              client_party_id: input.client_party_id,
+            })
+          : null;
 
     const inserted = await db
       .insertInto("accessory_rental")
@@ -453,6 +456,20 @@ export class AccessoriesRepository {
       .where("deleted_at", "is", null)
       .executeTakeFirst();
     return row != null;
+  }
+
+  async findOpenRentalIdByAccessory(
+    accessoryId: number,
+  ): Promise<number | null> {
+    const db = resolveDb(this.db);
+    const row = await db
+      .selectFrom("accessory_rental")
+      .select("id")
+      .where("accessory_id", "=", accessoryId)
+      .where("state", "=", "ON_LOAN")
+      .orderBy("id", "desc")
+      .executeTakeFirst();
+    return row ? Number(row.id) : null;
   }
 
   private mapRental(row: {

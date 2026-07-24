@@ -1,14 +1,15 @@
+import type { Mock } from "vitest";
 import * as password from "./password";
 import { AuthService } from "./auth.service";
 import { principal } from "../test-utils/fixtures";
 
-jest.mock("./password", () => {
-  const actual = jest.requireActual("./password");
+vi.mock("./password", async () => {
+  const actual = await vi.importActual("./password");
   return {
     ...actual,
-    verifyPassword: jest.fn(),
-    generateRefreshToken: jest.fn(() => "refresh-token-value"),
-    hashRefreshToken: jest.fn((translate: string) => `hash:${translate}`),
+    verifyPassword: vi.fn(),
+    generateRefreshToken: vi.fn(() => "refresh-token-value"),
+    hashRefreshToken: vi.fn((translate: string) => `hash:${translate}`),
   };
 });
 
@@ -32,7 +33,7 @@ function createDbMock(handlers: {
       "updateTable",
       "set",
     ]) {
-      api[member] = jest.fn((...args: unknown[]) => {
+      api[member] = vi.fn((...args: unknown[]) => {
         if (
           member === "selectFrom" ||
           member === "insertInto" ||
@@ -46,10 +47,10 @@ function createDbMock(handlers: {
         return self();
       });
     }
-    api.executeTakeFirst = jest.fn(async () =>
+    api.executeTakeFirst = vi.fn(async () =>
       handlers.takeFirst ? handlers.takeFirst(table) : null,
     );
-    api.execute = jest.fn(async () => {
+    api.execute = vi.fn(async () => {
       handlers.execute?.(table, op);
       return handlers.many ? handlers.many(table) : [];
     });
@@ -65,10 +66,10 @@ function createDbMock(handlers: {
 
 describe("AuthService", () => {
   const jwtService = {
-    signAsync: jest.fn().mockResolvedValue("access.jwt"),
+    signAsync: vi.fn().mockResolvedValue("access.jwt"),
   };
   const config = {
-    get: jest.fn((key: string) => {
+    get: vi.fn((key: string) => {
       if (key === "JWT_ACCESS_TTL") return 3600;
       if (key === "JWT_REFRESH_TTL") return 86400;
       if (key === "JWT_ACCESS_SECRET") return "secret";
@@ -76,7 +77,7 @@ describe("AuthService", () => {
     }),
   };
 
-  const verifyPassword = password.verifyPassword as jest.Mock;
+  const verifyPassword = password.verifyPassword as Mock;
   const userRow = {
     id: 1,
     username: "admin",
@@ -86,7 +87,7 @@ describe("AuthService", () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     verifyPassword.mockResolvedValue(true);
   });
 

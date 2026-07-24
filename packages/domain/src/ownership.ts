@@ -25,6 +25,8 @@ export function assertOwnerBasisConsistency(
 
 /**
  * BR-08 — REFILL ⇔ CUSTOMER-owned; RENTAL ⇔ OURS/SUPPLIER.
+ * SALE only applies to cylinders we own (OURS): we cannot sell a
+ * supplier's unit or a customer's own cylinder.
  */
 export function assertKindBasisConsistency(
   kind: MovementKind,
@@ -33,7 +35,8 @@ export function assertKindBasisConsistency(
   const refillOk = kind === "REFILL" && basis === "CUSTOMER";
   const rentalOk =
     kind === "RENTAL" && (basis === "OURS" || basis === "SUPPLIER");
-  if (!refillOk && !rentalOk) {
+  const saleOk = kind === "SALE" && basis === "OURS";
+  if (!refillOk && !rentalOk && !saleOk) {
     throw DomainErrors.kindBasisMismatch(kind, basis);
   }
 }

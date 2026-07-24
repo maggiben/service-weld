@@ -8,17 +8,23 @@ describe("resolveDeliveryNote", () => {
     findAfterRace?: { id: number } | undefined;
   }) {
     let findCalls = 0;
+    const whereChain = () => {
+      const chain: {
+        where: () => typeof chain;
+        executeTakeFirst: () => Promise<{ id: number } | undefined>;
+      } = {
+        where: () => chain,
+        executeTakeFirst: async () => {
+          findCalls += 1;
+          if (findCalls === 1) return handlers.find;
+          return handlers.findAfterRace;
+        },
+      };
+      return chain;
+    };
     return {
       selectFrom: () => ({
-        select: () => ({
-          where: () => ({
-            executeTakeFirst: async () => {
-              findCalls += 1;
-              if (findCalls === 1) return handlers.find;
-              return handlers.findAfterRace;
-            },
-          }),
-        }),
+        select: () => whereChain(),
       }),
       insertInto: () => ({
         values: () => ({

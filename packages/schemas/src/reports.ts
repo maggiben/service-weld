@@ -56,6 +56,8 @@ export const FloatAgingQuery = PaginationQuery.extend({
   sort: zod.enum(["days_out", "-days_out"]).default("-days_out"),
   bucket: zod.enum([">30", ">90", ">180", ">365"]).optional(),
   "filter[territory_id]": zod.coerce.number().int().optional(),
+  /** Client city; takes precedence over filter[territory_id] when both set. */
+  "filter[locality_id]": zod.coerce.number().int().optional(),
   /** Snapshot of currently open float as of this date. Omit = today. */
   as_of: IsoDate.optional(),
   /**

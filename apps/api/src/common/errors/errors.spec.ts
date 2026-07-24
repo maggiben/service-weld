@@ -33,7 +33,7 @@ describe("mapDomainError", () => {
   it("maps validation-like codes to 422", () => {
     try {
       mapDomainError(DomainErrors.sameParty());
-      fail("expected throw");
+      expect.unreachable("expected throw");
     } catch (err) {
       expect(err).toBeInstanceOf(ApiError);
       expect((err as ApiError).httpStatus).toBe(422);
@@ -44,9 +44,28 @@ describe("mapDomainError", () => {
   it("maps conflict-like codes to 409", () => {
     try {
       mapDomainError(DomainErrors.notOpen());
-      fail("expected throw");
     } catch (err) {
+      expect(err).toBeInstanceOf(ApiError);
       expect((err as ApiError).httpStatus).toBe(409);
+      return;
+    }
+    expect.unreachable("expected throw");
+  });
+
+  it("maps invoice simulation/void codes to 422", () => {
+    for (const err of [
+      DomainErrors.simulationModeRequired(),
+      DomainErrors.invoiceNothingToReset(),
+      DomainErrors.invoiceCannotVoidWithArca(),
+    ]) {
+      try {
+        mapDomainError(err);
+        expect.unreachable("expected throw");
+      } catch (mapped) {
+        expect(mapped).toBeInstanceOf(ApiError);
+        expect((mapped as ApiError).httpStatus).toBe(422);
+        expect((mapped as ApiError).code).toBe(err.code);
+      }
     }
   });
 

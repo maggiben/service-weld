@@ -8,6 +8,7 @@ import Chip from "@mui/material/Chip";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
 import Link from "@mui/material/Link";
+import ListSubheader from "@mui/material/ListSubheader";
 import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import Stack from "@mui/material/Stack";
@@ -49,7 +50,7 @@ import {
 } from "../lib/cursorPagination";
 import { todayIso, monthStartIso } from "../lib/dateFormat";
 import { loanStageChipColor } from "../lib/chipColors";
-import { useTerritories } from "../hooks/useTerritories";
+import { useLocations } from "../hooks/useLocations";
 import { useSessionStore } from "../store/sessionStore";
 
 type ReportTab =
@@ -94,7 +95,12 @@ export default function ReportsPage() {
   const canMedical = useSessionStore((state) =>
     state.hasCapability("medical:read"),
   );
-  const { territories } = useTerritories();
+  const { territories, localities, encodeFilter, decodeFilter } =
+    useLocations();
+  const citiesWithCylinders = useMemo(
+    () => localities.filter((locality) => (locality.cylinder_count ?? 0) > 0),
+    [localities],
+  );
   const [tab, setTab] = useState<ReportTab>("fleet");
   const [groupBy, setGroupBy] = useState<
     "state" | "gas_code" | "owner" | "locality" | "client"
@@ -104,7 +110,7 @@ export default function ReportsPage() {
   const [bucket, setBucket] = useState<"" | ">30" | ">90" | ">180" | ">365">(
     "",
   );
-  const [territoryFilter, setTerritoryFilter] = useState<number | "">("");
+  const [locationFilter, setLocationFilter] = useState("");
   const [rentalClient, setRentalClient] = useState<Client | null>(null);
   const [rentalCylinder, setRentalCylinder] = useState<Cylinder | null>(null);
   const [refillClient, setRefillClient] = useState<Client | null>(null);
@@ -120,9 +126,10 @@ export default function ReportsPage() {
   useEffect(() => {
     setPaginationModel({ page: 0, pageSize: 50 });
     setCursors([undefined]);
-  }, [tab, bucket, territoryFilter]);
+  }, [tab, bucket, locationFilter]);
 
   const cursor = cursors[paginationModel.page];
+  const location = decodeFilter(locationFilter);
   const showClientLedgerHint =
     tab === "float" ||
     tab === "rental" ||
@@ -156,7 +163,7 @@ export default function ReportsPage() {
       paginationModel.pageSize,
       cursor,
       bucket,
-      territoryFilter,
+      locationFilter,
     ],
     queryFn: () =>
       api.reportFloatAging({
@@ -164,8 +171,11 @@ export default function ReportsPage() {
         cursor,
         sort: "-days_out",
         ...(bucket ? { bucket } : {}),
-        ...(territoryFilter !== ""
-          ? { "filter[territory_id]": territoryFilter }
+        ...(location?.kind === "territory"
+          ? { "filter[territory_id]": location.id }
+          : {}),
+        ...(location?.kind === "locality"
+          ? { "filter[locality_id]": location.id }
           : {}),
       }),
     enabled: tab === "float" && (paginationModel.page === 0 || cursor != null),
@@ -785,20 +795,46 @@ export default function ReportsPage() {
         ) : null}
         {tab === "float" ? (
           <>
-            <FormControl size="small" sx={{ minWidth: 160 }}>
-              <InputLabel>{translate("reports.filters.territory")}</InputLabel>
+            <FormControl size="small" sx={{ minWidth: 220 }}>
+              <InputLabel>{translate("reports.filters.location")}</InputLabel>
               <Select
-                label={translate("reports.filters.territory")}
-                value={territoryFilter}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  setTerritoryFilter(value === "" ? "" : Number(value));
-                }}
+                label={translate("reports.filters.location")}
+                value={locationFilter}
+                onChange={(event) => setLocationFilter(event.target.value)}
               >
                 <MenuItem value="">{translate("clients.filters.all")}</MenuItem>
+                <ListSubheader>
+                  {translate("reports.filters.territories")}
+                </ListSubheader>
                 {territories.map((territory) => (
-                  <MenuItem key={territory.id} value={territory.id}>
+                  <MenuItem
+                    key={`territory-${territory.id}`}
+                    value={encodeFilter({
+                      kind: "territory",
+                      id: territory.id,
+                    })}
+                  >
                     {territory.name}
+                  </MenuItem>
+                ))}
+                <ListSubheader>
+                  {translate("reports.filters.cities")}
+                </ListSubheader>
+                {citiesWithCylinders.map((locality) => (
+                  <MenuItem
+                    key={`locality-${locality.id}`}
+                    value={encodeFilter({
+                      kind: "locality",
+                      id: locality.id,
+                    })}
+                  >
+                    {locality.name}
+                    {locality.territory_name
+                      ? ` · ${locality.territory_name}`
+                      : ""}
+                    {locality.cylinder_count != null
+                      ? ` (${locality.cylinder_count})`
+                      : ""}
                   </MenuItem>
                 ))}
               </Select>

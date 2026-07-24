@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
 import type { Battery, Cylinder } from "@weld/schemas";
 import { ApiClientError } from "@weld/api-client";
 import {

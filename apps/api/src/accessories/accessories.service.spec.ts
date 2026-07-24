@@ -4,20 +4,20 @@ import { AccessoriesService } from "./accessories.service";
 
 describe("AccessoriesService", () => {
   const repository = {
-    listAccessories: jest.fn(),
-    getAccessory: jest.fn(),
-    createAccessory: jest.fn(),
-    updateAccessory: jest.fn(),
-    listRentals: jest.fn(),
-    getRental: jest.fn(),
-    clientExists: jest.fn(),
-    createRental: jest.fn(),
-    returnRental: jest.fn(),
+    listAccessories: vi.fn(),
+    getAccessory: vi.fn(),
+    createAccessory: vi.fn(),
+    updateAccessory: vi.fn(),
+    listRentals: vi.fn(),
+    getRental: vi.fn(),
+    clientExists: vi.fn(),
+    createRental: vi.fn(),
+    returnRental: vi.fn(),
   };
   const service = new AccessoriesService(repository as never);
   const user = principal();
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => vi.clearAllMocks());
 
   it("CRUD accessories", async () => {
     repository.listAccessories.mockResolvedValue({ data: [] });

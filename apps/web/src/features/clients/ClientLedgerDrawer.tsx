@@ -20,8 +20,9 @@ import { useQuery } from "@tanstack/react-query";
 import NextLink from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { MovementKind } from "@weld/schemas";
+import type { MovementKind, Invoice } from "@weld/schemas";
 import { api } from "../../api/client";
+import { InvoiceBillingActions } from "../billing/InvoiceBillingActions";
 import {
   stashNextCursor,
   cursorPageRowCount,
@@ -42,6 +43,9 @@ export interface ClientLedgerDrawerProps {
   clientName?: string;
   open: boolean;
   onClose: () => void;
+  /** When opened from Facturación, the draft/approved invoice for this client. */
+  billingInvoice?: Invoice | null;
+  onBillingInvoiceUpdated?: (invoice: Invoice) => void;
 }
 
 export function ClientLedgerDrawer({
@@ -49,6 +53,8 @@ export function ClientLedgerDrawer({
   clientName,
   open,
   onClose,
+  billingInvoice = null,
+  onBillingInvoiceUpdated,
 }: ClientLedgerDrawerProps) {
   const { t: translate } = useTranslation();
   const [tab, setTab] = useState<LedgerTab>("outstanding");
@@ -170,7 +176,9 @@ export function ClientLedgerDrawer({
           <Box>
             <Typography variant="h6">{title}</Typography>
             <Typography variant="body2" color="text.secondary">
-              {translate("billing.ledger.subtitle")}
+              {billingInvoice
+                ? translate("billing.ledger.subtitle_with_invoice")
+                : translate("billing.ledger.subtitle")}
             </Typography>
           </Box>
           <Stack direction="row" spacing={1}>
@@ -189,6 +197,27 @@ export function ClientLedgerDrawer({
             </Button>
           </Stack>
         </Stack>
+
+        {billingInvoice && onBillingInvoiceUpdated && (
+          <Box
+            sx={{
+              p: 1.5,
+              borderRadius: 1,
+              border: "1px solid",
+              borderColor: "divider",
+              bgcolor: "action.hover",
+            }}
+          >
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>
+              {translate("billing.ledger.invoice_actions")}
+            </Typography>
+            <InvoiceBillingActions
+              invoice={billingInvoice}
+              onInvoiceUpdated={onBillingInvoiceUpdated}
+              compact
+            />
+          </Box>
+        )}
 
         {summary && (
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>

@@ -24,6 +24,7 @@ import ManageAccountsIcon from "@mui/icons-material/ManageAccounts";
 import HistoryIcon from "@mui/icons-material/History";
 import ImportExportIcon from "@mui/icons-material/ImportExport";
 import DescriptionIcon from "@mui/icons-material/Description";
+import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import Avatar from "@mui/material/Avatar";
 import Badge from "@mui/material/Badge";
 import AppBar from "@mui/material/AppBar";
@@ -157,6 +158,12 @@ const NAV_ITEMS: NavItem[] = [
     capability: "billing:read",
     icon: <ReceiptLongIcon />,
   },
+  {
+    to: "/admin/arca",
+    labelKey: "nav.arca",
+    capability: "arca:read",
+    icon: <AccountBalanceIcon />,
+  },
 ];
 
 const BREADCRUMB_BY_PREFIX: Record<string, string> = {
@@ -178,6 +185,7 @@ const BREADCRUMB_BY_PREFIX: Record<string, string> = {
   "/settings": "nav.settings",
   "/admin/users": "nav.users",
   "/admin/data": "nav.data_migration",
+  "/admin/arca": "nav.arca",
   "/audit-logs": "nav.audit",
 };
 
@@ -399,6 +407,14 @@ export default function AppShell({ children }: PropsWithChildren) {
                   <ImportExportIcon fontSize="small" />
                 </ListItemIcon>
                 {translate("shell.menu.data_migration")}
+              </MenuItem>
+            )}
+            {hasCapability("arca:read") && (
+              <MenuItem onClick={() => go("/admin/arca")}>
+                <ListItemIcon>
+                  <AccountBalanceIcon fontSize="small" />
+                </ListItemIcon>
+                {translate("shell.menu.arca")}
               </MenuItem>
             )}
             {hasCapability("audit:read") && (

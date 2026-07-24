@@ -2,12 +2,20 @@
 
 > Testing strategy proving every business rule (`001`) and workflow (`W1`–`W20`). The DB invariant suite has already been executed successfully against PostgreSQL 16 (see `README.md` verification table) — reproduce it in CI.
 
+## Mandated tooling
+
+- **Test runner: Vitest** (`vitest` + `@vitest/coverage-v8`) for every workspace package under `apps/*` and `packages/*`.
+- **Forbidden for first-party suites:** Jest (`jest`, `ts-jest`, `@types/jest`, …), Node’s built-in `node:test` runner, and ad-hoc coverage tools that bypass the monorepo gate.
+- Shared config: `scripts/vitest-shared.mjs` + per-package `vitest.config.ts`. Package scripts: `vitest run` / `vitest run --coverage`.
+- Coverage thresholds (≥80% lines/branches/functions/statements) are set in Vitest config and re-checked by `scripts/check-coverage.mjs` (`pnpm run test:coverage`; override only via `COVERAGE_THRESHOLD`).
+
 ## Purpose
 
 Guarantee that the implementation enforces the domain rules, that the API honors its contract, that the UIs (incl. offline sync) behave correctly, and that migration is safe — with automated, repeatable tests gating every change.
 
 ## Requirements
 
+- R0. **Vitest is the only unit/integration test runner** for first-party code. NestJS e2e smoke tests (`*.e2e-spec.ts`) also run under Vitest (`apps/api` `test:e2e`). Do not add Jest (or reintroduce `node:test`) to workspace `package.json` files or CI scripts.
 - R1. **Database invariant tests** (integration, real Postgres): assert each BR is enforced — single-custody blocked, `rental_days`=67, refill-on-ours blocked, return-before-delivery blocked, future-date blocked, bad-CUIT blocked, duplicate-serial-per-owner blocked, audit rows written, SCD-2 history + version bump. (These exact checks were verified on PG16.)
 - R2. **Unit tests** for domain services and pure functions: rate resolution precedence, rental/accrual math, CUIT validation, gas-alias normalization, state-transition guards.
 - R3. **API contract tests**: use the **NestJS testing utilities** (`@nestjs/testing`) + `supertest` (e2e) against a real DB; validate requests/responses against the **Zod** schemas; assert the **Swagger-emitted** OpenAPI matches `openapi_specification.md` (parity test); error codes match §6; verify pagination/filter/sort/idempotency/`If-Match` behaviors. **JWT/guard tests** cover RBAC denials, territory scoping, and MFA gating (`005`).
@@ -29,6 +37,7 @@ Guarantee that the implementation enforces the domain rules, that the API honors
 - C3. CI runs the full suite on every change (format, typecheck, unit tests, **coverage ≥80%**, build) plus schema load + invariants; migrations tested on a copy-shaped dataset.
 - C4. Coverage target: 100% of business rules (`001`) have at least one passing positive + negative test.
 - C5. The **80% global metric gate** (R9) is independent of C4: BR/workflow proof is qualitative completeness; line/branch/function/statement % is quantitative and applies to every package listed in R9.
+- C6. First-party `package.json` files MUST NOT declare `jest`, `ts-jest`, `@types/jest`, or `@jest/*`. (A transitive `jest-worker` from Nest’s webpack/`terser-webpack-plugin` is unrelated to the Jest test runner and is allowed.)
 
 ## Acceptance Criteria
 
@@ -40,6 +49,7 @@ Guarantee that the implementation enforces the domain rules, that the API honors
 - AC6. Migration test proves row-count reconciliation and exception-queue population on dirty fixtures.
 - AC7. `pnpm run test:coverage` exits 0; any package below 80% lines/branches/functions/statements fails the gate (CI job + pre-push hook).
 - AC8. A commit that would fail secrets check, Prettier on staged files, or typecheck is rejected by the pre-commit hook.
+- AC9. `pnpm -r test` runs Vitest in every workspace package; no first-party suite imports from `node:test` or uses Jest globals/APIs.
 
 ## Edge Cases
 
@@ -51,7 +61,7 @@ Guarantee that the implementation enforces the domain rules, that the API honors
 
 ## Dependencies
 
-- All specs (tests validate them). Tooling: container runtime for Postgres, a contract-test runner driven by the OpenAPI doc, an E2E driver for the web/field apps.
+- All specs (tests validate them). Tooling: **Vitest**, container runtime for Postgres, a contract-test runner driven by the OpenAPI doc, an E2E driver for the web/field apps.
 
 ## Implementation Notes
 
@@ -60,4 +70,4 @@ Guarantee that the implementation enforces the domain rules, that the API honors
 - Tag tests by BR/workflow id so coverage maps directly to `001`/`workflows.md`.
 - Keep a small, curated **legacy fixture set** (a few real-shaped sheets, anonymized) for migration tests.
 - **Before every commit:** run (or rely on) the pre-commit hook checks — `pnpm run check:secrets`, Prettier on touched files, `pnpm run typecheck`. **Before every push:** ensure `pnpm run test:coverage` passes (≥80% per package). Do not create a git commit until those checks pass; do not use `--no-verify` to skip them.
-- Coverage tooling: Node `--experimental-test-coverage` for non-API packages; Jest `--coverage` + `coverageThreshold.global` (80) for `@weld/api`. The monorepo gate is `scripts/check-coverage.mjs`.
+- **Vitest setup:** `globals: true`, Node environment, `@vitest/coverage-v8` with `coverage.thresholds` at 80. API keeps curated `coverage.include` (former Jest `collectCoverageFrom`); other packages use `coverage.all: false` so only modules loaded by tests count. Gate: `scripts/check-coverage.mjs` reads each package’s `coverage/coverage-summary.json`.

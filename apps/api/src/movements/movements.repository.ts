@@ -729,13 +729,16 @@ export class MovementsRepository {
   ): Promise<MovementEvent> {
     const db = resolveDb(this.db);
 
-    const remitoId = input.remito_number
-      ? await resolveDeliveryNote(db, {
-          remito_number: input.remito_number,
-          issued_date: input.delivery_date,
-          client_party_id: input.holder_party_id,
-        })
-      : null;
+    const remitoId =
+      input.remito_id != null
+        ? input.remito_id
+        : input.remito_number
+          ? await resolveDeliveryNote(db, {
+              remito_number: input.remito_number,
+              issued_date: input.delivery_date,
+              client_party_id: input.holder_party_id,
+            })
+          : null;
 
     const inserted = await db
       .insertInto("movement_event")
@@ -770,6 +773,61 @@ export class MovementsRepository {
 
     const created = await this.getById(Number(inserted.id));
     if (!created) throw ApiErrors.notFound("Movement not found after create");
+    return created;
+  }
+
+  /**
+   * Sell one of our cylinders: post a terminal SOLD movement (no return) and
+   * mark the cylinder SOLD. The unit leaves our fleet permanently.
+   */
+  async createSale(
+    input: CreateMovementInput,
+    propertyBasis: OwnershipBasis,
+    gasCode: string | null,
+    actorUserId: number,
+  ): Promise<MovementEvent> {
+    const db = resolveDb(this.db);
+
+    const remitoId = input.remito_number
+      ? await resolveDeliveryNote(db, {
+          remito_number: input.remito_number,
+          issued_date: input.delivery_date,
+          client_party_id: input.holder_party_id,
+        })
+      : null;
+
+    const inserted = await db
+      .insertInto("movement_event")
+      .values({
+        ...(input.request_id ? { request_id: input.request_id } : {}),
+        cylinder_id: input.cylinder_id,
+        holder_party_id: input.holder_party_id,
+        movement_kind: "SALE",
+        property_basis: propertyBasis,
+        gas_code: gasCode,
+        delivery_date: input.delivery_date,
+        return_date: null,
+        origin_party_id: input.origin_party_id ?? null,
+        remito_id: remitoId,
+        note: input.note ?? null,
+        state: "SOLD",
+        created_by: actorUserId,
+        updated_by: actorUserId,
+      })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+
+    await db
+      .updateTable("cylinder")
+      .set({
+        state: "SOLD",
+        updated_by: actorUserId,
+      })
+      .where("id", "=", input.cylinder_id)
+      .execute();
+
+    const created = await this.getById(Number(inserted.id));
+    if (!created) throw ApiErrors.notFound("Movement not found after sale");
     return created;
   }
 

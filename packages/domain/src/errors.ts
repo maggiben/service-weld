@@ -147,4 +147,118 @@ export const DomainErrors = {
   invalidMoney(): DomainError {
     return new DomainError("INVALID_MONEY", "Money amount must be >= 0");
   },
+  illegalRemitoTransition(from: string, to: string): DomainError {
+    return new DomainError(
+      "ILLEGAL_STATE_TRANSITION",
+      `Cannot transition remito from ${from} to ${to}`,
+    );
+  },
+  remitoNotEditable(status: string): DomainError {
+    return new DomainError(
+      "REMITO_NOT_EDITABLE",
+      `Remito in status ${status} cannot be edited`,
+    );
+  },
+  cancelReasonRequired(): DomainError {
+    return new DomainError(
+      "CANCEL_REASON_REQUIRED",
+      "Cancellation requires a reason",
+    );
+  },
+  remitoAssignRequiresSchedule(): DomainError {
+    return new DomainError(
+      "REMITO_ASSIGN_REQUIRES_SCHEDULE",
+      "Assigning a remito requires a scheduled delivery time",
+    );
+  },
+  illegalArcaTransition(from: string, to: string): DomainError {
+    return new DomainError(
+      "ILLEGAL_STATE_TRANSITION",
+      `Cannot advance ARCA setup from ${from} to ${to}`,
+    );
+  },
+  arcaCuitRequired(): DomainError {
+    return new DomainError(
+      "ARCA_CUIT_REQUIRED",
+      "Configure the company CUIT before generating an Access Request",
+    );
+  },
+  arcaRegenerateRequiresConfirm(): DomainError {
+    return new DomainError(
+      "ARCA_REGENERATE_REQUIRES_CONFIRM",
+      "Generating a new key will invalidate the existing certificate. Confirm to continue.",
+    );
+  },
+  arcaCertificateExpired(): DomainError {
+    return new DomainError(
+      "ARCA_CERTIFICATE_EXPIRED",
+      "This certificate has expired. Upload a new one before testing the connection.",
+    );
+  },
+  arcaGoLiveRequiresConfirm(): DomainError {
+    return new DomainError(
+      "ARCA_GO_LIVE_REQUIRES_CONFIRM",
+      "Confirm before disabling Testing Mode and using Live credentials.",
+    );
+  },
+  arcaGoLiveRequiresProduction(): DomainError {
+    return new DomainError(
+      "ARCA_GO_LIVE_REQUIRES_PRODUCTION",
+      "Live credentials must be connected before disabling Testing Mode.",
+    );
+  },
+  arcaEncryptionKeyMissing(): DomainError {
+    return new DomainError(
+      "ARCA_ENCRYPTION_KEY_MISSING",
+      "Server encryption key is not configured",
+    );
+  },
+  arcaNotConnected(): DomainError {
+    return new DomainError(
+      "ARCA_NOT_CONNECTED",
+      "ARCA credentials must be connected before authorizing an invoice",
+    );
+  },
+  invoiceNotApproved(): DomainError {
+    return new DomainError(
+      "INVOICE_NOT_APPROVED",
+      "Only approved or exported invoices can be authorized with ARCA",
+    );
+  },
+  invoiceAlreadyAuthorized(): DomainError {
+    return new DomainError(
+      "INVOICE_ALREADY_AUTHORIZED",
+      "This invoice already has a CAE",
+    );
+  },
+  invoiceNotAuthorized(): DomainError {
+    return new DomainError(
+      "INVOICE_NOT_AUTHORIZED",
+      "Authorize the invoice with ARCA before printing the fiscal PDF",
+    );
+  },
+  invoiceCannotVoidWithArca(): DomainError {
+    return new DomainError(
+      "INVOICE_CANNOT_VOID_WITH_ARCA",
+      "Authorized invoice is missing voucher fields required to issue a credit note",
+    );
+  },
+  simulationModeRequired(): DomainError {
+    return new DomainError(
+      "SIMULATION_MODE_REQUIRED",
+      "Invoice reset is only available when ARCA simulation mode is enabled",
+    );
+  },
+  invoiceNothingToReset(): DomainError {
+    return new DomainError(
+      "INVOICE_NOTHING_TO_RESET",
+      "Invoice is already a draft without ARCA authorization",
+    );
+  },
+  arcaAuthorizationFailed(detail: string): DomainError {
+    return new DomainError(
+      "ARCA_AUTHORIZATION_FAILED",
+      detail || "ARCA rejected the electronic invoice",
+    );
+  },
 };

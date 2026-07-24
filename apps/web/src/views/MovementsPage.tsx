@@ -456,6 +456,9 @@ export default function MovementsPage() {
             <MenuItem value="REFILL">
               {translate("enums.movement_kind.REFILL")}
             </MenuItem>
+            <MenuItem value="SALE">
+              {translate("enums.movement_kind.SALE")}
+            </MenuItem>
           </Select>
         </FormControl>
         <FormControl size="small" sx={{ minWidth: 140 }}>
