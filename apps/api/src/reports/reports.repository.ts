@@ -7,6 +7,7 @@ import {
   dailyUnitPrice,
   matchesAgingFilter,
   resolveEffectiveRate,
+  resolveRefillUnitPrice,
 } from "@weld/domain";
 import type {
   CylinderLifeRow,
@@ -20,6 +21,8 @@ import type {
   LossReportRow,
   MedicalStatementQuery,
   MedicalStatementRow,
+  RefillReportQuery,
+  RefillReportRow,
   RentalReportQuery,
   RentalReportRow,
   SupplierReturnsQuery,
@@ -45,6 +48,29 @@ export class ReportsRepository {
   constructor(@Inject(KYSELY) private readonly db: DB) {}
 
   async fleet(query: FleetQuery): Promise<FleetRow[]> {
+    if (
+      query.period_start &&
+      query.period_end &&
+      query.period_start <= query.period_end &&
+      (query.group_by === "state" || query.group_by === "gas_code")
+    ) {
+      return this.fleetActiveInPeriod(
+        query,
+        query.period_start,
+        query.period_end,
+      );
+    }
+
+    const asOf = query.as_of ?? businessTodayIso();
+    const today = businessTodayIso();
+    // Historical stock: reconstruct from movements when as_of is before today.
+    if (
+      asOf < today &&
+      (query.group_by === "state" || query.group_by === "gas_code")
+    ) {
+      return this.fleetAsOf(query, asOf);
+    }
+
     const db = resolveDb(this.db);
 
     if (query.group_by === "state") {
@@ -198,12 +224,259 @@ export class ReportsRepository {
     }));
   }
 
+  /**
+   * Custody **started** in [periodStart, periodEnd] (delivery / supplier receive).
+   * Counts each qualifying movement/loan once (not distinct cylinders), so longer
+   * nested windows accumulate more activity — unlike open-custody overlap, which
+   * treats a long-open rental the same in month and semester.
+   */
+  private async fleetActiveInPeriod(
+    query: FleetQuery,
+    periodStart: string,
+    periodEnd: string,
+  ): Promise<FleetRow[]> {
+    const db = resolveDb(this.db);
+
+    let movementQb = db
+      .selectFrom("movement_event")
+      .innerJoin("cylinder", "cylinder.id", "movement_event.cylinder_id")
+      .select(["movement_event.id", "cylinder.state", "cylinder.gas_code"])
+      .where("movement_event.delivery_date", ">=", periodStart)
+      .where("movement_event.delivery_date", "<=", periodEnd)
+      .where("movement_event.state", "in", ["OPEN", "CLOSED", "SWAPPED"])
+      .where("cylinder.deleted_at", "is", null);
+    if (query["filter[owner_party_id]"] != null) {
+      movementQb = movementQb.where(
+        "cylinder.owner_party_id",
+        "=",
+        query["filter[owner_party_id]"],
+      );
+    }
+    if (query["filter[gas_code]"]) {
+      movementQb = movementQb.where(
+        "cylinder.gas_code",
+        "=",
+        query["filter[gas_code]"],
+      );
+    }
+    const movements = await movementQb.execute();
+
+    let loanQb = db
+      .selectFrom("supplier_loan_cycle")
+      .innerJoin("cylinder", "cylinder.id", "supplier_loan_cycle.cylinder_id")
+      .select(["supplier_loan_cycle.id", "cylinder.state", "cylinder.gas_code"])
+      .where("supplier_loan_cycle.received_from_supplier", "is not", null)
+      .where("supplier_loan_cycle.received_from_supplier", ">=", periodStart)
+      .where("supplier_loan_cycle.received_from_supplier", "<=", periodEnd)
+      .where("cylinder.deleted_at", "is", null);
+    if (query["filter[owner_party_id]"] != null) {
+      loanQb = loanQb.where(
+        "cylinder.owner_party_id",
+        "=",
+        query["filter[owner_party_id]"],
+      );
+    }
+    if (query["filter[gas_code]"]) {
+      loanQb = loanQb.where(
+        "cylinder.gas_code",
+        "=",
+        query["filter[gas_code]"],
+      );
+    }
+    const loans = await loanQb.execute();
+
+    const counts = new Map<string, number>();
+    const bump = (key: string) => counts.set(key, (counts.get(key) ?? 0) + 1);
+
+    for (const row of movements) {
+      if (query.group_by === "gas_code") {
+        bump(row.gas_code ?? "UNKNOWN");
+      } else {
+        bump(row.state);
+      }
+    }
+    for (const row of loans) {
+      if (query.group_by === "gas_code") {
+        bump(row.gas_code ?? "UNKNOWN");
+      } else {
+        bump(row.state);
+      }
+    }
+
+    if (counts.size === 0) return [];
+
+    if (query.group_by === "gas_code") {
+      return [...counts.entries()]
+        .map(([key, count]) => ({
+          group_key: key,
+          gas_code: (key === "UNKNOWN" ? null : key) as FleetRow["gas_code"],
+          count,
+        }))
+        .sort((left, right) => right.count - left.count);
+    }
+
+    return [...counts.entries()]
+      .map(([state, count]) => ({
+        group_key: state,
+        state,
+        count,
+      }))
+      .sort((left, right) => right.count - left.count);
+  }
+
+  /**
+   * Fleet snapshot as of a past business date.
+   * Custody (AT_CLIENT / AT_SUPPLIER) comes from open movements / loans overlapping
+   * `asOf`. Existence: created/acquired on or before asOf, OR any movement/loan
+   * activity on or before asOf (covers migrated rows whose created_at is "today").
+   */
+  private async fleetAsOf(
+    query: FleetQuery,
+    asOf: string,
+  ): Promise<FleetRow[]> {
+    const db = resolveDb(this.db);
+
+    let cylQb = db
+      .selectFrom("cylinder")
+      .select([
+        "cylinder.id",
+        "cylinder.state",
+        "cylinder.gas_code",
+        "cylinder.created_at",
+        "cylinder.acquisition_date",
+        "cylinder.deleted_at",
+      ]);
+    if (query["filter[owner_party_id]"] != null) {
+      cylQb = cylQb.where(
+        "cylinder.owner_party_id",
+        "=",
+        query["filter[owner_party_id]"],
+      );
+    }
+    if (query["filter[gas_code]"]) {
+      cylQb = cylQb.where("cylinder.gas_code", "=", query["filter[gas_code]"]);
+    }
+    const cylinders = await cylQb.execute();
+
+    const atClientRows = await db
+      .selectFrom("movement_event")
+      .select("cylinder_id")
+      .distinct()
+      .where("delivery_date", "<=", asOf)
+      .where((eb) =>
+        eb.or([eb("return_date", "is", null), eb("return_date", ">", asOf)]),
+      )
+      .where("state", "in", ["OPEN", "CLOSED", "SWAPPED"])
+      .execute();
+    const atClient = new Set(
+      atClientRows.map((row) => Number(row.cylinder_id)),
+    );
+
+    // Any delivery on or before asOf ⇒ cylinder existed in operations by then.
+    const seenByRows = await db
+      .selectFrom("movement_event")
+      .select("cylinder_id")
+      .distinct()
+      .where("delivery_date", "<=", asOf)
+      .where("state", "<>", "VOID")
+      .execute();
+    const seenBy = new Set(seenByRows.map((row) => Number(row.cylinder_id)));
+
+    const atSupplierRows = await db
+      .selectFrom("supplier_loan_cycle")
+      .select("cylinder_id")
+      .distinct()
+      .where("received_from_supplier", "is not", null)
+      .where("received_from_supplier", "<=", asOf)
+      .where((eb) =>
+        eb.or([
+          eb("returned_to_supplier", "is", null),
+          eb("returned_to_supplier", ">", asOf),
+        ]),
+      )
+      .execute();
+    const atSupplier = new Set(
+      atSupplierRows.map((row) => Number(row.cylinder_id)),
+    );
+    for (const id of atSupplier) seenBy.add(id);
+
+    const TERMINAL = new Set([
+      "LOST",
+      "BROKEN",
+      "SOLD",
+      "RETIRED",
+      "RETURNED_TO_SUPPLIER",
+    ]);
+
+    const counts = new Map<string, number>();
+    for (const row of cylinders) {
+      const id = Number(row.id);
+      const deleted = isoDate(row.deleted_at);
+      if (deleted && deleted <= asOf) continue;
+
+      const created = isoDate(row.created_at);
+      const acquired = isoDate(row.acquisition_date);
+      const existedByDate =
+        (acquired != null && acquired <= asOf) ||
+        (created != null && created <= asOf) ||
+        seenBy.has(id);
+      if (!existedByDate) continue;
+
+      let state: string;
+      if (TERMINAL.has(row.state)) {
+        state = row.state;
+      } else if (atSupplier.has(id)) {
+        state = "AT_SUPPLIER";
+      } else if (atClient.has(id)) {
+        state = "AT_CLIENT";
+      } else if (
+        row.state === "IN_STOCK_FULL" ||
+        row.state === "IN_STOCK_EMPTY"
+      ) {
+        state = row.state;
+      } else {
+        state = "IN_STOCK_EMPTY";
+      }
+
+      if (query.group_by === "gas_code") {
+        const key = row.gas_code ?? "UNKNOWN";
+        counts.set(key, (counts.get(key) ?? 0) + 1);
+      } else {
+        counts.set(state, (counts.get(state) ?? 0) + 1);
+      }
+    }
+
+    if (query.group_by === "gas_code") {
+      return [...counts.entries()]
+        .map(([key, count]) => ({
+          group_key: key,
+          gas_code: (key === "UNKNOWN" ? null : key) as FleetRow["gas_code"],
+          count,
+        }))
+        .sort((left, right) => right.count - left.count);
+    }
+
+    return [...counts.entries()]
+      .map(([state, count]) => ({
+        group_key: state,
+        state,
+        count,
+      }))
+      .sort((left, right) => right.count - left.count);
+  }
+
   async floatAging(query: FloatAgingQuery): Promise<{
     data: FloatAgingRow[];
     page: ReturnType<typeof buildPageMeta>;
   }> {
     const db = resolveDb(this.db);
-    const asOf = query.as_of ?? businessTodayIso();
+    const periodMode =
+      Boolean(query.period_start) &&
+      Boolean(query.period_end) &&
+      query.period_start! <= query.period_end!;
+    const asOf = periodMode
+      ? query.period_end!
+      : (query.as_of ?? businessTodayIso());
     const limit = query.limit;
     const sort = parseSort(query.sort, ["days_out"]);
 
@@ -219,10 +492,25 @@ export class ReportsRepository {
         "movement_event.holder_party_id as client_party_id",
         "party.display_name as client_name",
         "movement_event.delivery_date",
+        "movement_event.return_date",
         "client.territory_id",
-      ])
-      .where("movement_event.state", "=", "OPEN")
-      .where("movement_event.return_date", "is", null);
+      ]);
+
+    if (periodMode) {
+      qb = qb
+        .where("movement_event.state", "in", ["OPEN", "CLOSED", "SWAPPED"])
+        .where("movement_event.delivery_date", "<=", query.period_end!)
+        .where((eb) =>
+          eb.or([
+            eb("movement_event.return_date", "is", null),
+            eb("movement_event.return_date", ">=", query.period_start!),
+          ]),
+        );
+    } else {
+      qb = qb
+        .where("movement_event.state", "=", "OPEN")
+        .where("movement_event.return_date", "is", null);
+    }
 
     if (query["filter[territory_id]"] != null) {
       qb = qb.where("client.territory_id", "=", query["filter[territory_id]"]);
@@ -231,7 +519,9 @@ export class ReportsRepository {
     const rows = await qb.execute();
     let mapped: FloatAgingRow[] = rows.map((row) => {
       const delivery = isoDate(row.delivery_date)!;
-      const days_out = calendarDaysBetween(delivery, asOf);
+      const returned = isoDate(row.return_date);
+      const ageUntil = returned && returned < asOf ? returned : asOf;
+      const days_out = calendarDaysBetween(delivery, ageUntil);
       return {
         movement_id: Number(row.movement_id),
         cylinder_id: Number(row.cylinder_id),
@@ -392,6 +682,97 @@ export class ReportsRepository {
       cur.rental_days += days;
       cur.revenue = Math.round((cur.revenue + revenue) * 100) / 100;
       cur.movement_count += 1;
+      agg.set(key, cur);
+    }
+
+    return [...agg.values()].sort(
+      (left, right) => right.revenue - left.revenue,
+    );
+  }
+
+  async refill(query: RefillReportQuery): Promise<RefillReportRow[]> {
+    const db = resolveDb(this.db);
+    let qb = db
+      .selectFrom("movement_event")
+      .innerJoin("party", "party.id", "movement_event.holder_party_id")
+      .leftJoin("client", "client.party_id", "movement_event.holder_party_id")
+      .innerJoin("cylinder", "cylinder.id", "movement_event.cylinder_id")
+      .select([
+        "movement_event.holder_party_id",
+        "party.display_name as client_name",
+        "movement_event.gas_code",
+        "cylinder.capacity_m3",
+        "cylinder.capacity_unit",
+        "movement_event.delivery_date",
+      ])
+      .where("movement_event.movement_kind", "=", "REFILL")
+      .where("movement_event.state", "in", ["OPEN", "CLOSED", "SWAPPED"])
+      .where("movement_event.delivery_date", ">=", query.period_start)
+      .where("movement_event.delivery_date", "<=", query.period_end);
+
+    if (query["filter[territory_id]"] != null) {
+      qb = qb.where("client.territory_id", "=", query["filter[territory_id]"]);
+    }
+    if (query["filter[gas_code]"]) {
+      qb = qb.where("movement_event.gas_code", "=", query["filter[gas_code]"]);
+    }
+    if (query["filter[client_party_id]"] != null) {
+      qb = qb.where(
+        "movement_event.holder_party_id",
+        "=",
+        query["filter[client_party_id]"],
+      );
+    }
+
+    const rows = await qb.execute();
+    const rates = await db.selectFrom("refill_rate").selectAll().execute();
+    const candidates = rates.map((rate) => ({
+      id: Number(rate.id),
+      gas_code: rate.gas_code,
+      capacity_m3: rate.capacity_m3 == null ? null : Number(rate.capacity_m3),
+      capacity_unit: (rate.capacity_unit ?? "M3") as "M3" | "KG",
+      amount: Number(rate.amount),
+      effective_from: isoDate(rate.effective_from)!,
+      effective_to: isoDate(rate.effective_to),
+    }));
+
+    const agg = new Map<
+      string,
+      {
+        client_party_id: number;
+        client_name: string;
+        gas_code: RefillReportRow["gas_code"];
+        refill_count: number;
+        revenue: number;
+      }
+    >();
+
+    for (const row of rows) {
+      const delivery = isoDate(row.delivery_date)!;
+      // Same resolution as billing (`resolveRefillUnitPrice`): prefer rate on
+      // delivery, then fall back to period end so late-entered / backfilled
+      // rates still show on the dashboard (007 AC7 / 014).
+      const unit = resolveRefillUnitPrice({
+        rates: candidates,
+        gasCode: row.gas_code,
+        capacityM3: row.capacity_m3 == null ? null : Number(row.capacity_m3),
+        capacityUnit: (row.capacity_unit ?? "M3") as "M3" | "KG",
+        deliveryDate: delivery,
+        periodStart: query.period_start,
+        periodEnd: query.period_end,
+      });
+      const revenue = unit ? Math.round(unit.amount * 100) / 100 : 0;
+
+      const key = `${row.holder_party_id}:${row.gas_code ?? ""}`;
+      const cur = agg.get(key) ?? {
+        client_party_id: Number(row.holder_party_id),
+        client_name: row.client_name,
+        gas_code: row.gas_code as RefillReportRow["gas_code"],
+        refill_count: 0,
+        revenue: 0,
+      };
+      cur.refill_count += 1;
+      cur.revenue = Math.round((cur.revenue + revenue) * 100) / 100;
       agg.set(key, cur);
     }
 

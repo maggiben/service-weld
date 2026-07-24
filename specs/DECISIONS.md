@@ -147,6 +147,15 @@ Legend: **D-n** decision · resolves inconsistency **I-n** / missing **M-n** fro
 - **Import (011):** parse explicit weight cells (`10 KG`, `25 k`, …) into magnitude + `KG` instead of discarding them; prefer explicit volume over weight when both appear.
 - Specs updated: `002` (Capacity VO), `003` (ENUM/columns), `008`/`009` (inventory/rates), `011` (importer).
 
+### D-19 — Refill / gas fill pricing _(product — 009 R2)_
+
+- **REFILL** movements (Su Propiedad / `ownership_basis = CUSTOMER`) accrue **no rental days**; they produce a **per-fill gas charge** instead.
+- **Table** `refill_rate`: `(gas_code?, capacity_m3?, capacity_unit, amount, effective_from, effective_to?)` — specificity gas > size (not client-specific); amount = ARS **per fill** (no `period`). DB may retain a nullable `client_party_id` column unused by the product.
+- **Billing:** draft runs emit charge lines with `unit = "fill"`, `quantity = 1`, description `Recarga <serial> · <gas> · <size>`. Period mode bills REFILL by `delivery_date` in window; history bills open REFILL rows.
+- **Close:** returning a REFILL closes the movement without putting the cylinder into our stock (`AT_CLIENT` / `FULL`); canje (swap) remains available.
+- **UI:** Tarifas tab “Recargas”; nav “Recargas”; dashboard refill count + revenue chart via `GET /reports/refill`.
+- **Canonical spec:** `014-refill-system.md` (requirements, ACs, implementation map). Cross-links: `003`, `004`, `006`, `007`, `009`, `workflows.md` W7/W20.
+
 ---
 
 ## Deviations from spec (flagged)

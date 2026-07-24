@@ -330,7 +330,7 @@ security:
 - **Error Codes:** global.
 - **Pagination:** cursor (`limit`, `cursor`).
 - **Filtering:** `q` (fuzzy name/CUIT/phone), `filter[territory_id]`, `filter[coverage]`, `filter[segment]`, `filter[status]`, `has_outstanding=true`.
-- **Sorting:** `name`, `-created_at`, `territory_id` (default `name`).
+- **Sorting:** `name`, `-created_at`, `territory_id`, `locality_id`, `outstanding_count` (default `name`).
 
 #### POST `/clients`
 

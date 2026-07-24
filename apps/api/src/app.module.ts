@@ -9,6 +9,7 @@ import { ClientsModule } from "./clients/clients.module";
 import { CylindersModule } from "./cylinders/cylinders.module";
 import { MovementsModule } from "./movements/movements.module";
 import { RatesModule } from "./rates/rates.module";
+import { RefillRatesModule } from "./refill-rates/refill-rates.module";
 import { SupplierLoansModule } from "./supplier-loans/supplier-loans.module";
 import { TransfersModule } from "./transfers/transfers.module";
 import { ReconciliationModule } from "./reconciliation/reconciliation.module";
@@ -45,6 +46,7 @@ const envFiles = [
     BatteriesModule,
     MovementsModule,
     RatesModule,
+    RefillRatesModule,
     BillingModule,
     SupplierLoansModule,
     TransfersModule,

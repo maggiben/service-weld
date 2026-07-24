@@ -12,6 +12,8 @@ import {
   LossReportResponse,
   MedicalStatementQuery,
   MedicalStatementReportResponse,
+  RefillReportQuery,
+  RefillReportResponse,
   RentalReportQuery,
   RentalReportResponse,
   SupplierReturnsQuery,
@@ -29,6 +31,11 @@ export class FloatAgingReportResponseDto extends createZodDto(
 export class RentalReportQueryDto extends createZodDto(RentalReportQuery) {}
 export class RentalReportResponseDto extends createZodDto(
   RentalReportResponse,
+) {}
+
+export class RefillReportQueryDto extends createZodDto(RefillReportQuery) {}
+export class RefillReportResponseDto extends createZodDto(
+  RefillReportResponse,
 ) {}
 
 export class LossReportQueryDto extends createZodDto(LossReportQuery) {}

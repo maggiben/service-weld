@@ -113,6 +113,8 @@ export const ClientListQuery = PaginationQuery.extend({
       "-created_at",
       "territory_id",
       "-territory_id",
+      "locality_id",
+      "-locality_id",
       "outstanding_count",
       "-outstanding_count",
     ])

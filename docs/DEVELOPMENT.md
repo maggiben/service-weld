@@ -129,6 +129,17 @@ Maintainability for this codebase follows **SOLID** and **DRY** (`sdd.md` NFR-10
 
 Do **not** over-abstract for speculative reuse — extract when duplication is real or about to be.
 
+## Frontend pitfalls (DataGrid / tabs)
+
+Learned while shipping Tarifas → Recargas (`014`):
+
+1. **Empty grid ≠ missing DB rows.** Confirm with `GET /api/v1/refill-rates` and `SELECT … FROM refill_rate` before chasing persistence bugs.
+2. **Do not hide a MUI X DataGrid with `display: none`.** Layout is measured while hidden (0×0); showing the panel later can leave an empty grid despite loaded query data. Mount **only the active tab**.
+3. **Persist tab selection in the URL** when leave/refresh must keep the same panel (e.g. `/rates?tab=refill`), not only `useState`.
+4. After changing `packages/schemas` source, run `pnpm --filter @weld/schemas build` so Nest/`createZodDto` do not keep a stale `dist`.
+
+Canonical write-up: `specs/014-refill-system.md` § Findings; also `specs/006-frontend.md` Implementation Notes.
+
 ## Quality gates (mandatory)
 
 Local hooks and CI enforce the same intent. **Never commit without the pre-commit checks having passed. Never push without the coverage gate having passed. Never skip hooks with `--no-verify` unless you explicitly choose to bypass.**

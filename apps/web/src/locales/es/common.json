@@ -19,7 +19,9 @@
     "settings": "Configuración",
     "users": "Usuarios y permisos",
     "audit": "Registro de auditoría",
-    "data_migration": "Importar / exportar datos"
+    "data_migration": "Importar / exportar datos",
+    "refills": "Recargas",
+    "dashboard": "Tablero"
   },
   "shell": {
     "signed_in_as": "Sesión: {{username}}",
@@ -91,6 +93,7 @@
       "custody": {
         "on_loan": "En préstamo",
         "returned": "Devuelto",
+        "swapped": "Tubo canjeado",
         "refill_open": "En curso",
         "refill_closed": "Recargado"
       },
@@ -375,6 +378,30 @@
       "confirm": "Anular"
     }
   },
+  "refills": {
+    "title": "Recargas / rellenado",
+    "subtitle": "Cilindros de clientes (Su Propiedad) que llegan para ser rellenados.",
+    "empty": "No hay recargas",
+    "columns": {
+      "serial": "Serie",
+      "client": "Cliente",
+      "entry": "Entrada",
+      "exit": "Salida",
+      "gas": "Gas",
+      "capacity": "Tamaño",
+      "owner": "Proveedor / dueño",
+      "city": "Ciudad",
+      "state": "Estado",
+      "actions": "Acciones"
+    },
+    "filters": {
+      "serial": "Buscar serie",
+      "open_only": "Solo abiertas",
+      "state": "Estado",
+      "client": "Cliente",
+      "locality": "Localidad"
+    }
+  },
   "enums": {
     "coverage": {
       "PRIVATE": "Privado",
@@ -429,7 +456,7 @@
     "movement_state": {
       "OPEN": "Abierto",
       "CLOSED": "Cerrado",
-      "SWAPPED": "Canje",
+      "SWAPPED": "Tubo canjeado",
       "LOST": "Perdido",
       "SOLD": "Vendido",
       "VOID": "Anulado",
@@ -582,7 +609,8 @@
     "rent_accessory": "Prestar / alquilar",
     "refresh_alerts": "Actualizar alertas",
     "resolve": "Resolver",
-    "new_rate": "Nueva tarifa",
+    "new_rate": "Nueva tarifa de alquiler",
+    "new_rate_menu": "Nueva tarifa",
     "backfill_rates": "Backfill",
     "run_billing": "Generar borrador",
     "run_billing_history": "Histórico",
@@ -592,7 +620,9 @@
     "new_user": "Nuevo usuario",
     "remove": "Eliminar",
     "deactivate": "Desactivar",
-    "reactivate": "Reactivar"
+    "reactivate": "Reactivar",
+    "new_refill_rate": "Nueva tarifa de recarga",
+    "new_refill": "Nueva recarga"
   },
   "loans": {
     "title": "Préstamos de proveedor",
@@ -816,7 +846,7 @@
     }
   },
   "rates": {
-    "title": "Tarifas de alquiler",
+    "title": "Tarifas",
     "global": "Global",
     "any_gas": "Cualquier gas",
     "any_capacity": "Cualquier tamaño",
@@ -851,6 +881,143 @@
       "body_rate": "Con esta tarifa: si es general (cualquier gas/tamaño), completa o suma el default diario del cliente; luego regenera el borrador histórico de facturación (alcance del cliente de la tarifa, o todos si es global). Los borradores previos del mismo alcance se reemplazan.",
       "confirm": "Aplicar",
       "done": "Backfill listo: {{filled}} defaults nuevos · {{increased}} defaults sumados · {{invoices}} facturas · {{lines}} líneas · omitidos {{skipped}} · total {{total}} ARS"
+    },
+    "tabs": {
+      "rental": "Alquiler",
+      "refill": "Recargas / rellenado"
+    },
+    "refill": {
+      "subtitle": "Precio por rellenado según gas y tamaño del cilindro (Su Propiedad).",
+      "columns": {
+        "amount": "Precio por recarga"
+      },
+      "form": {
+        "title": "Nueva tarifa de recarga",
+        "title_edit": "Editar tarifa de recarga",
+        "amount": "Precio por recarga (ARS)",
+        "effective_from_hint": "Para que el tablero y los reportes valoricen recargas antiguas, usá una fecha anterior o igual a la entrega (no solo hoy).",
+        "precedence_hint": "Gana la más específica: gas+tamaño → gas → tamaño → global."
+      },
+      "backfill": {
+        "title": "Aplicar tarifas a recargas abiertas",
+        "body_all": "Se regenera un borrador histórico de facturación para recalcular todas las recargas abiertas (Su Propiedad en curso) con los precios por rellenado vigentes. El tablero (cantidad y ganancias) usa el mismo criterio de tarifa. Los borradores previos del mismo alcance se reemplazan.",
+        "body_rate": "Verifica esta tarifa y regenera el borrador histórico de facturación para que las recargas abiertas se recalculen con las tarifas de rellenado vigentes. El tablero refleja esas tarifas en el período de cada entrega. Los borradores previos del mismo alcance se reemplazan.",
+        "confirm": "Aplicar",
+        "done": "Backfill de recargas listo: {{invoices}} facturas · {{lines}} líneas · omitidos {{skipped}} · total {{total}} ARS. Revisá Tablero → Recargas en el mes/año de cada entrega."
+      }
+    }
+  },
+  "dashboard": {
+    "title": "Tablero de gestión",
+    "subtitle": "Flota, stock, cilindros en la calle, ingresos y alertas — de un vistazo.",
+    "period_start": "Desde",
+    "period_end": "Hasta",
+    "period_invalid": "La fecha desde no puede ser posterior a hasta.",
+    "period_current_month": "Mes actual",
+    "grain": {
+      "month": "Mes",
+      "quarter": "Trimestre",
+      "semester": "Semestre",
+      "month_hint": "Último mes calendario",
+      "quarter_hint": "Últimos 3 meses",
+      "semester_hint": "Últimos 6 meses"
+    },
+    "grain_labels": {
+      "month_1": "Ene",
+      "month_2": "Feb",
+      "month_3": "Mar",
+      "month_4": "Abr",
+      "month_5": "May",
+      "month_6": "Jun",
+      "month_7": "Jul",
+      "month_8": "Ago",
+      "month_9": "Sep",
+      "month_10": "Oct",
+      "month_11": "Nov",
+      "month_12": "Dic",
+      "quarter_1": "T1",
+      "quarter_2": "T2",
+      "quarter_3": "T3",
+      "quarter_4": "T4",
+      "semester_1": "1er sem.",
+      "semester_2": "2do sem."
+    },
+    "refresh": "Actualizar",
+    "empty": "Sin datos",
+    "empty_period": "Sin ingresos en este período",
+    "error": "No se pudo cargar este bloque",
+    "unknown_gas": "Sin gas",
+    "view_reports": "Ver reportes",
+    "view_all": "Ver todos",
+    "days_out": "{{days}} d",
+    "kpi": {
+      "fleet": "Entregas del período",
+      "fleet_hint": "Entregas a cliente + ingresos de proveedor",
+      "in_stock": "Ya en depósito",
+      "in_stock_hint": "De esas entregas, tubos que volvieron",
+      "float": "Siguen en clientes",
+      "float_hint": "De esas entregas, aún en la calle",
+      "snapshot_hint": "Situación al día de hoy (no filtra por fechas)",
+      "as_of_hint": "Stock al {{date}} (inicio del período)",
+      "period_activity_hint": "Entregas / ingresos {{from}} → {{to}}",
+      "revenue": "Ingresos alquiler",
+      "revenue_month": "Ingresos alquiler del mes",
+      "revenue_quarter": "Ingresos alquiler del trimestre",
+      "revenue_semester": "Ingresos alquiler del semestre",
+      "revenue_hint": "{{from}} → {{to}}",
+      "revenue_hint_detail": "{{clients}} clientes · {{days}} días-cilindro",
+      "losses": "Pérdidas / roturas",
+      "losses_hint": "{{from}} → {{to}}",
+      "alerts": "Alertas abiertas",
+      "alerts_hint": "Requieren atención",
+      "alerts_period_hint": "Creadas {{from}} → {{to}} (siguen abiertas)",
+      "refill_revenue": "Ingresos por recargas",
+      "refill_revenue_hint": "{{count}} tubos · {{from}} → {{to}}"
+    },
+    "charts": {
+      "fleet_state": "Entregas por estado actual",
+      "fleet_gas": "Entregas por gas",
+      "fleet_gas_unit": "Cantidad de entregas / ingresos (no stock actual)",
+      "fleet_as_of": "Situación al {{date}}",
+      "fleet_period": "Entregas / ingresos {{from}} → {{to}}",
+      "utilization": "Utilización (en clientes)",
+      "utilization_hint": "% de esas entregas cuyo tubo sigue hoy en clientes",
+      "aging": "Antigüedad de la flota",
+      "aging_period": "Custodia en el período {{from}} → {{to}}",
+      "top_clients": "Top clientes por ingresos",
+      "top_clients_period": "{{from}} → {{to}} · total {{total}}",
+      "revenue_year": "Ingresos {{year}}",
+      "revenue_year_hint": "Alquiler + recargas por período. Clic en una barra para filtrar los KPI de abajo (Desde/Hasta).",
+      "refills": "Recargas: cantidad y ganancias",
+      "refills_hint": "Dos barras por gas: cantidad de tubos (eje izquierdo) y monto en ARS (eje derecho), según tarifas de recarga."
+    },
+    "series": {
+      "count": "Cantidad",
+      "cylinders": "Cilindros",
+      "revenue": "Alquiler (ARS)",
+      "refill_count": "Cantidad",
+      "refill_revenue": "Recargas (ARS)",
+      "total_revenue": "Ingresos (ARS)"
+    },
+    "legend": {
+      "revenue_low": "Menor ingreso",
+      "revenue_high": "Mayor ingreso"
+    },
+    "aging": {
+      "lte30": "≤30 d",
+      "gt30": ">30 d",
+      "gt90": ">90 d",
+      "gt180": ">180 d",
+      "gt365": ">365 d"
+    },
+    "worklists": {
+      "outstanding": "Flota antigua abierta",
+      "outstanding_empty": "Nada pendiente en antigüedad",
+      "supplier": "Devoluciones a proveedor",
+      "supplier_empty": "Sin préstamos proveedor abiertos",
+      "alerts": "Alertas",
+      "alerts_empty": "Sin alertas abiertas",
+      "alerts_forbidden": "Sin permiso para ver alertas"
     }
   },
   "billing": {
@@ -914,6 +1081,7 @@
       "fleet": "Flota",
       "float": "En la calle",
       "rental": "Ingresos alquiler",
+      "refill": "Ingresos recargas",
       "loss": "Pérdidas",
       "supplier": "Devoluciones proveedor",
       "quality": "Calidad de datos",
@@ -950,6 +1118,7 @@
       "gas": "Gas",
       "rental_days": "Días alquiler",
       "revenue": "Ingresos",
+      "refill_count": "Recargas",
       "movements": "Movimientos",
       "owner": "Dueño",
       "basis": "Base",

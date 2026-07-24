@@ -19,6 +19,23 @@ export function monthStartIso(
   return `${today.slice(0, 8)}01`;
 }
 
+/** Calendar year of an ISO date (YYYY-MM-DD). */
+export function yearOfIso(iso: string): number {
+  return Number(iso.slice(0, 4));
+}
+
+/** Last calendar day of `year`-`month` (1–12), optionally clamped to `asOf`. */
+export function monthEndIso(
+  year: number,
+  month: number,
+  asOf?: string,
+): string {
+  const last = new Date(Date.UTC(year, month, 0));
+  const end = last.toISOString().slice(0, 10);
+  if (asOf && asOf < end) return asOf;
+  return end;
+}
+
 /** Format YYYY-MM-DD (or datetime prefix) as DD/MM/YYYY, else "—". */
 export function formatDateDMY(value: string | null | undefined): string {
   if (!value) return "—";

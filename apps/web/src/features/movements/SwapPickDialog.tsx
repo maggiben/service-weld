@@ -19,6 +19,8 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onSelect: (movement: MovementEvent) => void;
+  /** When set, only list open movements of this kind. */
+  kindFilter?: "RENTAL" | "REFILL";
 }
 
 function movementLabel(member: MovementEvent): string {
@@ -28,7 +30,7 @@ function movementLabel(member: MovementEvent): string {
 }
 
 /** Pick an OPEN movement to start a swap from the toolbar. */
-export function SwapPickDialog({ open, onClose, onSelect }: Props) {
+export function SwapPickDialog({ open, onClose, onSelect, kindFilter }: Props) {
   const { t: translate } = useTranslation();
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -48,13 +50,14 @@ export function SwapPickDialog({ open, onClose, onSelect }: Props) {
   }, [query]);
 
   const openMovements = useQuery({
-    queryKey: ["movements", "swap-picker", debouncedQuery],
+    queryKey: ["movements", "swap-picker", debouncedQuery, kindFilter],
     queryFn: () =>
       api.listMovements({
         open: true,
         limit: 40,
         sort: "-delivery_date",
         q: debouncedQuery.trim() || undefined,
+        ...(kindFilter ? { "filter[movement_kind]": kindFilter } : {}),
       }),
     enabled: open,
   });

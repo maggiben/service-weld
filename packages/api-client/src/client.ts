@@ -19,8 +19,12 @@ import type {
   CreateMovementInput,
   BackfillRentalRatesInput,
   BackfillRentalRatesResult,
+  BackfillRefillRatesInput,
+  BackfillRefillRatesResult,
   CreateRentalRateInput,
   UpdateRentalRateInput,
+  CreateRefillRateInput,
+  UpdateRefillRateInput,
   Cylinder,
   CylinderHistoryQuery,
   CylinderHistoryResponse,
@@ -32,6 +36,9 @@ import type {
   RentalRate,
   RentalRateListQuery,
   RentalRateListResponse,
+  RefillRate,
+  RefillRateListQuery,
+  RefillRateListResponse,
   ReplaceCylinderInput,
   ReplaceCylinderResponse,
   ReportCylinderLossInput,
@@ -76,6 +83,8 @@ import type {
   FloatAgingReportResponse,
   RentalReportQuery,
   RentalReportResponse,
+  RefillReportQuery,
+  RefillReportResponse,
   LossReportQuery,
   LossReportResponse,
   SupplierReturnsQuery,
@@ -670,8 +679,14 @@ export class WeldApiClient {
     );
   }
 
-  alertsSummary(): Promise<AlertSummary> {
-    return this.request<AlertSummary>("GET", "/alerts/summary");
+  alertsSummary(
+    query: Partial<{ period_start: string; period_end: string }> &
+      Record<string, QueryValue> = {},
+  ): Promise<AlertSummary> {
+    return this.request<AlertSummary>(
+      "GET",
+      `/alerts/summary${toQuery(query as Record<string, QueryValue>)}`,
+    );
   }
 
   refreshAlerts(): Promise<RefreshAlertsResult> {
@@ -712,6 +727,15 @@ export class WeldApiClient {
     return this.request<RentalReportResponse>(
       "GET",
       `/reports/rental${toQuery(query as Record<string, QueryValue>)}`,
+    );
+  }
+
+  reportRefill(
+    query: RefillReportQuery & Record<string, QueryValue>,
+  ): Promise<RefillReportResponse> {
+    return this.request<RefillReportResponse>(
+      "GET",
+      `/reports/refill${toQuery(query as Record<string, QueryValue>)}`,
     );
   }
 
@@ -987,6 +1011,40 @@ export class WeldApiClient {
     return this.request<BackfillRentalRatesResult>(
       "POST",
       "/rental-rates/backfill",
+      {
+        body: input,
+      },
+    );
+  }
+
+  listRefillRates(
+    query: Partial<RefillRateListQuery> & Record<string, QueryValue> = {},
+  ): Promise<RefillRateListResponse> {
+    return this.request<RefillRateListResponse>(
+      "GET",
+      `/refill-rates${toQuery(query as Record<string, QueryValue>)}`,
+    );
+  }
+
+  createRefillRate(input: CreateRefillRateInput): Promise<RefillRate> {
+    return this.request<RefillRate>("POST", "/refill-rates", { body: input });
+  }
+
+  updateRefillRate(
+    id: number,
+    input: UpdateRefillRateInput,
+  ): Promise<RefillRate> {
+    return this.request<RefillRate>("PATCH", `/refill-rates/${id}`, {
+      body: input,
+    });
+  }
+
+  backfillRefillRates(
+    input: BackfillRefillRatesInput = {},
+  ): Promise<BackfillRefillRatesResult> {
+    return this.request<BackfillRefillRatesResult>(
+      "POST",
+      "/refill-rates/backfill",
       {
         body: input,
       },

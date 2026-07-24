@@ -43,6 +43,13 @@ export {
 } from "./rates";
 export type { RateCandidate, RatePeriod } from "./rates";
 export {
+  resolveRefillPrice,
+  resolveRefillUnitPrice,
+  refillChargeAmount,
+  refillRatesOverlap,
+} from "./refill-rates";
+export type { RefillRateCandidate } from "./refill-rates";
+export {
   assertBatteryMemberCount,
   assertPackableAsBatteryMember,
   assertNotPackedMember,

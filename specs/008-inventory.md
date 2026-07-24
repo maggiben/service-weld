@@ -18,6 +18,7 @@ Track every physical cylinder, battery, and accessory through its full lifecycle
 - R8. Implement **stock transfers** between nodes/territories (W16) with a **structured origin/destination party** (BR-14).
 - R9. Implement **reconciliation** (W18): outstanding-cylinder lists (open movements), physical-count vs system variance, "to-verify" flags; and **sub-distributor disposition** (W19).
 - R10. Implement **accessories** inventory + loans (W11): one active loan per unit; states `IN_STOCK/ON_LOAN/IN_REPAIR/LOST/BROKEN/RETIRED`.
+- R11. **REFILL close** (W7 / `014`): closing a customer-owned refill MUST leave the cylinder `AT_CLIENT`/`FULL` — do not transition to `IN_STOCK_*` (that is only for RENTAL return-to-stock).
 
 ## Constraints
 
@@ -46,7 +47,7 @@ Track every physical cylinder, battery, and accessory through its full lifecycle
 
 ## Dependencies
 
-- `001` (BR-01/06/07/11/12/13/14), `002` (entities/states), `003` (constraints/triggers), `009` (rental effects of movements), `007` (float/aging/loss reports).
+- `001` (BR-01/06/07/11/12/13/14), `002` (entities/states), `003` (constraints/triggers), `009` (rental effects of movements), `014` (REFILL close/swap), `007` (float/aging/loss reports).
 
 ## Implementation Notes
 

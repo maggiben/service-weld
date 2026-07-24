@@ -21,6 +21,27 @@ describe("capabilities", () => {
     expect(hasCapabilities(caps, ["clients:read"])).toBe(true);
     expect(hasCapabilities(caps, ["admin:write"])).toBe(false);
   });
+
+  it("limits dashboard/billing write to ADMIN, BILLING, MANAGER, SUBDIST", () => {
+    const billingRoles = ["ADMIN", "BILLING", "MANAGER", "SUBDIST"] as const;
+    for (const role of billingRoles) {
+      expect(ROLE_CAPABILITIES[role]).toContain("billing:read");
+      expect(ROLE_CAPABILITIES[role]).toContain("billing:write");
+      expect(ROLE_CAPABILITIES[role]).toContain("billing:approve");
+    }
+    for (const role of [
+      "CLERK",
+      "DRIVER",
+      "PLANT",
+      "INVENTORY",
+      "MEDICAL",
+      "CLIENT",
+    ] as const) {
+      expect(ROLE_CAPABILITIES[role]).not.toContain("billing:read");
+      expect(ROLE_CAPABILITIES[role]).not.toContain("billing:write");
+      expect(ROLE_CAPABILITIES[role]).not.toContain("billing:approve");
+    }
+  });
 });
 
 describe("principal territory helpers", () => {

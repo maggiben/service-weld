@@ -171,7 +171,6 @@ export default function ClientsPage() {
         field: "locality_id",
         headerName: translate("clients.columns.territory"),
         width: 160,
-        sortable: false,
         valueFormatter: (value: number | null) => localityLabel(value),
       },
       {

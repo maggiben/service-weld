@@ -30,6 +30,9 @@ Build the two user-facing applications: a desktop-first **back-office web app** 
 - R7. Implement **i18n** with **react-i18next**: locales **`es` (default & fallback)** and **`en`**; namespaced keys; **no hard-coded user-facing strings**; translate domain vocabulary/enums (gas, states, roles, coverage, segments) via an `enums` namespace while storing canonical codes (BR-15); apply MUI localization packs (core `esES`/`enUS`, Data Grid, Date Pickers) tied to the active language; format numbers/currency (ARS) and dates (`dd/mm/yyyy` for `es-AR`) through shared `Intl`/adapter helpers; language switcher persisted, **defaulting to `es`** (org default also stored as `primary_language` in system settings — D-17).
 - R8. Implement all charts with **MUI X Charts** (`BarChart`, `LineChart`, `PieChart`, `SparkLineChart`, `Gauge`, `ScatterChart`), sourcing series colors from the theme's gas/state palette keys.
 - R10. Implement the **Configuración** (`/settings`) screen: appearance (`ThemePicker`), personal UI language (`uiStore`), and — for `admin:write` — operational system settings via `GET/PATCH /settings` (business timezone, rental min days, primary language, supplier-loan overdue days).
+- R11. Implement **Recargas** (`/refills`, `014`): REFILL-only DataGrid (serial/client ledger links, entry/exit, gas, size, owner, city, sortable), actions devolver/canjear/anular, deliver drawer defaulting to REFILL; capability `movements:read` / `movements:write` / `movements:void`.
+- R12. Extend **Tarifas** (`/rates`) with a **Recargas / rellenado** tab for `refill_rate` CRUD (gas × size) alongside rental rates (`014` R16).
+- R13. Management **Dashboard** (`/dashboard`) includes refill revenue KPI and a quantity/revenue chart from `GET /reports/refill` (`014` R14 / `007`).
 
 ## Constraints
 
@@ -68,12 +71,13 @@ Build the two user-facing applications: a desktop-first **back-office web app** 
 
 ## Dependencies
 
-- `004` (API contract + client), `005` (auth/capabilities/scoping), `007` (report/dashboard data), `009` (rental previews).
+- `004` (API contract + client), `005` (auth/capabilities/scoping), `007` (report/dashboard data), `009` (rental previews), `014` (refills UI).
 
 ## Implementation Notes
 
 - Two apps `SHOULD` share one **MUI theme** + component library and the `enums`/translation resources; the field app is a separate build optimized for xs/sm and touch (still MUI + DataGrid + Charts).
 - **DataGrid server mode:** map `onSortModelChange`/`onFilterModelChange`/`onPaginationModelChange` to API query params; feed rows + `paginationMeta.hasNextPage` + `estimatedRowCount` back; do not use client-side sort/filter for server-backed lists. Persist `{ sortModel, filterModel, columnVisibilityModel, density, pageSize }` for saved views.
+- **DataGrid + tabs:** never keep a server-mode DataGrid mounted under `display: none` (or equivalent zero-size hide). The grid measures layout while hidden and can render an **empty viewport** after the tab is shown again, even when the query cache has rows. Prefer **conditional mount** of the active tab panel. If a tab must stay selected across navigation/refresh, put it in the URL (e.g. `/rates?tab=refill` — see `014` R16).
 - **Charts:** wrap MUI X Charts in small presentational components that read series colors from `theme.palette` domain keys; provide shared loading/empty/error wrappers.
 - **i18n setup:** initialize react-i18next with `fallbackLng: 'es'`, `supportedLngs: ['es','en']`, lazy-loaded namespace bundles; a single `LocaleProvider` composes react-i18next + MUI `esES`/`enUS` + Date Picker `LocalizationProvider` adapterLocale so one switch updates everything. Add a CI lint to catch untranslated literals.
 - **State architecture:** three non-overlapping layers — (1) **query/cache layer** for server data (invalidate on mutations), (2) **Zustand** slice stores for client/session/UI/offline state, (3) **react-hook-form** for in-progress form values. Keep them decoupled; sync only at boundaries (e.g., `sessionStore` provides the auth token to the fetch layer; a successful mutation invalidates the query cache and may update `notificationStore`).

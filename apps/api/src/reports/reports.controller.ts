@@ -14,6 +14,8 @@ import {
   LossReportResponseDto,
   MedicalStatementQueryDto,
   MedicalStatementReportResponseDto,
+  RefillReportQueryDto,
+  RefillReportResponseDto,
   RentalReportQueryDto,
   RentalReportResponseDto,
   SupplierReturnsQueryDto,
@@ -46,6 +48,13 @@ export class ReportsController {
   @ApiOkResponse({ type: RentalReportResponseDto })
   rental(@Query() query: RentalReportQueryDto) {
     return this.reportsService.rental(query);
+  }
+
+  @Get("refill")
+  @RequireCapabilities("reports:read")
+  @ApiOkResponse({ type: RefillReportResponseDto })
+  refill(@Query() query: RefillReportQueryDto) {
+    return this.reportsService.refill(query);
   }
 
   @Get("loss")

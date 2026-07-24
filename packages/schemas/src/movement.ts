@@ -1,6 +1,12 @@
 import { z as zod } from "zod";
 import { IsoDate, paginated, PaginationQuery } from "./common";
-import { GasCode, MovementKind, MovementState, OwnershipBasis } from "./enums";
+import {
+  CapacityUnit,
+  GasCode,
+  MovementKind,
+  MovementState,
+  OwnershipBasis,
+} from "./enums";
 
 export const MovementEvent = zod.object({
   id: zod.number().int(),
@@ -22,6 +28,12 @@ export const MovementEvent = zod.object({
   version: zod.number().int(),
   created_at: zod.string().datetime(),
   cylinder_serial: zod.string().optional(),
+  /** Denormalized from cylinder for grids (refills / movements). */
+  capacity_m3: zod.number().nullable().optional(),
+  capacity_unit: CapacityUnit.optional(),
+  locality_name: zod.string().nullable().optional(),
+  owner_party_id: zod.number().int().nullable().optional(),
+  owner_name: zod.string().nullable().optional(),
 });
 export type MovementEvent = zod.infer<typeof MovementEvent>;
 
@@ -77,6 +89,12 @@ export const MovementListQuery = PaginationQuery.extend({
       "-rental_days",
       "state",
       "-state",
+      "capacity_m3",
+      "-capacity_m3",
+      "locality_name",
+      "-locality_name",
+      "owner_name",
+      "-owner_name",
     ])
     .default("-delivery_date"),
   open: zod

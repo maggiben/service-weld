@@ -34,6 +34,7 @@ import type {
   FloatAgingRow,
   LossReportRow,
   MedicalStatementRow,
+  RefillReportRow,
   RentalReportRow,
   SupplierReturnsRow,
 } from "@weld/schemas";
@@ -50,7 +51,14 @@ import { useTerritories } from "../hooks/useTerritories";
 import { useSessionStore } from "../store/sessionStore";
 
 type ReportTab =
-  "fleet" | "float" | "rental" | "loss" | "supplier" | "quality" | "medical";
+  | "fleet"
+  | "float"
+  | "rental"
+  | "refill"
+  | "loss"
+  | "supplier"
+  | "quality"
+  | "medical";
 
 type LedgerClient = { id: number; name?: string };
 
@@ -97,6 +105,7 @@ export default function ReportsPage() {
   const [territoryFilter, setTerritoryFilter] = useState<number | "">("");
   const [rentalClient, setRentalClient] = useState<Client | null>(null);
   const [rentalCylinder, setRentalCylinder] = useState<Cylinder | null>(null);
+  const [refillClient, setRefillClient] = useState<Client | null>(null);
   const [clientQuery, setClientQuery] = useState("");
   const [cylinderQuery, setCylinderQuery] = useState("");
   const [ledgerClient, setLedgerClient] = useState<LedgerClient | null>(null);
@@ -115,13 +124,14 @@ export default function ReportsPage() {
   const showClientLedgerHint =
     tab === "float" ||
     tab === "rental" ||
+    tab === "refill" ||
     tab === "medical" ||
     (tab === "fleet" && groupBy === "client");
 
   const clientsSearch = useQuery({
-    queryKey: ["clients", "picker", "reports-rental", clientQuery],
+    queryKey: ["clients", "picker", "reports", tab, clientQuery],
     queryFn: () => api.listClients({ q: clientQuery || undefined, limit: 20 }),
-    enabled: tab === "rental",
+    enabled: tab === "rental" || tab === "refill",
   });
 
   const cylindersSearch = useQuery({
@@ -161,6 +171,7 @@ export default function ReportsPage() {
 
   const rentalClientId = rentalClient?.id;
   const rentalCylinderId = rentalCylinder?.id;
+  const refillClientId = refillClient?.id;
 
   const rentalQuery = useQuery({
     queryKey: [
@@ -183,6 +194,19 @@ export default function ReportsPage() {
           : {}),
       }),
     enabled: tab === "rental",
+  });
+
+  const refillQuery = useQuery({
+    queryKey: ["reports", "refill", periodStart, periodEnd, refillClientId],
+    queryFn: () =>
+      api.reportRefill({
+        period_start: periodStart,
+        period_end: periodEnd,
+        ...(refillClientId != null
+          ? { "filter[client_party_id]": refillClientId }
+          : {}),
+      }),
+    enabled: tab === "refill",
   });
 
   const lossQuery = useQuery({
@@ -418,6 +442,49 @@ export default function ReportsPage() {
     [translate],
   );
 
+  const refillColumns = useMemo<GridColDef<RefillReportRow>[]>(
+    () => [
+      {
+        field: "client_name",
+        headerName: translate("reports.columns.client"),
+        flex: 1,
+        minWidth: 140,
+        renderCell: (params) => (
+          <ClientLedgerLink
+            clientPartyId={params.row.client_party_id}
+            label={params.value ?? String(params.row.client_party_id)}
+            onOpen={setLedgerClient}
+          />
+        ),
+      },
+      {
+        field: "gas_code",
+        headerName: translate("reports.columns.gas"),
+        width: 110,
+        valueFormatter: (value: string | null) =>
+          value
+            ? translate(`enums.gas.${value}`, { defaultValue: value })
+            : "—",
+      },
+      {
+        field: "refill_count",
+        headerName: translate("reports.columns.refill_count"),
+        width: 120,
+      },
+      {
+        field: "revenue",
+        headerName: translate("reports.columns.revenue"),
+        width: 120,
+        valueFormatter: (value: number) =>
+          new Intl.NumberFormat(undefined, {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2,
+          }).format(value),
+      },
+    ],
+    [translate],
+  );
+
   const lossColumns = useMemo<GridColDef<LossReportRow>[]>(
     () => [
       {
@@ -574,13 +641,15 @@ export default function ReportsPage() {
         ? floatQuery
         : tab === "rental"
           ? rentalQuery
-          : tab === "loss"
-            ? lossQuery
-            : tab === "supplier"
-              ? supplierQuery
-              : tab === "quality"
-                ? qualityQuery
-                : medicalQuery;
+          : tab === "refill"
+            ? refillQuery
+            : tab === "loss"
+              ? lossQuery
+              : tab === "supplier"
+                ? supplierQuery
+                : tab === "quality"
+                  ? qualityQuery
+                  : medicalQuery;
 
   const rows =
     tab === "fleet"
@@ -595,25 +664,30 @@ export default function ReportsPage() {
               ...row,
               id: item,
             }))
-          : tab === "loss"
-            ? (lossQuery.data?.data ?? []).map((row, item) => ({
+          : tab === "refill"
+            ? (refillQuery.data?.data ?? []).map((row, item) => ({
                 ...row,
                 id: item,
               }))
-            : tab === "supplier"
-              ? (supplierQuery.data?.data ?? []).map((row) => ({
+            : tab === "loss"
+              ? (lossQuery.data?.data ?? []).map((row, item) => ({
                   ...row,
-                  id: row.loan_id,
+                  id: item,
                 }))
-              : tab === "quality"
-                ? (qualityQuery.data?.data ?? []).map((row) => ({
+              : tab === "supplier"
+                ? (supplierQuery.data?.data ?? []).map((row) => ({
                     ...row,
-                    id: row.id,
+                    id: row.loan_id,
                   }))
-                : (medicalQuery.data?.data ?? []).map((row, item) => ({
-                    ...row,
-                    id: item,
-                  }));
+                : tab === "quality"
+                  ? (qualityQuery.data?.data ?? []).map((row) => ({
+                      ...row,
+                      id: row.id,
+                    }))
+                  : (medicalQuery.data?.data ?? []).map((row, item) => ({
+                      ...row,
+                      id: item,
+                    }));
 
   const columns =
     tab === "fleet"
@@ -622,13 +696,15 @@ export default function ReportsPage() {
         ? floatColumns
         : tab === "rental"
           ? rentalColumns
-          : tab === "loss"
-            ? lossColumns
-            : tab === "supplier"
-              ? supplierColumns
-              : tab === "quality"
-                ? qualityColumns
-                : medicalColumns;
+          : tab === "refill"
+            ? refillColumns
+            : tab === "loss"
+              ? lossColumns
+              : tab === "supplier"
+                ? supplierColumns
+                : tab === "quality"
+                  ? qualityColumns
+                  : medicalColumns;
 
   const paginated = tab === "float" || tab === "supplier" || tab === "quality";
 
@@ -664,6 +740,7 @@ export default function ReportsPage() {
         <Tab value="fleet" label={translate("reports.tabs.fleet")} />
         <Tab value="float" label={translate("reports.tabs.float")} />
         <Tab value="rental" label={translate("reports.tabs.rental")} />
+        <Tab value="refill" label={translate("reports.tabs.refill")} />
         <Tab value="loss" label={translate("reports.tabs.loss")} />
         <Tab value="supplier" label={translate("reports.tabs.supplier")} />
         <Tab value="quality" label={translate("reports.tabs.quality")} />
@@ -744,7 +821,10 @@ export default function ReportsPage() {
             </FormControl>
           </>
         ) : null}
-        {tab === "rental" || tab === "loss" || tab === "medical" ? (
+        {tab === "rental" ||
+        tab === "refill" ||
+        tab === "loss" ||
+        tab === "medical" ? (
           <>
             <TextField
               size="small"
@@ -825,6 +905,36 @@ export default function ReportsPage() {
                   )}
                 />
               </>
+            ) : null}
+            {tab === "refill" ? (
+              <Autocomplete
+                size="small"
+                sx={{ minWidth: 220 }}
+                options={
+                  refillClient
+                    ? [
+                        refillClient,
+                        ...(clientsSearch.data?.data ?? []).filter(
+                          (client) => client.id !== refillClient.id,
+                        ),
+                      ]
+                    : (clientsSearch.data?.data ?? [])
+                }
+                getOptionLabel={(option: Client) => option.name}
+                isOptionEqualToValue={(left, right) => left.id === right.id}
+                loading={clientsSearch.isFetching}
+                value={refillClient}
+                onChange={(_, value) => setRefillClient(value)}
+                onInputChange={(_, value, reason) => {
+                  if (reason !== "reset") setClientQuery(value);
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label={translate("reports.filters.client")}
+                  />
+                )}
+              />
             ) : null}
             <Button
               variant="outlined"

@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "build": "nest build",
+    "predev": "pnpm --filter @weld/schemas build && pnpm --filter @weld/domain build",
     "dev": "nest start --watch",
     "start": "node dist/apps/api/src/main.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",

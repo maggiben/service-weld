@@ -82,6 +82,8 @@ export const ROLE_CAPABILITIES: Record<RoleCode, readonly string[]> = {
     "transfers:read",
     "accessories:read",
     "billing:read",
+    "billing:write",
+    "billing:approve",
     "reports:read",
     "rates:read",
     "alerts:read",
@@ -95,6 +97,9 @@ export const ROLE_CAPABILITIES: Record<RoleCode, readonly string[]> = {
     "cylinders:read",
     "transfers:read",
     "transfers:write",
+    "billing:read",
+    "billing:write",
+    "billing:approve",
   ],
   ADMIN: [
     "clients:read",

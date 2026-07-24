@@ -111,22 +111,6 @@ export class MovementsService {
       throw ApiErrors.notOpen();
     }
 
-    // Customer-owned / REFILL: the unit is theirs — close via canje (swap), not return-to-stock.
-    if (
-      movement.property_basis === "CUSTOMER" ||
-      movement.movement_kind === "REFILL"
-    ) {
-      throw ApiErrors.validationFailed(
-        "Customer-owned cylinders cannot be returned; use swap (canje) instead",
-        [
-          {
-            field: "movement_kind",
-            issue: "REFILL movements use swap, not return",
-          },
-        ],
-      );
-    }
-
     try {
       assertPlausibleBusinessDate(input.return_date);
       RentalPeriod.between(movement.delivery_date, input.return_date);
@@ -135,6 +119,20 @@ export class MovementsService {
     }
 
     const expectedVersion = ifMatchVersion ?? movement.version;
+
+    // Customer-owned / REFILL: close the fill cycle without returning to our stock.
+    if (
+      movement.property_basis === "CUSTOMER" ||
+      movement.movement_kind === "REFILL"
+    ) {
+      return this.repository.closeRefill(
+        id,
+        movement.cylinder_id,
+        input.return_date,
+        expectedVersion,
+        principal.id,
+      );
+    }
 
     return this.repository.closeReturn(
       id,

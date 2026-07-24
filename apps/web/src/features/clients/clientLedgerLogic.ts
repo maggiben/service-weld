@@ -39,8 +39,9 @@ export function clientCustodyLabel(
   const returned = isMovementReturned(row);
 
   if (returned) {
+    // Per-tube outcome — not a company-level "Canje" tag (other open tubes unchanged).
     if (row.state === "SWAPPED")
-      return translate("enums.movement_state.SWAPPED");
+      return translate("clients.detail.custody.swapped");
     if (row.state === "LOST") return translate("enums.movement_state.LOST");
     if (row.state === "SOLD") return translate("enums.movement_state.SOLD");
     if (row.state === "VOID") return translate("enums.movement_state.VOID");

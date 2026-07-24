@@ -15,6 +15,7 @@ import {
   AlertListQueryDto,
   AlertListResponseDto,
   AlertSummaryDto,
+  AlertSummaryQueryDto,
   RefreshAlertsResultDto,
   UpdateAlertContactDto,
 } from "./dto/alerts.dto";
@@ -36,8 +37,8 @@ export class AlertsController {
   @Get("summary")
   @RequireCapabilities("alerts:read")
   @ApiOkResponse({ type: AlertSummaryDto })
-  summary() {
-    return this.alertsService.summary();
+  summary(@Query() query: AlertSummaryQueryDto) {
+    return this.alertsService.summary(query);
   }
 
   @Post("refresh")

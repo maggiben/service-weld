@@ -38,6 +38,9 @@ import type {
 /** Coalesced open-movement count for ORDER BY / keyset cursor. */
 const OPEN_COUNT_EXPR = sql<number>`coalesce(open_by_holder.cnt, 0)`;
 
+/** Locality display name for ORDER BY / keyset cursor (null → ''). */
+const LOCALITY_NAME_EXPR = sql<string>`coalesce(locality.name, '')`;
+
 interface ClientRow {
   party_id: number;
   display_name: string;
@@ -45,6 +48,7 @@ interface ClientRow {
   cuit_valid: boolean;
   address_street: string | null;
   locality_id: number | null;
+  locality_name?: string | null;
   territory_id: number | null;
   coverage: ClientCoverage;
   segment: ClientSegment | null;
@@ -125,12 +129,14 @@ export class ClientsRepository {
       "name",
       "created_at",
       "territory_id",
+      "locality_id",
       "outstanding_count",
     ]);
 
     let qb = db
       .selectFrom("client")
       .innerJoin("party", "party.id", "client.party_id")
+      .leftJoin("locality", "locality.id", "client.locality_id")
       .leftJoin(
         (eb) =>
           eb
@@ -163,6 +169,7 @@ export class ClientsRepository {
         "client.created_at",
       ])
       .select(OPEN_COUNT_EXPR.as("outstanding_count"))
+      .select(LOCALITY_NAME_EXPR.as("locality_name"))
       .where("client.deleted_at", "is", null)
       .where("party.deleted_at", "is", null);
 
@@ -237,6 +244,16 @@ export class ClientsRepository {
             : qb.where(
                 sql<SqlBool>`(${OPEN_COUNT_EXPR} < ${cursorCount} or (${OPEN_COUNT_EXPR} = ${cursorCount} and client.party_id < ${cursorId}))`,
               );
+      } else if (sort.field === "locality_id") {
+        const cursorLocality = String(cursor.locality_name ?? "");
+        qb =
+          sort.direction === "asc"
+            ? qb.where(
+                sql<SqlBool>`(${LOCALITY_NAME_EXPR} > ${cursorLocality} or (${LOCALITY_NAME_EXPR} = ${cursorLocality} and client.party_id > ${cursorId}))`,
+              )
+            : qb.where(
+                sql<SqlBool>`(${LOCALITY_NAME_EXPR} < ${cursorLocality} or (${LOCALITY_NAME_EXPR} = ${cursorLocality} and client.party_id < ${cursorId}))`,
+              );
       }
     }
 
@@ -245,16 +262,20 @@ export class ClientsRepository {
         ? qb
             .orderBy(OPEN_COUNT_EXPR, sort.direction)
             .orderBy("client.party_id", sort.direction)
-        : qb
-            .orderBy(
-              sort.field === "name"
-                ? "party.display_name"
-                : sort.field === "created_at"
-                  ? "client.created_at"
-                  : "client.territory_id",
-              sort.direction,
-            )
-            .orderBy("client.party_id", sort.direction);
+        : sort.field === "locality_id"
+          ? qb
+              .orderBy(LOCALITY_NAME_EXPR, sort.direction)
+              .orderBy("client.party_id", sort.direction)
+          : qb
+              .orderBy(
+                sort.field === "name"
+                  ? "party.display_name"
+                  : sort.field === "created_at"
+                    ? "client.created_at"
+                    : "client.territory_id",
+                sort.direction,
+              )
+              .orderBy("client.party_id", sort.direction);
 
     const rows = await ordered.limit(limit + 1).execute();
 
@@ -275,10 +296,15 @@ export class ClientsRepository {
                       outstanding_count: Number(last.outstanding_count ?? 0),
                       id: Number(last.party_id),
                     }
-                  : {
-                      name: last.display_name,
-                      id: Number(last.party_id),
-                    },
+                  : sort.field === "locality_id"
+                    ? {
+                        locality_name: last.locality_name ?? "",
+                        id: Number(last.party_id),
+                      }
+                    : {
+                        name: last.display_name,
+                        id: Number(last.party_id),
+                      },
               )
             : null,
       }),

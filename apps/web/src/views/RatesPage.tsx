@@ -1,18 +1,23 @@
 "use client";
 
 import AddIcon from "@mui/icons-material/Add";
+import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import SyncIcon from "@mui/icons-material/Sync";
 import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
+import ButtonGroup from "@mui/material/ButtonGroup";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
 import Drawer from "@mui/material/Drawer";
+import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import Stack from "@mui/material/Stack";
+import Tab from "@mui/material/Tab";
+import Tabs from "@mui/material/Tabs";
 import TextField from "@mui/material/TextField";
 import Typography from "@mui/material/Typography";
 import {
@@ -24,7 +29,8 @@ import {
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import dayjs, { type Dayjs } from "dayjs";
-import { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import type {
   CapacityUnit,
@@ -38,6 +44,7 @@ import {
 } from "@weld/schemas";
 import { ApiClientError } from "@weld/api-client";
 import { api } from "../api/client";
+import { RefillRatesPanel } from "../features/rates/RefillRatesPanel";
 import { formatCapacity } from "../lib/format";
 import {
   stashNextCursor,
@@ -49,8 +56,22 @@ import { useSessionStore } from "../store/sessionStore";
 
 const GASES: GasCode[] = ["O2", "O2_MED", "CO2", "N2", "AR", "ATAL", "ACET"];
 
+type RatesTab = "rental" | "refill";
+
+function parseRatesTab(value: string | null): RatesTab {
+  return value === "refill" ? "refill" : "rental";
+}
+
 export default function RatesPage() {
   const { t: translate } = useTranslation();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const tab = parseRatesTab(searchParams.get("tab"));
+  const [createMenuAnchor, setCreateMenuAnchor] = useState<HTMLElement | null>(
+    null,
+  );
+  const [refillCreateRequestId, setRefillCreateRequestId] = useState(0);
   const canWrite = useSessionStore((state) =>
     state.hasCapability("rates:write"),
   );
@@ -102,7 +123,7 @@ export default function RatesPage() {
   const ratesQuery = useQuery({
     queryKey: ["rental-rates", queryParams],
     queryFn: () => api.listRentalRates(queryParams),
-    enabled: paginationModel.page === 0 || cursor != null,
+    enabled: tab === "rental" && (paginationModel.page === 0 || cursor != null),
   });
 
   const rows = ratesQuery.data?.data ?? [];
@@ -154,6 +175,19 @@ export default function RatesPage() {
     setError(null);
   };
 
+  const setTab = (next: RatesTab) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === "rental") {
+      params.delete("tab");
+    } else {
+      params.set("tab", next);
+    }
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, {
+      scroll: false,
+    });
+  };
+
   const openCreate = () => {
     resetForm();
     setDrawerOpen(true);
@@ -163,6 +197,24 @@ export default function RatesPage() {
     if (!canWrite) return;
     resetForm(rate);
     setDrawerOpen(true);
+  };
+
+  const closeCreateMenu = () => setCreateMenuAnchor(null);
+
+  const openCreateMenu = (event: MouseEvent<HTMLElement>) => {
+    setCreateMenuAnchor(event.currentTarget);
+  };
+
+  const createRentalRate = () => {
+    closeCreateMenu();
+    setTab("rental");
+    openCreate();
+  };
+
+  const createRefillRate = () => {
+    closeCreateMenu();
+    setTab("refill");
+    setRefillCreateRequestId((prev) => prev + 1);
   };
 
   const openBackfillConfirm = (rateId?: number) => {
@@ -291,256 +343,312 @@ export default function RatesPage() {
   return (
     <Stack spacing={2} sx={{ height: "calc(100vh - 180px)" }}>
       <Stack
-        direction={{ xs: "column", md: "row" }}
+        direction={{ xs: "column", sm: "row" }}
         justifyContent="space-between"
-        alignItems={{ md: "center" }}
+        alignItems={{ sm: "center" }}
         spacing={1}
       >
         <Typography variant="h5">{translate("rates.title")}</Typography>
-        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-          {canBackfill && (
-            <Button
-              variant="outlined"
-              startIcon={<SyncIcon />}
-              onClick={() => openBackfillConfirm()}
-              disabled={backfillMutation.isPending}
-            >
-              {translate("actions.backfill_rates")}
-            </Button>
-          )}
-          {canWrite && (
-            <Button
+        {canWrite && (
+          <>
+            <ButtonGroup
               variant="contained"
-              startIcon={<AddIcon />}
-              onClick={openCreate}
+              aria-label={translate("actions.new_rate_menu")}
             >
-              {translate("actions.new_rate")}
-            </Button>
-          )}
-        </Stack>
+              <Button startIcon={<AddIcon />} onClick={openCreateMenu}>
+                {translate("actions.new_rate_menu")}
+              </Button>
+              <Button
+                size="small"
+                aria-label={translate("actions.new_rate_menu")}
+                aria-haspopup="menu"
+                aria-expanded={createMenuAnchor ? "true" : undefined}
+                onClick={openCreateMenu}
+              >
+                <ArrowDropDownIcon />
+              </Button>
+            </ButtonGroup>
+            <Menu
+              anchorEl={createMenuAnchor}
+              open={Boolean(createMenuAnchor)}
+              onClose={closeCreateMenu}
+              anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+              transformOrigin={{ vertical: "top", horizontal: "right" }}
+            >
+              <MenuItem onClick={createRentalRate}>
+                {translate("actions.new_rate")}
+              </MenuItem>
+              <MenuItem onClick={createRefillRate}>
+                {translate("actions.new_refill_rate")}
+              </MenuItem>
+            </Menu>
+          </>
+        )}
       </Stack>
 
-      {ratesQuery.isError && (
-        <Alert severity="error">{translate("errors.load_failed")}</Alert>
-      )}
-
-      <Box sx={{ flex: 1, minHeight: 400 }}>
-        <DataGrid
-          rows={rows}
-          columns={columns}
-          getRowId={(row) => row.id}
-          loading={ratesQuery.isLoading || ratesQuery.isFetching}
-          paginationMode="server"
-          paginationModel={paginationModel}
-          onPaginationModelChange={handlePaginationModelChange}
-          pageSizeOptions={[25, 50]}
-          rowCount={cursorPageRowCount(
-            paginationModel.page,
-            paginationModel.pageSize,
-            rows.length,
-            pageMeta?.has_more ?? false,
-          )}
-          disableRowSelectionOnClick
-          onRowClick={(params) => openEdit(params.row as RentalRate)}
-          sx={{
-            [`& .${gridClasses.cell}`]: { outline: "none" },
-            ...(canWrite
-              ? { [`& .${gridClasses.row}`]: { cursor: "pointer" } }
-              : {}),
-          }}
-        />
-      </Box>
-
-      <Drawer
-        anchor="right"
-        open={drawerOpen}
-        onClose={closeDrawer}
-        // Above the fixed AppBar (shell uses drawer + 1) so the title/labels are not clipped.
-        sx={{ zIndex: (theme) => theme.zIndex.modal }}
-        PaperProps={{ sx: { width: { xs: "100%", sm: 400 }, p: 3 } }}
+      <Tabs
+        value={tab}
+        onChange={(_event, value: RatesTab) => setTab(value)}
+        sx={{ borderBottom: 1, borderColor: "divider" }}
       >
-        <Stack spacing={2}>
-          <Typography variant="h6">
-            {isEditing
-              ? translate("rates.form.title_edit")
-              : translate("rates.form.title")}
-          </Typography>
-          {error && <Alert severity="error">{error}</Alert>}
-          <TextField
-            label={translate("rates.form.amount")}
-            type="number"
-            value={amount}
-            onChange={(event) => setAmount(event.target.value)}
-            fullWidth
-          />
-          <TextField
-            select
-            label={translate("rates.form.period")}
-            value={period}
-            onChange={(event) => setPeriod(event.target.value as RatePeriod)}
-            fullWidth
+        <Tab value="rental" label={translate("rates.tabs.rental")} />
+        <Tab value="refill" label={translate("rates.tabs.refill")} />
+      </Tabs>
+
+      {/* Mount only the active tab: MUI DataGrid inside display:none measures
+          zero size and stays empty after the panel is shown again. */}
+      {tab === "refill" ? (
+        <RefillRatesPanel createRequestId={refillCreateRequestId} />
+      ) : (
+        <>
+          <Stack
+            direction={{ xs: "column", md: "row" }}
+            justifyContent="flex-end"
+            alignItems={{ md: "center" }}
+            spacing={1}
           >
-            <MenuItem value="DAILY">
-              {translate("enums.rate_period.DAILY")}
-            </MenuItem>
-            <MenuItem value="MONTHLY">
-              {translate("enums.rate_period.MONTHLY")}
-            </MenuItem>
-          </TextField>
-          <TextField
-            select
-            label={translate("rates.form.client")}
-            value={clientId}
-            onChange={(event) =>
-              setClientId(
-                event.target.value === "" ? "" : Number(event.target.value),
-              )
-            }
-            fullWidth
-          >
-            <MenuItem value="">{translate("rates.global")}</MenuItem>
-            {(clientsQuery.data?.data ?? []).map((client) => (
-              <MenuItem key={client.id} value={client.id}>
-                {client.name}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            label={translate("rates.form.gas")}
-            value={gas}
-            onChange={(event) => setGas(event.target.value as GasCode | "")}
-            fullWidth
-          >
-            <MenuItem value="">{translate("rates.any_gas")}</MenuItem>
-            {GASES.map((code) => (
-              <MenuItem key={code} value={code}>
-                {code}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            label={translate("rates.form.capacity_unit")}
-            value={capacityUnit}
-            onChange={(event) => {
-              setCapacityUnit(event.target.value as CapacityUnit);
-              setCapacity("");
-            }}
-            fullWidth
-          >
-            <MenuItem value="M3">
-              {translate("enums.capacity_unit.M3")}
-            </MenuItem>
-            <MenuItem value="KG">
-              {translate("enums.capacity_unit.KG")}
-            </MenuItem>
-          </TextField>
-          <TextField
-            select
-            label={translate("rates.form.capacity")}
-            value={capacity}
-            onChange={(event) =>
-              setCapacity(
-                event.target.value === "" ? "" : Number(event.target.value),
-              )
-            }
-            fullWidth
-            helperText={translate("rates.form.capacity_hint")}
-          >
-            <MenuItem value="">{translate("rates.any_capacity")}</MenuItem>
-            {(capacityUnit === "KG"
-              ? CYLINDER_CAPACITY_KG_OPTIONS
-              : CYLINDER_CAPACITY_OPTIONS
-            ).map((size) => (
-              <MenuItem key={`${capacityUnit}-${size}`} value={size}>
-                {formatCapacity(size, capacityUnit)}
-              </MenuItem>
-            ))}
-          </TextField>
-          <DatePicker
-            label={translate("rates.form.effective_from")}
-            value={dayjs(effectiveFrom)}
-            onChange={(value: Dayjs | null) => {
-              if (value) setEffectiveFrom(value.format("YYYY-MM-DD"));
-            }}
-            slotProps={{
-              textField: {
-                fullWidth: true,
-                helperText: translate("rates.form.effective_from_hint"),
-              },
-            }}
-          />
-          <DatePicker
-            label={translate("rates.form.effective_to")}
-            value={effectiveTo ? dayjs(effectiveTo) : null}
-            onChange={(value: Dayjs | null) => {
-              setEffectiveTo(value ? value.format("YYYY-MM-DD") : null);
-            }}
-            slotProps={{
-              textField: {
-                fullWidth: true,
-                helperText: translate("rates.form.effective_to_hint"),
-              },
-              field: { clearable: true },
-            }}
-          />
-          <Alert severity="info">
-            {translate("rates.form.precedence_hint")}
-          </Alert>
-          <Stack direction="row" spacing={1} justifyContent="flex-end">
-            <Button onClick={closeDrawer}>{translate("actions.cancel")}</Button>
-            {canBackfill && isEditing && editingRate && (
-              <Button
-                variant="outlined"
-                startIcon={<SyncIcon />}
-                disabled={backfillMutation.isPending}
-                onClick={() => openBackfillConfirm(editingRate.id)}
-              >
-                {translate("actions.backfill_rates")}
-              </Button>
-            )}
-            <Button
-              variant="contained"
-              disabled={saveMutation.isPending || !amount}
-              onClick={() => saveMutation.mutate()}
-            >
-              {translate("actions.save")}
-            </Button>
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              {canBackfill && (
+                <Button
+                  variant="outlined"
+                  startIcon={<SyncIcon />}
+                  onClick={() => openBackfillConfirm()}
+                  disabled={backfillMutation.isPending}
+                >
+                  {translate("actions.backfill_rates")}
+                </Button>
+              )}
+            </Stack>
           </Stack>
-        </Stack>
-      </Drawer>
 
-      <Dialog
-        open={backfillConfirmOpen}
-        onClose={() =>
-          backfillMutation.isPending ? undefined : setBackfillConfirmOpen(false)
-        }
-      >
-        <DialogTitle>{translate("rates.backfill.title")}</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            {backfillRateId != null
-              ? translate("rates.backfill.body_rate")
-              : translate("rates.backfill.body_all")}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() => setBackfillConfirmOpen(false)}
-            disabled={backfillMutation.isPending}
+          {ratesQuery.isError && (
+            <Alert severity="error">{translate("errors.load_failed")}</Alert>
+          )}
+
+          <Box sx={{ flex: 1, minHeight: 400 }}>
+            <DataGrid
+              rows={rows}
+              columns={columns}
+              getRowId={(row) => row.id}
+              loading={ratesQuery.isLoading || ratesQuery.isFetching}
+              paginationMode="server"
+              paginationModel={paginationModel}
+              onPaginationModelChange={handlePaginationModelChange}
+              pageSizeOptions={[25, 50]}
+              rowCount={cursorPageRowCount(
+                paginationModel.page,
+                paginationModel.pageSize,
+                rows.length,
+                pageMeta?.has_more ?? false,
+              )}
+              disableRowSelectionOnClick
+              onRowClick={(params) => openEdit(params.row as RentalRate)}
+              sx={{
+                [`& .${gridClasses.cell}`]: { outline: "none" },
+                ...(canWrite
+                  ? { [`& .${gridClasses.row}`]: { cursor: "pointer" } }
+                  : {}),
+              }}
+            />
+          </Box>
+
+          <Drawer
+            anchor="right"
+            open={drawerOpen}
+            onClose={closeDrawer}
+            sx={{ zIndex: (theme) => theme.zIndex.modal }}
+            PaperProps={{ sx: { width: { xs: "100%", sm: 400 }, p: 3 } }}
           >
-            {translate("actions.cancel")}
-          </Button>
-          <Button
-            variant="contained"
-            disabled={backfillMutation.isPending}
-            onClick={() => backfillMutation.mutate()}
+            <Stack spacing={2}>
+              <Typography variant="h6">
+                {isEditing
+                  ? translate("rates.form.title_edit")
+                  : translate("rates.form.title")}
+              </Typography>
+              {error && <Alert severity="error">{error}</Alert>}
+              <TextField
+                label={translate("rates.form.amount")}
+                type="number"
+                value={amount}
+                onChange={(event) => setAmount(event.target.value)}
+                fullWidth
+              />
+              <TextField
+                select
+                label={translate("rates.form.period")}
+                value={period}
+                onChange={(event) =>
+                  setPeriod(event.target.value as RatePeriod)
+                }
+                fullWidth
+              >
+                <MenuItem value="DAILY">
+                  {translate("enums.rate_period.DAILY")}
+                </MenuItem>
+                <MenuItem value="MONTHLY">
+                  {translate("enums.rate_period.MONTHLY")}
+                </MenuItem>
+              </TextField>
+              <TextField
+                select
+                label={translate("rates.form.client")}
+                value={clientId}
+                onChange={(event) =>
+                  setClientId(
+                    event.target.value === "" ? "" : Number(event.target.value),
+                  )
+                }
+                fullWidth
+              >
+                <MenuItem value="">{translate("rates.global")}</MenuItem>
+                {(clientsQuery.data?.data ?? []).map((client) => (
+                  <MenuItem key={client.id} value={client.id}>
+                    {client.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                select
+                label={translate("rates.form.gas")}
+                value={gas}
+                onChange={(event) => setGas(event.target.value as GasCode | "")}
+                fullWidth
+              >
+                <MenuItem value="">{translate("rates.any_gas")}</MenuItem>
+                {GASES.map((code) => (
+                  <MenuItem key={code} value={code}>
+                    {code}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                select
+                label={translate("rates.form.capacity_unit")}
+                value={capacityUnit}
+                onChange={(event) => {
+                  setCapacityUnit(event.target.value as CapacityUnit);
+                  setCapacity("");
+                }}
+                fullWidth
+              >
+                <MenuItem value="M3">
+                  {translate("enums.capacity_unit.M3")}
+                </MenuItem>
+                <MenuItem value="KG">
+                  {translate("enums.capacity_unit.KG")}
+                </MenuItem>
+              </TextField>
+              <TextField
+                select
+                label={translate("rates.form.capacity")}
+                value={capacity}
+                onChange={(event) =>
+                  setCapacity(
+                    event.target.value === "" ? "" : Number(event.target.value),
+                  )
+                }
+                fullWidth
+                helperText={translate("rates.form.capacity_hint")}
+              >
+                <MenuItem value="">{translate("rates.any_capacity")}</MenuItem>
+                {(capacityUnit === "KG"
+                  ? CYLINDER_CAPACITY_KG_OPTIONS
+                  : CYLINDER_CAPACITY_OPTIONS
+                ).map((size) => (
+                  <MenuItem key={`${capacityUnit}-${size}`} value={size}>
+                    {formatCapacity(size, capacityUnit)}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <DatePicker
+                label={translate("rates.form.effective_from")}
+                value={dayjs(effectiveFrom)}
+                onChange={(value: Dayjs | null) => {
+                  if (value) setEffectiveFrom(value.format("YYYY-MM-DD"));
+                }}
+                slotProps={{
+                  textField: {
+                    fullWidth: true,
+                    helperText: translate("rates.form.effective_from_hint"),
+                  },
+                }}
+              />
+              <DatePicker
+                label={translate("rates.form.effective_to")}
+                value={effectiveTo ? dayjs(effectiveTo) : null}
+                onChange={(value: Dayjs | null) => {
+                  setEffectiveTo(value ? value.format("YYYY-MM-DD") : null);
+                }}
+                slotProps={{
+                  textField: {
+                    fullWidth: true,
+                    helperText: translate("rates.form.effective_to_hint"),
+                  },
+                  field: { clearable: true },
+                }}
+              />
+              <Alert severity="info">
+                {translate("rates.form.precedence_hint")}
+              </Alert>
+              <Stack direction="row" spacing={1} justifyContent="flex-end">
+                <Button onClick={closeDrawer}>
+                  {translate("actions.cancel")}
+                </Button>
+                {canBackfill && isEditing && editingRate && (
+                  <Button
+                    variant="outlined"
+                    startIcon={<SyncIcon />}
+                    disabled={backfillMutation.isPending}
+                    onClick={() => openBackfillConfirm(editingRate.id)}
+                  >
+                    {translate("actions.backfill_rates")}
+                  </Button>
+                )}
+                <Button
+                  variant="contained"
+                  disabled={saveMutation.isPending || !amount}
+                  onClick={() => saveMutation.mutate()}
+                >
+                  {translate("actions.save")}
+                </Button>
+              </Stack>
+            </Stack>
+          </Drawer>
+
+          <Dialog
+            open={backfillConfirmOpen}
+            onClose={() =>
+              backfillMutation.isPending
+                ? undefined
+                : setBackfillConfirmOpen(false)
+            }
           >
-            {translate("rates.backfill.confirm")}
-          </Button>
-        </DialogActions>
-      </Dialog>
+            <DialogTitle>{translate("rates.backfill.title")}</DialogTitle>
+            <DialogContent>
+              <DialogContentText>
+                {backfillRateId != null
+                  ? translate("rates.backfill.body_rate")
+                  : translate("rates.backfill.body_all")}
+              </DialogContentText>
+            </DialogContent>
+            <DialogActions>
+              <Button
+                onClick={() => setBackfillConfirmOpen(false)}
+                disabled={backfillMutation.isPending}
+              >
+                {translate("actions.cancel")}
+              </Button>
+              <Button
+                variant="contained"
+                disabled={backfillMutation.isPending}
+                onClick={() => backfillMutation.mutate()}
+              >
+                {translate("rates.backfill.confirm")}
+              </Button>
+            </DialogActions>
+          </Dialog>
+        </>
+      )}
     </Stack>
   );
 }

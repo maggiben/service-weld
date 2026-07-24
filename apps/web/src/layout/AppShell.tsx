@@ -10,6 +10,7 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import MenuIcon from "@mui/icons-material/Menu";
 import PeopleIcon from "@mui/icons-material/People";
 import PropaneTankIcon from "@mui/icons-material/PropaneTank";
+import LocalGasStationIcon from "@mui/icons-material/LocalGasStation";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import HandshakeIcon from "@mui/icons-material/Handshake";
@@ -17,6 +18,7 @@ import NotificationsIcon from "@mui/icons-material/Notifications";
 import BuildIcon from "@mui/icons-material/Build";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
 import AssessmentIcon from "@mui/icons-material/Assessment";
+import DashboardCustomizeIcon from "@mui/icons-material/DashboardCustomize";
 import SettingsIcon from "@mui/icons-material/Settings";
 import ManageAccountsIcon from "@mui/icons-material/ManageAccounts";
 import HistoryIcon from "@mui/icons-material/History";
@@ -83,6 +85,12 @@ const NAV_ITEMS: NavItem[] = [
     icon: <LocalShippingIcon />,
   },
   {
+    to: "/refills",
+    labelKey: "nav.refills",
+    capability: "movements:read",
+    icon: <LocalGasStationIcon />,
+  },
+  {
     to: "/supplier-loans",
     labelKey: "nav.supplier_loans",
     capability: "supplier_loans:read",
@@ -131,6 +139,12 @@ const NAV_ITEMS: NavItem[] = [
     icon: <AttachMoneyIcon />,
   },
   {
+    to: "/dashboard",
+    labelKey: "nav.dashboard",
+    capability: "billing:read",
+    icon: <DashboardCustomizeIcon />,
+  },
+  {
     to: "/billing",
     labelKey: "nav.billing",
     capability: "billing:read",
@@ -143,6 +157,7 @@ const BREADCRUMB_BY_PREFIX: Record<string, string> = {
   "/cylinders": "nav.cylinders",
   "/batteries": "nav.batteries",
   "/movements": "nav.movements",
+  "/refills": "nav.refills",
   "/supplier-loans": "nav.supplier_loans",
   "/transfers": "nav.transfers",
   "/reconciliation": "nav.reconciliation",
@@ -150,6 +165,7 @@ const BREADCRUMB_BY_PREFIX: Record<string, string> = {
   "/accessories": "nav.accessories",
   "/alerts": "nav.alerts",
   "/rates": "nav.rates",
+  "/dashboard": "nav.dashboard",
   "/billing": "nav.billing",
   "/settings": "nav.settings",
   "/admin/users": "nav.users",
@@ -406,6 +422,7 @@ export default function AppShell({ children }: PropsWithChildren) {
           [`& .MuiDrawer-paper`]: {
             width: DRAWER_WIDTH,
             boxSizing: "border-box",
+            overflowY: "auto",
           },
         }}
       >

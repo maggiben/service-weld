@@ -42,6 +42,11 @@ interface MovementRow {
   version: number;
   created_at: Date;
   cylinder_serial: string;
+  capacity_m3: string | number | null;
+  capacity_unit: "M3" | "KG" | null;
+  locality_name: string | null;
+  owner_party_id: number | null;
+  owner_name: string | null;
 }
 
 interface CylinderForDelivery {
@@ -69,6 +74,9 @@ const MOVEMENT_LIST_SORT_FIELDS = [
   "gas_code",
   "rental_days",
   "state",
+  "capacity_m3",
+  "locality_name",
+  "owner_name",
 ] as const;
 
 /**
@@ -135,6 +143,15 @@ function movementListCursorPayload(
       };
     case "state":
       return { state: last.state, id };
+    case "capacity_m3":
+      return {
+        capacity_m3: last.capacity_m3 == null ? null : Number(last.capacity_m3),
+        id,
+      };
+    case "locality_name":
+      return { locality_name: last.locality_name, id };
+    case "owner_name":
+      return { owner_name: last.owner_name, id };
     case "delivery_date":
     default:
       return { delivery_date: toIsoDate(last.delivery_date), id };
@@ -164,6 +181,12 @@ function mapMovement(row: MovementRow): MovementEvent {
     version: row.version,
     created_at: row.created_at.toISOString(),
     cylinder_serial: row.cylinder_serial,
+    capacity_m3: row.capacity_m3 == null ? null : Number(row.capacity_m3),
+    capacity_unit: row.capacity_unit ?? "M3",
+    locality_name: row.locality_name,
+    owner_party_id:
+      row.owner_party_id == null ? null : Number(row.owner_party_id),
+    owner_name: row.owner_name,
   };
 }
 
@@ -187,6 +210,12 @@ export class MovementsRepository {
       .innerJoin("party", "party.id", "movement_event.holder_party_id")
       .innerJoin("cylinder", "cylinder.id", "movement_event.cylinder_id")
       .leftJoin("client", "client.party_id", "movement_event.holder_party_id")
+      .leftJoin("locality", "locality.id", "client.locality_id")
+      .leftJoin(
+        "party as owner_party",
+        "owner_party.id",
+        "cylinder.owner_party_id",
+      )
       .select([
         "movement_event.id",
         "movement_event.request_id",
@@ -207,6 +236,11 @@ export class MovementsRepository {
         "movement_event.version",
         "movement_event.created_at",
         "cylinder.serial_number as cylinder_serial",
+        "cylinder.capacity_m3",
+        "cylinder.capacity_unit",
+        "locality.name as locality_name",
+        "cylinder.owner_party_id",
+        "owner_party.display_name as owner_name",
       ]);
 
     if (query.open) {
@@ -369,6 +403,40 @@ export class MovementsRepository {
           : qb.where(
               sql<SqlBool>`(movement_event.state::text < ${cursorState} or (movement_event.state::text = ${cursorState} and movement_event.id < ${cursorId}))`,
             );
+      } else if (sort.field === "capacity_m3") {
+        const cursorCap =
+          cursor.capacity_m3 == null || cursor.capacity_m3 === ""
+            ? null
+            : Number(cursor.capacity_m3);
+        const capKey = sql`coalesce(cylinder.capacity_m3, -1)`;
+        const cursorKey = cursorCap == null ? -1 : cursorCap;
+        qb = asc
+          ? qb.where(
+              sql<SqlBool>`(${capKey} > ${cursorKey} or (${capKey} = ${cursorKey} and movement_event.id > ${cursorId}))`,
+            )
+          : qb.where(
+              sql<SqlBool>`(${capKey} < ${cursorKey} or (${capKey} = ${cursorKey} and movement_event.id < ${cursorId}))`,
+            );
+      } else if (sort.field === "locality_name") {
+        const cursorLoc = String(cursor.locality_name ?? "");
+        const locKey = sql`coalesce(locality.name, '')`;
+        qb = asc
+          ? qb.where(
+              sql<SqlBool>`(${locKey} > ${cursorLoc} or (${locKey} = ${cursorLoc} and movement_event.id > ${cursorId}))`,
+            )
+          : qb.where(
+              sql<SqlBool>`(${locKey} < ${cursorLoc} or (${locKey} = ${cursorLoc} and movement_event.id < ${cursorId}))`,
+            );
+      } else if (sort.field === "owner_name") {
+        const cursorOwner = String(cursor.owner_name ?? "");
+        const ownerKey = sql`coalesce(owner_party.display_name, '')`;
+        qb = asc
+          ? qb.where(
+              sql<SqlBool>`(${ownerKey} > ${cursorOwner} or (${ownerKey} = ${cursorOwner} and movement_event.id > ${cursorId}))`,
+            )
+          : qb.where(
+              sql<SqlBool>`(${ownerKey} < ${cursorOwner} or (${ownerKey} = ${cursorOwner} and movement_event.id < ${cursorId}))`,
+            );
       }
     }
 
@@ -420,12 +488,33 @@ export class MovementsRepository {
                             sort.direction,
                           )
                           .orderBy("movement_event.id", sort.direction)
-                      : qb
-                          .orderBy(
-                            "movement_event.delivery_date",
-                            sort.direction,
-                          )
-                          .orderBy("movement_event.id", sort.direction);
+                      : sort.field === "capacity_m3"
+                        ? qb
+                            .orderBy(
+                              sql`coalesce(cylinder.capacity_m3, -1)`,
+                              sort.direction,
+                            )
+                            .orderBy("movement_event.id", sort.direction)
+                        : sort.field === "locality_name"
+                          ? qb
+                              .orderBy(
+                                sql`coalesce(locality.name, '')`,
+                                sort.direction,
+                              )
+                              .orderBy("movement_event.id", sort.direction)
+                          : sort.field === "owner_name"
+                            ? qb
+                                .orderBy(
+                                  sql`coalesce(owner_party.display_name, '')`,
+                                  sort.direction,
+                                )
+                                .orderBy("movement_event.id", sort.direction)
+                            : qb
+                                .orderBy(
+                                  "movement_event.delivery_date",
+                                  sort.direction,
+                                )
+                                .orderBy("movement_event.id", sort.direction);
 
     const [rows, totalEstimate] = await Promise.all([
       ordered.limit(limit + 1).execute() as Promise<MovementRow[]>,
@@ -520,6 +609,13 @@ export class MovementsRepository {
       .selectFrom("movement_event")
       .innerJoin("party", "party.id", "movement_event.holder_party_id")
       .innerJoin("cylinder", "cylinder.id", "movement_event.cylinder_id")
+      .leftJoin("client", "client.party_id", "movement_event.holder_party_id")
+      .leftJoin("locality", "locality.id", "client.locality_id")
+      .leftJoin(
+        "party as owner_party",
+        "owner_party.id",
+        "cylinder.owner_party_id",
+      )
       .select([
         "movement_event.id",
         "movement_event.request_id",
@@ -540,6 +636,11 @@ export class MovementsRepository {
         "movement_event.version",
         "movement_event.created_at",
         "cylinder.serial_number as cylinder_serial",
+        "cylinder.capacity_m3",
+        "cylinder.capacity_unit",
+        "locality.name as locality_name",
+        "cylinder.owner_party_id",
+        "owner_party.display_name as owner_name",
       ])
       .where("movement_event.id", "=", id)
       .executeTakeFirst()) as MovementRow | undefined;
@@ -683,6 +784,56 @@ export class MovementsRepository {
 
     const closed = await this.getById(movementId);
     if (!closed) throw ApiErrors.notFound("Movement not found after return");
+    return closed;
+  }
+
+  /**
+   * Close a REFILL / Su Propiedad cycle: customer keeps the cylinder (AT_CLIENT
+   * FULL). Distinct from closeReturn which puts our stock back IN_STOCK_EMPTY.
+   */
+  async closeRefill(
+    movementId: number,
+    cylinderId: number,
+    returnDate: string,
+    expectedVersion: number,
+    actorUserId: number,
+  ): Promise<MovementEvent> {
+    const db = resolveDb(this.db);
+
+    const updated = await db
+      .updateTable("movement_event")
+      .set({
+        return_date: returnDate,
+        state: "CLOSED",
+        updated_by: actorUserId,
+      })
+      .where("id", "=", movementId)
+      .where("state", "=", "OPEN")
+      .where("version", "=", expectedVersion)
+      .returning("id")
+      .executeTakeFirst();
+
+    if (!updated) {
+      throw ApiErrors.conflict(
+        "VERSION_CONFLICT",
+        "Movement version conflict or not OPEN",
+      );
+    }
+
+    await db
+      .updateTable("cylinder")
+      .set({
+        state: "AT_CLIENT",
+        condition: "FULL",
+        updated_by: actorUserId,
+      })
+      .where("id", "=", cylinderId)
+      .execute();
+
+    const closed = await this.getById(movementId);
+    if (!closed) {
+      throw ApiErrors.notFound("Movement not found after refill close");
+    }
     return closed;
   }
 

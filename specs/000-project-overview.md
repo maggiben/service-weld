@@ -10,7 +10,7 @@ Build a single system of record that replaces three manual Excel workbooks (~2,1
 ## Requirements
 
 - R1. Deliver two front-end surfaces: a **back-office web app** and an **offline-capable mobile field app** (spec `006`), plus a public **corporate landing page** (spec `013`).
-- R2. Implement the domain, database, API, auth, reporting, inventory, and rental subsystems per specs `001`–`009`.
+- R2. Implement the domain, database, API, auth, reporting, inventory, rental, and refill subsystems per specs `001`–`009` and `014`.
 - R3. Support the 10 user roles (`CLERK, DRIVER, PLANT, INVENTORY, BILLING, MANAGER, SUBDIST, ADMIN, MEDICAL, CLIENT`) and cover all workflows `W1`–`W20`.
 - R4. Migrate legacy workbook data into the new model (spec `011`) with a cleanup/exceptions pipeline.
 - R5. Enforce the 20 canonical business rules (`spec 001`) at the database, API, and UI layers.
@@ -29,7 +29,7 @@ Build a single system of record that replaces three manual Excel workbooks (~2,1
 
 ## Acceptance Criteria
 
-- AC1. Every numbered spec (`001`–`013`) is implemented and its own acceptance criteria pass.
+- AC1. Every numbered spec (`001`–`014`) is implemented and its own acceptance criteria pass.
 - AC2. A cylinder can be registered, delivered, returned (rental days auto-computed), refilled, swapped, sold, lost, and replaced end-to-end through the API and both UIs.
 - AC3. Legacy data migrates with a reconciliation report distinguishing clean vs flagged rows; no movement is dropped silently.
 - AC4. All 20 business rules have passing automated tests; the DB rejects each violation.
@@ -51,7 +51,7 @@ Build a single system of record that replaces three manual Excel workbooks (~2,1
 
 ## Implementation Notes
 
-- **Recommended build order:** `002` domain → `003` database (+`011` migration scaffolding) → `005` auth → `004` API → `009` rental + `008` inventory logic → `007` reporting → `006` frontend → `010` testing (continuous) → `011` migration run → `012` deployment; `013` marketing site (`apps/www`) is independent of the back-office once Next/MUI conventions exist.
+- **Recommended build order:** `002` domain → `003` database (+`011` migration scaffolding) → `005` auth → `004` API → `009` rental + `008` inventory logic → `014` refill/Su Propiedad → `007` reporting → `006` frontend → `010` testing (continuous) → `011` migration run → `012` deployment; `013` marketing site (`apps/www`) is independent of the back-office once Next/MUI conventions exist.
 - **Mandated stack:** **Backend** = NestJS + Zod (`nestjs-zod`) + OpenAPI via `@nestjs/swagger` + **Passport** auth (`@nestjs/passport` with JWT: local/jwt/jwt-refresh strategies) on Node LTS/TypeScript, over PostgreSQL 15+ (`003`/`004`/`005`). **Frontend** = **Next.js 16+ App Router** + React 19 + MUI, MUI X Data Grid (Community), MUI X Charts, MUI X Date Pickers, react-i18next (`es` default/`en`), Zustand (client state), react-hook-form (forms) (`006`, D-12). Public marketing = `@weld/www` (013).
 - **Repo layout (suggested):** `apps/api` (NestJS), `apps/web` (Next.js App Router back-office → `app.serviceweld.com`), `apps/www` (public marketing → `serviceweld.com`), `apps/field` (Next.js App Router field PWA), `packages/domain`, `packages/schemas` (shared Zod schemas), `packages/api-client` (generated from the **Swagger-emitted** OpenAPI JSON), `db/` (`schema.sql`, migrations), `migration/` (workbook importer), `specs/`.
 - **Source of truth ordering:** if specs and the root analysis docs disagree, the numbered `specs/` win; flag the discrepancy.

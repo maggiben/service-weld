@@ -2,7 +2,9 @@ import { Inject, Injectable } from "@nestjs/common";
 import {
   billableDaysInPeriod,
   businessTodayIso,
+  refillChargeAmount,
   resolveBillingUnitPrice,
+  resolveRefillUnitPrice,
   rentalChargeAmount,
 } from "@weld/domain";
 import type {
@@ -15,6 +17,7 @@ import { ApiErrors } from "../common/errors/api-error";
 import { KYSELY, type DB } from "../database/database.module";
 import { resolveDb } from "../database/transaction.context";
 import { RatesRepository } from "../rates/rates.repository";
+import { RefillRatesRepository } from "../refill-rates/refill-rates.repository";
 
 interface BillableMovement {
   id: number;
@@ -42,6 +45,7 @@ export class BillingRepository {
   constructor(
     @Inject(KYSELY) private readonly db: DB,
     private readonly ratesRepository: RatesRepository,
+    private readonly refillRatesRepository: RefillRatesRepository,
   ) {}
 
   async createDraftRun(
@@ -335,6 +339,7 @@ export class BillingRepository {
 
     const movements = (await movementsQb.execute()) as BillableMovement[];
     const rates = await this.ratesRepository.listAllCandidates();
+    const refillRates = await this.refillRatesRepository.listAllCandidates();
 
     const byClient = new Map<
       number,
@@ -419,6 +424,103 @@ export class BillingRepository {
           : `Alquiler ${movement.cylinder_serial}${gasLabel}${sizeLabel} (${days} d · ${rangeLabel})`,
         quantity: days,
         unit: "day",
+        unit_price: unit.amount,
+        amount: amount.amount,
+      });
+      byClient.set(holderId, bucket);
+    }
+
+    // Gas charges for REFILL / Su Propiedad (009 R2 / AC2): one fill = one line.
+    let refillQb = db
+      .selectFrom("movement_event")
+      .innerJoin("client", "client.party_id", "movement_event.holder_party_id")
+      .innerJoin("party", "party.id", "movement_event.holder_party_id")
+      .innerJoin("cylinder", "cylinder.id", "movement_event.cylinder_id")
+      .leftJoin("locality", "locality.id", "client.locality_id")
+      .select([
+        "movement_event.id",
+        "movement_event.holder_party_id",
+        "party.display_name as holder_name",
+        "client.locality_id as holder_locality_id",
+        "locality.name as holder_locality_name",
+        "client.daily_rate_default",
+        "movement_event.gas_code",
+        "cylinder.capacity_m3",
+        "cylinder.capacity_unit",
+        "movement_event.delivery_date",
+        "movement_event.return_date",
+        "cylinder.serial_number as cylinder_serial",
+      ])
+      .where("movement_event.movement_kind", "=", "REFILL")
+      .where("movement_event.state", "!=", "VOID")
+      .where("movement_event.property_basis", "=", "CUSTOMER");
+
+    if (isHistory) {
+      refillQb = refillQb
+        .where("movement_event.return_date", "is", null)
+        .where("movement_event.delivery_date", "<=", periodEnd);
+    } else {
+      refillQb = refillQb
+        .where("movement_event.delivery_date", ">=", periodStart)
+        .where("movement_event.delivery_date", "<=", periodEnd);
+    }
+
+    if (input.client_party_id != null) {
+      refillQb = refillQb.where(
+        "movement_event.holder_party_id",
+        "=",
+        input.client_party_id,
+      );
+    } else if (input.locality_id != null) {
+      refillQb = refillQb.where("client.locality_id", "=", input.locality_id);
+    } else if (input.territory_id != null) {
+      refillQb = refillQb.where("client.territory_id", "=", input.territory_id);
+    }
+
+    const refillMovements = (await refillQb.execute()) as BillableMovement[];
+
+    for (const movement of refillMovements) {
+      const holderId = Number(movement.holder_party_id);
+      if (lockedClientIds.has(holderId)) continue;
+
+      const delivery = toIsoDate(movement.delivery_date)!;
+      const capacityM3 =
+        movement.capacity_m3 == null ? null : Number(movement.capacity_m3);
+      const capacityUnit = movement.capacity_unit ?? "M3";
+      const unit = resolveRefillUnitPrice({
+        rates: refillRates,
+        gasCode: movement.gas_code,
+        capacityM3,
+        capacityUnit,
+        deliveryDate: delivery,
+        periodStart,
+        periodEnd,
+      });
+      if (!unit) {
+        skippedNoRate += 1;
+        continue;
+      }
+
+      const amount = refillChargeAmount(unit);
+      const bucket = byClient.get(holderId) ?? {
+        name: movement.holder_name,
+        locality_id:
+          movement.holder_locality_id == null
+            ? null
+            : Number(movement.holder_locality_id),
+        locality_name: movement.holder_locality_name,
+        lines: [],
+      };
+      const gasLabel = movement.gas_code ? ` · ${movement.gas_code}` : "";
+      const sizeSuffix = capacityUnit === "KG" ? " kg" : " m³";
+      const sizeLabel =
+        capacityM3 != null ? ` · ${capacityM3}${sizeSuffix}` : "";
+      bucket.lines.push({
+        source_table: "movement_event",
+        source_id: Number(movement.id),
+        description: `Recarga ${movement.cylinder_serial}${gasLabel}${sizeLabel}`,
+        quantity: 1,
+        unit: "fill",
         unit_price: unit.amount,
         amount: amount.amount,
       });

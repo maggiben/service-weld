@@ -284,10 +284,8 @@ export default function MovementsPage() {
         align: "left",
         headerAlign: "left",
         renderCell: (params) => {
-          // Customer-owned (refill) stock is theirs — no "return to us", only canje.
-          const canReturn =
-            params.row.property_basis !== "CUSTOMER" &&
-            params.row.movement_kind !== "REFILL";
+          // Rental return-to-stock; REFILL closes the fill cycle (customer keeps unit).
+          const canReturn = params.row.state === "OPEN";
           const actions: GridActionItem[] = [];
           if (canWrite && params.row.state === "OPEN") {
             if (canReturn) {

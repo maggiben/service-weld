@@ -241,6 +241,11 @@ describe("WeldApiClient", () => {
     await api.updateRentalRate(1, { amount: 2 });
     await api.backfillRentalRates({});
     await api.backfillRentalRates({ rate_id: 1 });
+    await api.listRefillRates({});
+    await api.createRefillRate({ amount: 1, effective_from: "2024-01-01" });
+    await api.updateRefillRate(1, { amount: 2 });
+    await api.backfillRefillRates({});
+    await api.backfillRefillRates({ rate_id: 1 });
     await api.createBillingRun({
       period_start: "2024-01-01",
       period_end: "2024-01-31",

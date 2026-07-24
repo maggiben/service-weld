@@ -1,5 +1,6 @@
 /** First back-office route the user can open, given their capabilities. */
 const HOME_CANDIDATES: ReadonlyArray<{ path: string; capability: string }> = [
+  { path: "/dashboard", capability: "billing:read" },
   { path: "/clients", capability: "clients:read" },
   { path: "/cylinders", capability: "cylinders:read" },
   { path: "/movements", capability: "movements:read" },

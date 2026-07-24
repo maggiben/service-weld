@@ -261,13 +261,30 @@ export class AlertsRepository {
     return enriched!;
   }
 
-  async openCount(): Promise<number> {
+  async openCount(period?: {
+    period_start?: string;
+    period_end?: string;
+  }): Promise<number> {
     const db = resolveDb(this.db);
-    const openCount = await db
+    let qb = db
       .selectFrom("alert")
       .select((eb) => eb.fn.countAll<string>().as("c"))
-      .where("resolved_at", "is", null)
-      .executeTakeFirst();
+      .where("resolved_at", "is", null);
+    if (period?.period_start) {
+      qb = qb.where(
+        "created_at",
+        ">=",
+        new Date(`${period.period_start}T00:00:00.000Z`),
+      );
+    }
+    if (period?.period_end) {
+      qb = qb.where(
+        "created_at",
+        "<=",
+        new Date(`${period.period_end}T23:59:59.999Z`),
+      );
+    }
+    const openCount = await qb.executeTakeFirst();
     return Number(openCount?.c ?? 0);
   }
 

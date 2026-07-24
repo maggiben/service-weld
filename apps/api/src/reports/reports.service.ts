@@ -6,6 +6,7 @@ import type {
   FloatAgingQuery,
   LossReportQuery,
   MedicalStatementQuery,
+  RefillReportQuery,
   RentalReportQuery,
   SupplierReturnsQuery,
 } from "@weld/schemas";
@@ -31,6 +32,11 @@ export class ReportsService {
 
   async rental(query: RentalReportQuery) {
     const data = await this.repository.rental(query);
+    return this.envelope(data);
+  }
+
+  async refill(query: RefillReportQuery) {
+    const data = await this.repository.refill(query);
     return this.envelope(data);
   }
 

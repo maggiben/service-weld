@@ -19,6 +19,7 @@ export function buildSortParam<T extends string>(
 export const CLIENT_SORT_FIELDS = [
   "name",
   "territory_id",
+  "locality_id",
   "created_at",
   "outstanding_count",
 ] as const;
@@ -47,6 +48,9 @@ export const MOVEMENT_SORT_FIELDS = [
   "gas_code",
   "rental_days",
   "state",
+  "capacity_m3",
+  "locality_name",
+  "owner_name",
 ] as const;
 
 export const SUPPLIER_LOAN_SORT_FIELDS = [

@@ -44,7 +44,7 @@ Implement and enforce the following rules. Each is a `MUST`.
 - AC1. Each BR has at least one automated test that asserts a valid case passes and an invalid case is rejected with the correct error.
 - AC2. Attempting a second overlapping `OPEN` movement for a cylinder is rejected (BR-01).
 - AC3. Returning a rental computes `rental_days` matching `return−delivery` for 100% of sampled rows (BR-03) — reference value: 2013-05-20→2013-07-26 = 67.
-- AC4. A `REFILL` on an `OURS` cylinder is rejected (BR-08); a `RENTAL` accrues rental, a `REFILL` does not (BR-08/BR-19).
+- AC4. A `REFILL` on an `OURS` cylinder is rejected (BR-08); a `RENTAL` accrues rental, a `REFILL` does not (BR-08/BR-19). Gas fill pricing and billing for REFILL: see `014` / D-19.
 - AC5. Selling a cylinder that is `AT_CLIENT` is rejected (BR-09).
 - AC6. An invalid CUIT (format or check digit) is rejected (BR-17).
 

@@ -9,13 +9,14 @@ Compute rental duration and charges deterministically for cylinders on hire and 
 ## Requirements
 
 - R1. Compute **rental days** = `return_date − delivery_date` (calendar days) for `RENTAL` movements; for open rentals expose **accrued days** = `as_of − delivery_date` (BR-03).
-- R2. Accrue rental **only** for `property_basis ∈ {OURS, SUPPLIER}`; `REFILL` (CUSTOMER-owned) accrues **no rental**, only a gas charge (BR-08/BR-02).
-- R3. Resolve the **effective rate** for a movement/period from `rental_rate` by most-specific match among active rows: null `gas_code` / `capacity_m3` act as wildcards (“any gas” / “any size”); when capacity is set, match both magnitude **and** `capacity_unit` (D-18 — m³ rates must not match kg cylinders); prefer client over gas over capacity; honor `effective_from/to` (rate history, BR-19).
+- R2. Accrue rental **only** for `property_basis ∈ {OURS, SUPPLIER}`; `REFILL` (CUSTOMER-owned) accrues **no rental**, only a gas charge (BR-08/BR-02). Gas-charge pricing, custody close, and UI for Su Propiedad are specified in **`014`** (D-19).
+- R3. Resolve the **effective rental rate** for a movement/period from `rental_rate` by most-specific match among active rows: null `gas_code` / `capacity_m3` act as wildcards (“any gas” / “any size”); when capacity is set, match both magnitude **and** `capacity_unit` (D-18 — m³ rates must not match kg cylinders); prefer client over gas over capacity; honor `effective_from/to` (rate history, BR-19).
 - R4. Compute **rental charge** = accrued/closed days × effective daily rate; support monthly rates prorated to days.
 - R5. Compute **accessory rental charges** (regulator/adapter/mochila) in parallel; `FREE_LOAN` accrues none (W11).
-- R6. Implement **billing runs** (W20): for a period and optional client, produce invoices with charge lines traced to source movements/accessory rentals; support **draft → approve → export** with statuses.
+- R6. Implement **billing runs** (W20): for a period and optional client, produce invoices with charge lines traced to source movements/accessory rentals **and REFILL gas fills** (`unit=fill`, `014` R9–R11); support **draft → approve → export** with statuses.
 - R7. Route **medical** (`MUNICIPAL_HOSPITAL`) clients to the municipal billing profile/statement (BR-18, `007`).
 - R8. Stop accrual at movement `CLOSED/SWAPPED/SOLD/LOST`; on sale, convert remaining liability appropriately (BR-09).
+- R9. Resolve **refill unit price** from `refill_rate` via the same specificity ladder as R3 (no period/daily conversion); see `014` R6–R8.
 
 ## Constraints
 
@@ -28,7 +29,7 @@ Compute rental duration and charges deterministically for cylinders on hire and 
 ## Acceptance Criteria
 
 - AC1. A rental 2013-05-20→2013-07-26 yields `rental_days = 67`; charge = 67 × effective rate.
-- AC2. A `REFILL` movement yields no rental charge; a gas charge is produced instead.
+- AC2. A `REFILL` movement yields no rental charge; a gas charge is produced instead (details and ACs in `014`).
 - AC3. For client with daily rate 85 and 44 accrued days, rental charge = 3740.
 - AC4. Open rentals bill on accrued-to-date days; no rental is un-billable due to a missing return (no ERROR states).
 - AC5. Rate change mid-history: an invoice for a past period uses the past rate.
@@ -44,7 +45,7 @@ Compute rental duration and charges deterministically for cylinders on hire and 
 
 ## Dependencies
 
-- `003` (generated `rental_days`, `rental_rate`), `008` (movement custody effects), `007` (revenue reports reconcile), `004` (billing endpoints), `005` (MFA for approve/export).
+- `003` (generated `rental_days`, `rental_rate`, `refill_rate`), `008` (movement custody effects), `007` (revenue reports reconcile), `004` (billing endpoints), `005` (MFA for approve/export), `014` (refill pricing + fill charge lines).
 
 ## Implementation Notes
 

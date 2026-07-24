@@ -245,6 +245,18 @@ export interface RentalRateTable {
   effective_to: string | null;
 }
 
+export interface RefillRateTable {
+  id: Generated<number>;
+  client_party_id: number | null;
+  gas_code: string | null;
+  /** Null = any cylinder size. Magnitude is in capacity_unit (D-18). */
+  capacity_m3: string | null;
+  capacity_unit: CapacityUnit;
+  amount: string;
+  effective_from: string;
+  effective_to: string | null;
+}
+
 export interface BillingRunTable {
   id: Generated<number>;
   period_start: string;
@@ -394,6 +406,7 @@ export interface Database {
   cylinder_battery: CylinderBatteryTable;
   battery_member: BatteryMemberTable;
   rental_rate: RentalRateTable;
+  refill_rate: RefillRateTable;
   billing_run: BillingRunTable;
   invoice: InvoiceTable;
   charge_line: ChargeLineTable;

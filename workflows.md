@@ -89,11 +89,11 @@ The workflows fall into five groups:
 - **Goal.** Fill a cylinder the client owns and return it — gas sale only, no rental.
 - **Trigger.** Client hands over their own **empty** (`vacío`). `» observed`
 - **Actors.** Driver, Plant Op (fills), Clerk.
-- **Preconditions.** Cylinder is client property (`S/P`).
-- **Happy path.** Right pane row: `FECHA vacíos/ENTREGA` (empty in), `NÚMEROS` (their serial), `GAS`; then `FECHA llenos/DEVOLUCIÓN` when returned full; `METROS` left blank (no rental). `» observed`
+- **Preconditions.** Cylinder is client property (`S/P` / `ownership_basis = CUSTOMER`).
+- **Happy path.** Create `REFILL` movement (`POST /movements`); plant fills; close with `PATCH …/return` (cylinder stays `AT_CLIENT`/`FULL`) or exchange via `PATCH …/swap`. UI: **Recargas** (`/refills`). Rate from `refill_rate` (gas × size). Spec **`014`**. `» observed` (legacy right pane: `FECHA vacíos/ENTREGA`, `NÚMEROS`, `GAS`, then `FECHA llenos/DEVOLUCIÓN`; `METROS` blank).
 - **Alternative flows.** Empty stays at plant for days before return (long `vacío→lleno` gap). `» observed`
-- **Error cases.** A customer cylinder mistakenly logged as ours, or vice-versa (`devuelto a agronoble por ser de s/p`). `» observed`
-- **Postconditions.** Client cylinder returned full; gas charge queued; no rental created.
+- **Error cases.** A customer cylinder mistakenly logged as ours, or vice-versa (`devuelto a agronoble por ser de s/p`). `» observed` → API `422 KIND_BASIS_MISMATCH` (BR-08).
+- **Postconditions.** Client cylinder returned full; gas charge queued via billing (`unit=fill`); no rental created.
 
 ### W8 — Medical Home-Oxygen Replenishment Cycle
 
@@ -245,7 +245,7 @@ The workflows fall into five groups:
 - **Trigger.** Billing period close. **INFERRED** (no accounting fields in these books).
 - **Actors.** Biller, Clerk.
 - **Preconditions.** Rental days computed (W5/W6); gas deliveries/refills logged (W4/W7); accessories (W11).
-- **Happy path.** Biller reads per-client accrued **rental days × rate** + gas charges + accessory rentals, and issues invoices in the separate accounting system; medical patients billed to the municipality. **INFERRED** from `alquiler $/día` notes + day-count column. `» observed` (day counts)
+- **Happy path.** Biller reads per-client accrued **rental days × rate** + **gas fill charges** (`refill_rate` / `014`) + accessory rentals, and issues invoices in the separate accounting system; medical patients billed to the municipality. Draft billing run emits `day` lines for RENTAL and `fill` lines for REFILL. **INFERRED** from `alquiler $/día` notes + day-count column. `» observed` (day counts)
 - **Alternative flows.** Monthly flat rental for some clients; sale invoices from W10. **INFERRED**
 - **Error cases.** Prices live only as stray notes → billed from memory; `ERROR`/blank return dates make some rentals un-billable until fixed. `» observed`
 - **Postconditions.** Invoices issued; the spreadsheets remain the physical-custody source of truth, not the financial record.

@@ -3,6 +3,7 @@ import type {
   Alert,
   AlertListQuery,
   AlertSummary,
+  AlertSummaryQuery,
   RefreshAlertsResult,
   UpdateAlertContact,
 } from "@weld/schemas";
@@ -17,8 +18,13 @@ export class AlertsService {
     return this.repository.list(query);
   }
 
-  async summary(): Promise<AlertSummary> {
-    return { open_count: await this.repository.openCount() };
+  async summary(query: AlertSummaryQuery = {}): Promise<AlertSummary> {
+    return {
+      open_count: await this.repository.openCount({
+        period_start: query.period_start,
+        period_end: query.period_end,
+      }),
+    };
   }
 
   async resolve(id: number): Promise<Alert> {

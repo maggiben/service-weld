@@ -9,7 +9,12 @@ import {
   stashNextCursor,
   shouldResetCursors,
 } from "./lib/cursorPagination";
-import { formatDateDMY, monthStartIso, todayIso } from "./lib/dateFormat";
+import {
+  formatDateDMY,
+  monthStartIso,
+  todayIso,
+  monthEndIso,
+} from "./lib/dateFormat";
 import {
   alertSeverityColor,
   cylinderStateChipColor,
@@ -100,6 +105,8 @@ describe("dateFormat", () => {
       monthStartIso(new Date("2024-06-15T15:00:00.000Z"), "UTC"),
       "2024-06-01",
     );
+    assert.equal(monthEndIso(2024, 2), "2024-02-29");
+    assert.equal(monthEndIso(2024, 6, "2024-06-15"), "2024-06-15");
   });
 });
 
@@ -111,6 +118,14 @@ describe("sortParam", () => {
     assert.equal(
       clientSortParam([{ field: "outstanding_count", sort: "desc" }]),
       "-outstanding_count",
+    );
+    assert.equal(
+      clientSortParam([{ field: "locality_id", sort: "asc" }]),
+      "locality_id",
+    );
+    assert.equal(
+      clientSortParam([{ field: "locality_id", sort: "desc" }]),
+      "-locality_id",
     );
     assert.equal(cylinderSortParam([]), "serial_number");
     assert.equal(cylinderSortParam([{ field: "state", sort: "asc" }]), "state");
@@ -536,7 +551,7 @@ describe("clientFormLogic / clientLedgerLogic", () => {
         { state: "SWAPPED", return_date: null, movement_kind: "RENTAL" },
         translate,
       ),
-      "enums.movement_state.SWAPPED",
+      "clients.detail.custody.swapped",
     );
     assert.equal(
       clientCustodyLabel(
@@ -628,6 +643,8 @@ describe("userFormLogic", () => {
 
 describe("homePathForCapabilities", () => {
   it("picks the first granted route and falls back to settings", () => {
+    assert.equal(homePathForCapabilities(["billing:read"]), "/dashboard");
+    assert.equal(homePathForCapabilities(["reports:read"]), "/reports");
     assert.equal(homePathForCapabilities(["clients:read"]), "/clients");
     assert.equal(
       homePathForCapabilities(["cylinders:read", "movements:read"]),

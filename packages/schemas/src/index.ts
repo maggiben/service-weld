@@ -14,6 +14,7 @@ export * from "./client";
 export * from "./cylinder";
 export * from "./movement";
 export * from "./rental-rate";
+export * from "./refill-rate";
 export * from "./billing";
 export * from "./battery";
 export * from "./supplier-loan";

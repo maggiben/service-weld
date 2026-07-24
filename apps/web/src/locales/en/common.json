@@ -19,7 +19,9 @@
     "settings": "Configuration",
     "users": "Users & permissions",
     "audit": "Audit log",
-    "data_migration": "Import / export data"
+    "data_migration": "Import / export data",
+    "refills": "Refills",
+    "dashboard": "Tablero"
   },
   "shell": {
     "signed_in_as": "Signed in as {{username}}",
@@ -91,6 +93,7 @@
       "custody": {
         "on_loan": "On loan",
         "returned": "Returned",
+        "swapped": "Swapped cylinder",
         "refill_open": "In progress",
         "refill_closed": "Refilled"
       },
@@ -375,6 +378,30 @@
       "confirm": "Void"
     }
   },
+  "refills": {
+    "title": "Refills",
+    "subtitle": "Customer-owned cylinders brought in to be refilled.",
+    "empty": "No refills yet",
+    "columns": {
+      "serial": "Serial",
+      "client": "Client",
+      "entry": "Entry",
+      "exit": "Exit",
+      "gas": "Gas",
+      "capacity": "Size",
+      "owner": "Owner / supplier",
+      "city": "City",
+      "state": "State",
+      "actions": "Actions"
+    },
+    "filters": {
+      "serial": "Search serial",
+      "open_only": "Open only",
+      "state": "State",
+      "client": "Client",
+      "locality": "Locality"
+    }
+  },
   "enums": {
     "coverage": {
       "PRIVATE": "Private",
@@ -429,7 +456,7 @@
     "movement_state": {
       "OPEN": "Open",
       "CLOSED": "Closed",
-      "SWAPPED": "Swapped",
+      "SWAPPED": "Swapped cylinder",
       "LOST": "Lost",
       "SOLD": "Sold",
       "VOID": "Void",
@@ -582,7 +609,8 @@
     "rent_accessory": "Rent / loan",
     "refresh_alerts": "Refresh alerts",
     "resolve": "Resolve",
-    "new_rate": "New rate",
+    "new_rate": "New rental rate",
+    "new_rate_menu": "New rate",
     "backfill_rates": "Backfill",
     "run_billing": "Generate draft",
     "run_billing_history": "History",
@@ -592,7 +620,9 @@
     "new_user": "New user",
     "remove": "Remove",
     "deactivate": "Deactivate",
-    "reactivate": "Reactivate"
+    "reactivate": "Reactivate",
+    "new_refill_rate": "New refill rate",
+    "new_refill": "New refill"
   },
   "loans": {
     "title": "Supplier loans",
@@ -816,7 +846,7 @@
     }
   },
   "rates": {
-    "title": "Rental rates",
+    "title": "Rates",
     "global": "Global",
     "any_gas": "Any gas",
     "any_capacity": "Any size",
@@ -851,6 +881,143 @@
       "body_rate": "With this rate: if it is general (any gas/size), fills or adds the client daily default; then regenerates the history billing draft (scoped to the rate’s client, or all clients if global). Prior drafts in the same scope are replaced.",
       "confirm": "Apply",
       "done": "Backfill done: {{filled}} defaults set · {{increased}} defaults increased · {{invoices}} invoices · {{lines}} lines · skipped {{skipped}} · total {{total}} ARS"
+    },
+    "tabs": {
+      "rental": "Rental",
+      "refill": "Refills"
+    },
+    "refill": {
+      "subtitle": "Per-fill price by gas and cylinder size (customer-owned).",
+      "columns": {
+        "amount": "Price per fill"
+      },
+      "form": {
+        "title": "New refill rate",
+        "title_edit": "Edit refill rate",
+        "amount": "Price per fill (ARS)",
+        "effective_from_hint": "To value older refills on the dashboard and reports, use a date on or before the delivery (not only today).",
+        "precedence_hint": "Most specific wins: gas+size → gas → size → global."
+      },
+      "backfill": {
+        "title": "Apply rates to open refills",
+        "body_all": "Regenerates a history billing draft so all open refills (customer-owned fills still in progress) are recalculated at current per-fill prices. The dashboard (volume and revenue) uses the same rate resolution. Prior drafts in the same scope are replaced.",
+        "body_rate": "Verifies this rate, then regenerates the history billing draft so open refills reprice at current refill rates. The dashboard reflects those rates in each delivery’s period. Prior drafts in the same scope are replaced.",
+        "confirm": "Apply",
+        "done": "Refill backfill done: {{invoices}} invoices · {{lines}} lines · skipped {{skipped}} · total {{total}} ARS. Check Dashboard → Refills for each delivery’s month/year."
+      }
+    }
+  },
+  "dashboard": {
+    "title": "Management dashboard",
+    "subtitle": "Fleet, stock, float, revenue and alerts at a glance.",
+    "period_start": "From",
+    "period_end": "To",
+    "period_invalid": "Start date cannot be after end date.",
+    "period_current_month": "Current month",
+    "grain": {
+      "month": "Month",
+      "quarter": "Quarter",
+      "semester": "Semester",
+      "month_hint": "Current calendar month",
+      "quarter_hint": "Last 3 months",
+      "semester_hint": "Last 6 months"
+    },
+    "grain_labels": {
+      "month_1": "Jan",
+      "month_2": "Feb",
+      "month_3": "Mar",
+      "month_4": "Apr",
+      "month_5": "May",
+      "month_6": "Jun",
+      "month_7": "Jul",
+      "month_8": "Aug",
+      "month_9": "Sep",
+      "month_10": "Oct",
+      "month_11": "Nov",
+      "month_12": "Dec",
+      "quarter_1": "Q1",
+      "quarter_2": "Q2",
+      "quarter_3": "Q3",
+      "quarter_4": "Q4",
+      "semester_1": "1st half",
+      "semester_2": "2nd half"
+    },
+    "refresh": "Refresh",
+    "empty": "No data",
+    "empty_period": "No revenue in this period",
+    "error": "Could not load this section",
+    "unknown_gas": "Unknown gas",
+    "view_reports": "View reports",
+    "view_all": "View all",
+    "days_out": "{{days}} d",
+    "kpi": {
+      "fleet": "Period deliveries",
+      "fleet_hint": "Client deliveries + supplier receives",
+      "in_stock": "Back in stock",
+      "in_stock_hint": "Of those, cylinders that returned",
+      "float": "Still at clients",
+      "float_hint": "Of those, still out on the street",
+      "snapshot_hint": "As of today (not filtered by dates)",
+      "as_of_hint": "Stock as of {{date}} (period start)",
+      "period_activity_hint": "Deliveries / receives {{from}} → {{to}}",
+      "revenue": "Rental revenue",
+      "revenue_month": "Rental revenue this month",
+      "revenue_quarter": "Rental revenue this quarter",
+      "revenue_semester": "Rental revenue this semester",
+      "revenue_hint": "{{from}} → {{to}}",
+      "revenue_hint_detail": "{{clients}} clients · {{days}} cylinder-days",
+      "losses": "Losses / broken",
+      "losses_hint": "{{from}} → {{to}}",
+      "alerts": "Open alerts",
+      "alerts_hint": "Need attention",
+      "alerts_period_hint": "Created {{from}} → {{to}} (still open)",
+      "refill_revenue": "Refill revenue",
+      "refill_revenue_hint": "{{count}} fills · {{from}} → {{to}}"
+    },
+    "charts": {
+      "fleet_state": "Deliveries by current state",
+      "fleet_gas": "Deliveries by gas",
+      "fleet_gas_unit": "Delivery / receive count (not current stock)",
+      "fleet_as_of": "As of {{date}}",
+      "fleet_period": "Deliveries / receives {{from}} → {{to}}",
+      "utilization": "Utilization (at clients)",
+      "utilization_hint": "% of those deliveries whose cylinder is still at clients",
+      "aging": "Float aging",
+      "aging_period": "Custody in period {{from}} → {{to}}",
+      "top_clients": "Top clients by revenue",
+      "top_clients_period": "{{from}} → {{to}} · total {{total}}",
+      "revenue_year": "Revenue {{year}}",
+      "revenue_year_hint": "Rental + refills by period. Click a bar to filter the KPIs below (From/To).",
+      "refills": "Refills: volume and revenue",
+      "refills_hint": "Two bars per gas: fill count (left axis) and ARS amount (right axis), from refill rates."
+    },
+    "series": {
+      "count": "Count",
+      "cylinders": "Cylinders",
+      "revenue": "Rental (ARS)",
+      "refill_count": "Count",
+      "refill_revenue": "Refills (ARS)",
+      "total_revenue": "Revenue (ARS)"
+    },
+    "legend": {
+      "revenue_low": "Lower revenue",
+      "revenue_high": "Higher revenue"
+    },
+    "aging": {
+      "lte30": "≤30 d",
+      "gt30": ">30 d",
+      "gt90": ">90 d",
+      "gt180": ">180 d",
+      "gt365": ">365 d"
+    },
+    "worklists": {
+      "outstanding": "Long-outstanding float",
+      "outstanding_empty": "Nothing aged outstanding",
+      "supplier": "Supplier returns",
+      "supplier_empty": "No open supplier loans",
+      "alerts": "Alerts",
+      "alerts_empty": "No open alerts",
+      "alerts_forbidden": "No permission to view alerts"
     }
   },
   "billing": {
@@ -914,6 +1081,7 @@
       "fleet": "Fleet",
       "float": "Out in the field",
       "rental": "Rental revenue",
+      "refill": "Refill revenue",
       "loss": "Losses",
       "supplier": "Supplier returns",
       "quality": "Data quality",
@@ -950,6 +1118,7 @@
       "gas": "Gas",
       "rental_days": "Rental days",
       "revenue": "Revenue",
+      "refill_count": "Refills",
       "movements": "Movements",
       "owner": "Owner",
       "basis": "Basis",

@@ -36,7 +36,7 @@ Provide the canonical object model the application layer implements, independent
 
 - Battery treated as a unit for movement while retaining member identity (BR-13).
 - A cylinder whose gas changes over its life (re-purposed) — gas is a mutable attribute with history (see `003` SCD-2).
-- Customer-owned cylinders (`ownership_basis = CUSTOMER`) participate only in `REFILL` movements.
+- Customer-owned cylinders (`ownership_basis = CUSTOMER`) participate only in `REFILL` movements. Full Su Propiedad refill module: spec `014`.
 - Parties that are both counterparties and owners (sub-distributors) — single `Party` supertype handles this.
 
 ## Dependencies

@@ -27,6 +27,14 @@ export const FleetQuery = zod.object({
   group_by: zod
     .enum(["state", "gas_code", "owner", "locality", "client"])
     .default("state"),
+  /** Reconstruct fleet stock as of this business date (inclusive). Omit = today. */
+  as_of: IsoDate.optional(),
+  /**
+   * When both set (with state/gas_code), count custody starts in the inclusive
+   * range (client deliveries + supplier receives). Nested lookbacks accumulate.
+   */
+  period_start: IsoDate.optional(),
+  period_end: IsoDate.optional(),
   "filter[owner_party_id]": zod.coerce.number().int().optional(),
   "filter[gas_code]": GasCode.optional(),
 });
@@ -48,7 +56,14 @@ export const FloatAgingQuery = PaginationQuery.extend({
   sort: zod.enum(["days_out", "-days_out"]).default("-days_out"),
   bucket: zod.enum([">30", ">90", ">180", ">365"]).optional(),
   "filter[territory_id]": zod.coerce.number().int().optional(),
+  /** Snapshot of currently open float as of this date. Omit = today. */
   as_of: IsoDate.optional(),
+  /**
+   * When both set: custody overlapping the inclusive range (open + closed),
+   * aged as of period_end (or return if earlier). Longer windows accumulate.
+   */
+  period_start: IsoDate.optional(),
+  period_end: IsoDate.optional(),
 });
 export type FloatAgingQuery = zod.infer<typeof FloatAgingQuery>;
 
@@ -175,6 +190,27 @@ export type FloatAgingReportResponse = zod.infer<
 
 export const RentalReportResponse = ReportEnvelope(RentalReportRow);
 export type RentalReportResponse = zod.infer<typeof RentalReportResponse>;
+
+export const RefillReportRow = zod.object({
+  client_party_id: zod.number().int(),
+  client_name: zod.string(),
+  gas_code: GasCode.nullable(),
+  refill_count: zod.number().int(),
+  revenue: zod.number(),
+});
+export type RefillReportRow = zod.infer<typeof RefillReportRow>;
+
+export const RefillReportQuery = zod.object({
+  period_start: IsoDate,
+  period_end: IsoDate,
+  "filter[territory_id]": zod.coerce.number().int().optional(),
+  "filter[gas_code]": GasCode.optional(),
+  "filter[client_party_id]": zod.coerce.number().int().optional(),
+});
+export type RefillReportQuery = zod.infer<typeof RefillReportQuery>;
+
+export const RefillReportResponse = ReportEnvelope(RefillReportRow);
+export type RefillReportResponse = zod.infer<typeof RefillReportResponse>;
 
 export const LossReportResponse = ReportEnvelope(LossReportRow);
 export type LossReportResponse = zod.infer<typeof LossReportResponse>;

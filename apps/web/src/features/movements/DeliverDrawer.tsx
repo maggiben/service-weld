@@ -47,6 +47,8 @@ interface Props {
   onClose: () => void;
   prefillCylinderId?: number;
   prefillHolderId?: number;
+  /** Prefill movement kind when opening (e.g. REFILL from Recargas). */
+  defaultKind?: MovementKind;
 }
 
 export function DeliverDrawer({
@@ -54,6 +56,7 @@ export function DeliverDrawer({
   onClose,
   prefillCylinderId,
   prefillHolderId,
+  defaultKind = "RENTAL",
 }: Props) {
   const { t: translate } = useTranslation();
   const queryClient = useQueryClient();
@@ -196,7 +199,7 @@ export function DeliverDrawer({
     reset({
       cylinder_id: prefillCylinderId ?? 0,
       holder_party_id: prefillHolderId ?? 0,
-      movement_kind: "RENTAL",
+      movement_kind: defaultKind,
       gas_code: null,
       delivery_date: dayjs().format("YYYY-MM-DD"),
       origin_party_id: null,
@@ -208,7 +211,7 @@ export function DeliverDrawer({
     setClientQuery("");
     setSelectedCylinder(null);
     setSelectedClient(null);
-  }, [open, reset, prefillCylinderId, prefillHolderId]);
+  }, [open, reset, prefillCylinderId, prefillHolderId, defaultKind]);
 
   const create = useMutation({
     mutationFn: (values: FormValues) =>
@@ -216,6 +219,7 @@ export function DeliverDrawer({
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["movements"] }),
+        queryClient.invalidateQueries({ queryKey: ["refills"] }),
         queryClient.invalidateQueries({ queryKey: ["cylinders"] }),
       ]);
       onClose();

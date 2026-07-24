@@ -1,5 +1,5 @@
 import { z as zod } from "zod";
-import { paginated, PaginationQuery } from "./common";
+import { IsoDate, paginated, PaginationQuery } from "./common";
 import { MovementKind } from "./enums";
 
 export const Alert = zod.object({
@@ -55,6 +55,13 @@ export const AlertSummary = zod.object({
   open_count: zod.number().int(),
 });
 export type AlertSummary = zod.infer<typeof AlertSummary>;
+
+/** Optional period: count still-open alerts created in the inclusive date range. */
+export const AlertSummaryQuery = zod.object({
+  period_start: IsoDate.optional(),
+  period_end: IsoDate.optional(),
+});
+export type AlertSummaryQuery = zod.infer<typeof AlertSummaryQuery>;
 
 /** Register / update customer follow-up on an operational alert. */
 export const UpdateAlertContact = zod.object({
