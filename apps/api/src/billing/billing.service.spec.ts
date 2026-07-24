@@ -1,16 +1,20 @@
 import { principal } from "../test-utils/fixtures";
+import { ApiError } from "../common/errors/api-error";
 import { BillingService } from "./billing.service";
 
 describe("BillingService", () => {
   const repository = {
     createDraftRun: vi.fn(),
+    listPeriodInvoices: vi.fn(),
     getRun: vi.fn(),
     getInvoiceById: vi.fn(),
+    setDraftChargeLines: vi.fn(),
     approveRun: vi.fn(),
     approveInvoice: vi.fn(),
     exportRun: vi.fn(),
     saveArcaAuthorization: vi.fn(),
     resetInvoiceForSimulation: vi.fn(),
+    nextArcaVoucherNumber: vi.fn(),
   };
   const arcaService = {
     getCompanyProfile: vi.fn(),
@@ -20,7 +24,10 @@ describe("BillingService", () => {
   };
   const service = new BillingService(repository as never, arcaService as never);
 
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    arcaService.isSimulationModeEnabled.mockResolvedValue(false);
+  });
 
   it("normalizes history mode drafts", async () => {
     repository.createDraftRun.mockResolvedValue({ id: 1 });
@@ -32,7 +39,24 @@ describe("BillingService", () => {
     expect(repository.createDraftRun).toHaveBeenCalledWith(
       {
         mode: "history",
+        charges: "all",
         client_party_id: null,
+        locality_id: null,
+        territory_id: null,
+      },
+      user.id,
+    );
+
+    await service.createDraft(user, {
+      mode: "history",
+      charges: "sales",
+      client_party_id: 9,
+    } as never);
+    expect(repository.createDraftRun).toHaveBeenLastCalledWith(
+      {
+        mode: "history",
+        charges: "sales",
+        client_party_id: 9,
         locality_id: null,
         territory_id: null,
       },
@@ -48,6 +72,39 @@ describe("BillingService", () => {
       expect.objectContaining({ mode: "period" }),
       user.id,
     );
+  });
+
+  it("lists period invoices", async () => {
+    repository.listPeriodInvoices.mockResolvedValue({
+      period_start: "2026-07-01",
+      period_end: "2026-07-31",
+      locked: true,
+      invoices: [],
+    });
+    await expect(
+      service.listPeriodInvoices({
+        period_start: "2026-07-01",
+        period_end: "2026-07-31",
+        client_party_id: 1973,
+      }),
+    ).resolves.toMatchObject({ locked: true });
+    expect(repository.listPeriodInvoices).toHaveBeenCalledWith({
+      period_start: "2026-07-01",
+      period_end: "2026-07-31",
+      client_party_id: 1973,
+    });
+  });
+
+  it("sets draft charge lines", async () => {
+    repository.setDraftChargeLines.mockResolvedValue({
+      id: 9,
+      total: 21000,
+      charge_lines: [{ id: 2 }],
+    });
+    await expect(
+      service.setDraftChargeLines(9, { charge_line_ids: [2] }),
+    ).resolves.toMatchObject({ total: 21000 });
+    expect(repository.setDraftChargeLines).toHaveBeenCalledWith(9, [2]);
   });
 
   it("gets, approves, and exports runs", async () => {
@@ -194,7 +251,123 @@ describe("BillingService", () => {
     ).resolves.toMatchObject({ arca: { cae: "71234567890123" } });
     expect(repository.saveArcaAuthorization).toHaveBeenCalledWith(
       12,
-      expect.objectContaining({ cae: "71234567890123", ptoVta: 2 }),
+      expect.objectContaining({
+        cae: "71234567890123",
+        ptoVta: 2,
+        cbteNro: 15,
+      }),
+    );
+    expect(repository.nextArcaVoucherNumber).not.toHaveBeenCalled();
+    expect(arcaService.createElectronicVoucher).toHaveBeenCalledWith(
+      expect.objectContaining({ simulatedCbteNro: undefined }),
+    );
+  });
+
+  it("allocates the next local voucher number in ARCA simulation mode", async () => {
+    repository.getInvoiceById.mockResolvedValue({
+      id: 22,
+      status: "APPROVED",
+      total: 100,
+      period_start: "2026-07-01",
+      period_end: "2026-07-24",
+      client_cuit: null,
+      arca: { cae: null },
+    });
+    arcaService.getCompanyProfile.mockResolvedValue({
+      cuit: "30-71552577-8",
+      legal_name: "Weld",
+      alias: null,
+      point_of_sale: 1,
+    });
+    arcaService.isSimulationModeEnabled.mockResolvedValue(true);
+    repository.nextArcaVoucherNumber
+      .mockResolvedValueOnce(3)
+      .mockResolvedValueOnce(3);
+    arcaService.createElectronicVoucher.mockResolvedValue({
+      result: { cae: "74111111111114", caeFchVto: "20260803", cbteNro: 3 },
+      environment: "HOMOLOGATION",
+      company: {
+        cuit: "30-71552577-8",
+        legal_name: "Weld",
+        alias: null,
+        point_of_sale: 1,
+      },
+      issuerCuitDigits: "30715525778",
+    });
+    repository.saveArcaAuthorization.mockResolvedValue({
+      id: 22,
+      status: "APPROVED",
+      arca: { cae: "74111111111114", cbte_nro: 3 },
+    });
+
+    await expect(
+      service.authorizeWithArca(principal(), 22),
+    ).resolves.toMatchObject({ arca: { cae: "74111111111114" } });
+    expect(repository.nextArcaVoucherNumber).toHaveBeenCalledWith(1, 6);
+    expect(arcaService.createElectronicVoucher).toHaveBeenCalledWith(
+      expect.objectContaining({ simulatedCbteNro: 3 }),
+    );
+    expect(repository.saveArcaAuthorization).toHaveBeenCalledWith(
+      22,
+      expect.objectContaining({ cbteNro: 3 }),
+    );
+  });
+
+  it("retries the next voucher number when simulation hits a collision", async () => {
+    repository.getInvoiceById.mockResolvedValue({
+      id: 23,
+      status: "APPROVED",
+      total: 100,
+      period_start: "2026-07-01",
+      period_end: "2026-07-24",
+      client_cuit: null,
+      arca: { cae: null },
+    });
+    arcaService.getCompanyProfile.mockResolvedValue({
+      cuit: "30-71552577-8",
+      legal_name: "Weld",
+      alias: null,
+      point_of_sale: 1,
+    });
+    arcaService.isSimulationModeEnabled.mockResolvedValue(true);
+    repository.nextArcaVoucherNumber.mockResolvedValue(1);
+    arcaService.createElectronicVoucher.mockResolvedValue({
+      result: { cae: "74111111111114", caeFchVto: "20260803", cbteNro: 1 },
+      environment: "HOMOLOGATION",
+      company: {
+        cuit: "30-71552577-8",
+        legal_name: "Weld",
+        alias: null,
+        point_of_sale: 1,
+      },
+      issuerCuitDigits: "30715525778",
+    });
+    repository.saveArcaAuthorization
+      .mockRejectedValueOnce(
+        new ApiError(
+          "ARCA_VOUCHER_NUMBER_TAKEN",
+          "That ARCA voucher number is already used by another invoice",
+          409,
+        ),
+      )
+      .mockResolvedValueOnce({
+        id: 23,
+        status: "APPROVED",
+        arca: { cae: "74111111111114", cbte_nro: 2 },
+      });
+
+    await expect(
+      service.authorizeWithArca(principal(), 23),
+    ).resolves.toMatchObject({ arca: { cbte_nro: 2 } });
+    expect(repository.saveArcaAuthorization).toHaveBeenNthCalledWith(
+      1,
+      23,
+      expect.objectContaining({ cbteNro: 1 }),
+    );
+    expect(repository.saveArcaAuthorization).toHaveBeenNthCalledWith(
+      2,
+      23,
+      expect.objectContaining({ cbteNro: 2 }),
     );
   });
 

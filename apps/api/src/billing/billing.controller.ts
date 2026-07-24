@@ -5,7 +5,9 @@ import {
   Header,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
+  Query,
   Res,
 } from "@nestjs/common";
 import {
@@ -21,12 +23,17 @@ import type {
   BillingExportPayload,
   BillingRunDetail,
   Invoice,
+  PeriodInvoicesResponse,
 } from "@weld/schemas";
 import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { RequireCapabilities } from "../common/decorators/require-capabilities.decorator";
 import type { AuthPrincipal } from "../auth/principal";
 import { BillingService } from "./billing.service";
-import { CreateBillingRunDto } from "./dto/billing.dto";
+import {
+  CreateBillingRunDto,
+  PeriodInvoicesQueryDto,
+  SetInvoiceChargeLinesDto,
+} from "./dto/billing.dto";
 
 @ApiTags("Billing")
 @ApiBearerAuth()
@@ -42,6 +49,17 @@ export class BillingController {
     @Body() body: CreateBillingRunDto,
   ): Promise<BillingRunDetail> {
     return this.billingService.createDraft(user, body);
+  }
+
+  @Get("period-invoices")
+  @RequireCapabilities("billing:read")
+  @ApiOkResponse({
+    description: "Existing invoices for a period (including locked periods)",
+  })
+  listPeriodInvoices(
+    @Query() query: PeriodInvoicesQueryDto,
+  ): Promise<PeriodInvoicesResponse> {
+    return this.billingService.listPeriodInvoices(query);
   }
 
   @Get("runs/:id")
@@ -73,6 +91,19 @@ export class BillingController {
   @ApiOkResponse({ description: "Invoice with charge lines and ARCA fields" })
   getInvoice(@Param("id", ParseIntPipe) id: number): Promise<Invoice> {
     return this.billingService.getInvoice(id);
+  }
+
+  @Patch("invoices/:id/charge-lines")
+  @RequireCapabilities("billing:write")
+  @ApiOkResponse({
+    description:
+      "Keep selected DRAFT charge lines; deferred lines can be billed in a later run",
+  })
+  setChargeLines(
+    @Param("id", ParseIntPipe) id: number,
+    @Body() body: SetInvoiceChargeLinesDto,
+  ): Promise<Invoice> {
+    return this.billingService.setDraftChargeLines(id, body);
   }
 
   @Post("invoices/:id/approve")

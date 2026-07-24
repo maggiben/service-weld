@@ -1,5 +1,10 @@
 import { z as zod } from "zod";
-import { IsoDate, paginated, PaginationQuery } from "./common";
+import {
+  IsoDate,
+  PositiveNullableMoneyInput,
+  paginated,
+  PaginationQuery,
+} from "./common";
 import {
   CapacityUnit,
   GasCode,
@@ -39,19 +44,36 @@ export const MovementEvent = zod.object({
 });
 export type MovementEvent = zod.infer<typeof MovementEvent>;
 
-export const CreateMovementInput = zod.object({
-  cylinder_id: zod.number().int(),
-  holder_party_id: zod.number().int(),
-  movement_kind: MovementKind,
-  gas_code: GasCode.nullable().optional(),
-  delivery_date: IsoDate,
-  origin_party_id: zod.number().int().nullable().optional(),
-  /** Prefer when remito Aggregate already exists (close side effects). */
-  remito_id: zod.number().int().nullable().optional(),
-  remito_number: zod.string().nullable().optional(),
-  note: zod.string().nullable().optional(),
-  request_id: zod.string().uuid().optional(),
-});
+export const CreateMovementInput = zod
+  .object({
+    cylinder_id: zod.number().int(),
+    holder_party_id: zod.number().int(),
+    movement_kind: MovementKind,
+    gas_code: GasCode.nullable().optional(),
+    delivery_date: IsoDate,
+    origin_party_id: zod.number().int().nullable().optional(),
+    /** Prefer when remito Aggregate already exists (close side effects). */
+    remito_id: zod.number().int().nullable().optional(),
+    remito_number: zod.string().nullable().optional(),
+    note: zod.string().nullable().optional(),
+    /**
+     * Unit sale price in ARS. Required when `movement_kind` is `SALE` — feeds
+     * `cylinder_sale` and billing charge lines (009 / W20).
+     * Accepts es-AR typing (`15.000,50`) via {@link PositiveNullableMoneyInput}.
+     */
+    sale_price: PositiveNullableMoneyInput.optional(),
+    request_id: zod.string().uuid().optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.movement_kind !== "SALE") return;
+    if (value.sale_price == null || !(value.sale_price > 0)) {
+      ctx.addIssue({
+        code: zod.ZodIssueCode.custom,
+        path: ["sale_price"],
+        message: "Required for sale",
+      });
+    }
+  });
 export type CreateMovementInput = zod.infer<typeof CreateMovementInput>;
 
 export const ReturnMovementInput = zod.object({
@@ -69,6 +91,18 @@ export const VoidMovementInput = zod.object({
   reason: zod.string().min(1),
 });
 export type VoidMovementInput = zod.infer<typeof VoidMovementInput>;
+
+/**
+ * Attach a billable `cylinder_sale` row to an existing SALE movement that was
+ * posted without a price (legacy / incomplete).
+ */
+export const RecordSalePriceInput = zod.object({
+  sale_price: PositiveNullableMoneyInput.refine(
+    (value): value is number => value != null && value > 0,
+    { message: "Sale price is required" },
+  ),
+});
+export type RecordSalePriceInput = zod.infer<typeof RecordSalePriceInput>;
 
 export const MovementListQuery = PaginationQuery.extend({
   /** Partial match on cylinder serial or holder (client) display name. */

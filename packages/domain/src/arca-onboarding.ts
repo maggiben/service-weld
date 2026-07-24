@@ -201,7 +201,10 @@ export function simulatedArcaCredentialFacts(
 }
 
 /** Fake CAE payload for simulated electronic authorization (AFIP date = YYYYMMDD). */
-export function buildSimulatedArcaCae(now: Date = new Date()): {
+export function buildSimulatedArcaCae(
+  now: Date = new Date(),
+  cbteNro = 1,
+): {
   cae: string;
   caeFchVto: string;
   cbteNro: number;
@@ -214,6 +217,6 @@ export function buildSimulatedArcaCae(now: Date = new Date()): {
   return {
     cae: "74111111111114",
     caeFchVto: `${year}${month}${day}`,
-    cbteNro: 1,
+    cbteNro,
   };
 }

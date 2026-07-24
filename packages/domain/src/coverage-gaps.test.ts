@@ -62,6 +62,7 @@ describe("DomainErrors factories", () => {
       DomainErrors.invalidMoney(),
       DomainErrors.illegalRemitoTransition("DRAFT", "CLOSED"),
       DomainErrors.remitoNotEditable("PREPARED"),
+      DomainErrors.remitoNotDeletable("INVOICED"),
       DomainErrors.cancelReasonRequired(),
       DomainErrors.remitoAssignRequiresSchedule(),
       DomainErrors.illegalArcaTransition("NOT_STARTED", "VALIDATED"),

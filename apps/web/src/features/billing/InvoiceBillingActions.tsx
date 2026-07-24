@@ -18,6 +18,11 @@ export interface InvoiceBillingActionsProps {
   onInvoiceUpdated: (invoice: Invoice) => void;
   /** Compact layout for embedding in the client ledger drawer. */
   compact?: boolean;
+  /**
+   * When set on a DRAFT, these lines are kept before approve/issue;
+   * unchecked lines stay unbilled for a later run.
+   */
+  selectedChargeLineIds?: number[];
 }
 
 function formatMoney(value: number): string {
@@ -31,6 +36,7 @@ export function InvoiceBillingActions({
   invoice,
   onInvoiceUpdated,
   compact = false,
+  selectedChargeLineIds,
 }: InvoiceBillingActionsProps) {
   const { t: translate } = useTranslation();
   const canWrite = useSessionStore((state) =>
@@ -60,8 +66,33 @@ export function InvoiceBillingActions({
     setError(translate("errors.generic"));
   };
 
+  const applySelectionIfNeeded = async (): Promise<Invoice> => {
+    if (invoice.status !== "DRAFT" || selectedChargeLineIds == null) {
+      return invoice;
+    }
+    if (selectedChargeLineIds.length === 0) {
+      throw new ApiClientError(
+        "VALIDATION_FAILED",
+        translate("billing.invoice_drawer.select_at_least_one"),
+        400,
+      );
+    }
+    const currentIds = (invoice.charge_lines ?? []).map((line) => line.id);
+    const same =
+      currentIds.length === selectedChargeLineIds.length &&
+      currentIds.every((id) => selectedChargeLineIds.includes(id));
+    if (same) return invoice;
+    return api.setInvoiceChargeLines(invoice.id, {
+      charge_line_ids: selectedChargeLineIds,
+    });
+  };
+
   const approveMutation = useMutation({
-    mutationFn: () => api.approveInvoice(invoice.id),
+    mutationFn: async () => {
+      const prepared = await applySelectionIfNeeded();
+      onInvoiceUpdated(prepared);
+      return api.approveInvoice(prepared.id);
+    },
     onSuccess: (updated) => {
       setError(null);
       onInvoiceUpdated(updated);
@@ -70,7 +101,11 @@ export function InvoiceBillingActions({
   });
 
   const issueMutation = useMutation({
-    mutationFn: () => api.issueInvoice(invoice.id),
+    mutationFn: async () => {
+      const prepared = await applySelectionIfNeeded();
+      onInvoiceUpdated(prepared);
+      return api.issueInvoice(prepared.id);
+    },
     onSuccess: (updated) => {
       setError(null);
       onInvoiceUpdated(updated);
@@ -118,11 +153,23 @@ export function InvoiceBillingActions({
   const isDraft = invoice.status === "DRAFT";
   const isApproved =
     invoice.status === "APPROVED" || invoice.status === "EXPORTED";
-  const canApproveOne = canApprove && isDraft && invoice.total > 0;
+  const selectionReady =
+    selectedChargeLineIds == null || selectedChargeLineIds.length > 0;
+  const effectiveTotal =
+    selectedChargeLineIds == null
+      ? invoice.total
+      : Math.round(
+          (invoice.charge_lines ?? [])
+            .filter((line) => selectedChargeLineIds.includes(line.id))
+            .reduce((sum, line) => sum + line.amount, 0) * 100,
+        ) / 100;
+  const canApproveOne =
+    canApprove && isDraft && effectiveTotal > 0 && selectionReady;
   const canIssue =
     canApprove &&
     canWrite &&
-    invoice.total > 0 &&
+    effectiveTotal > 0 &&
+    selectionReady &&
     !hasCae &&
     (isDraft || isApproved);
   const canAuthorize = canWrite && isApproved && !hasCae && invoice.total > 0;
@@ -139,7 +186,7 @@ export function InvoiceBillingActions({
     printMutation.isPending;
 
   return (
-    <Stack spacing={compact ? 1 : 1.5}>
+    <Stack spacing={compact ? 1.25 : 1.75}>
       <Stack
         direction="row"
         spacing={1}
@@ -168,7 +215,11 @@ export function InvoiceBillingActions({
           {translate("billing.invoice_drawer.subtitle", {
             from: invoice.period_start,
             to: invoice.period_end,
-            total: formatMoney(invoice.total),
+            total: formatMoney(
+              isDraft && selectedChargeLineIds != null
+                ? effectiveTotal
+                : invoice.total,
+            ),
           })}
         </Typography>
       </Stack>
@@ -189,9 +240,9 @@ export function InvoiceBillingActions({
               due: arca.cae_due_date,
               number: `${String(arca.pto_vta).padStart(5, "0")}-${String(arca.cbte_nro).padStart(8, "0")}`,
               env:
-                arca.arca_environment === "HOMOLOGATION"
-                  ? translate("billing.invoice_drawer.env_homo")
-                  : translate("billing.invoice_drawer.env_prod"),
+                arca.arca_environment === "PRODUCTION"
+                  ? translate("billing.invoice_drawer.env_prod")
+                  : translate("billing.invoice_drawer.env_homo"),
             })}
           </Typography>
         </Alert>

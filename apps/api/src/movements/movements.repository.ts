@@ -5,7 +5,7 @@ import type {
   MovementEvent,
   MovementListQuery,
 } from "@weld/schemas";
-import { sql, type SqlBool } from "kysely";
+import { sql, type Kysely, type SqlBool } from "kysely";
 import { ApiErrors } from "../common/errors/api-error";
 import {
   buildPageMeta,
@@ -17,11 +17,16 @@ import { KYSELY, type DB } from "../database/database.module";
 import { resolveDb } from "../database/transaction.context";
 import type {
   CylinderState,
+  Database,
   MovementKind,
   MovementState,
   OwnershipBasis,
 } from "../database/schema.types";
-import { resolveDeliveryNote } from "../delivery-notes/resolve-delivery-note";
+import {
+  allocateClosedDeliveryNote,
+  resolveDeliveryNote,
+} from "../delivery-notes/resolve-delivery-note";
+import { ensureRemitoCylinderLine } from "../delivery-notes/ensure-remito-cylinder-line";
 
 interface MovementRow {
   id: number;
@@ -58,6 +63,8 @@ interface CylinderForDelivery {
   gas_code: string | null;
   serial_number: string;
   packaging: "SINGLE" | "BATTERY" | "BATTERY_MEMBER";
+  capacity_m3: number | null;
+  capacity_unit: "M3" | "KG";
 }
 
 function toIsoDate(value: string | Date | null): string | null {
@@ -682,6 +689,8 @@ export class MovementsRepository {
         "gas_code",
         "serial_number",
         "packaging",
+        "capacity_m3",
+        "capacity_unit",
       ])
       .where("id", "=", cylinderId)
       .where("deleted_at", "is", null)
@@ -694,6 +703,8 @@ export class MovementsRepository {
           gas_code: row.gas_code,
           serial_number: row.serial_number,
           packaging: row.packaging,
+          capacity_m3: row.capacity_m3 == null ? null : Number(row.capacity_m3),
+          capacity_unit: row.capacity_unit ?? "M3",
         }
       : null;
   }
@@ -729,16 +740,7 @@ export class MovementsRepository {
   ): Promise<MovementEvent> {
     const db = resolveDb(this.db);
 
-    const remitoId =
-      input.remito_id != null
-        ? input.remito_id
-        : input.remito_number
-          ? await resolveDeliveryNote(db, {
-              remito_number: input.remito_number,
-              issued_date: input.delivery_date,
-              client_party_id: input.holder_party_id,
-            })
-          : null;
+    const remitoId = await this.resolveOrAllocateRemito(db, input);
 
     const inserted = await db
       .insertInto("movement_event")
@@ -761,6 +763,21 @@ export class MovementsRepository {
       .returning("id")
       .executeTakeFirstOrThrow();
 
+    const movementId = Number(inserted.id);
+
+    // Remito Aggregate close path passes remito_id and already has lines.
+    // Movement-first creates need a cylinder line snapshot on the remito.
+    if (input.remito_id == null) {
+      await ensureRemitoCylinderLine(db, {
+        remitoId,
+        cylinderId: input.cylinder_id,
+        movementEventId: movementId,
+        movementKind: input.movement_kind,
+        gasCode,
+        propertyBasis,
+      });
+    }
+
     await db
       .updateTable("cylinder")
       .set({
@@ -771,30 +788,31 @@ export class MovementsRepository {
       .where("id", "=", input.cylinder_id)
       .execute();
 
-    const created = await this.getById(Number(inserted.id));
+    const created = await this.getById(movementId);
     if (!created) throw ApiErrors.notFound("Movement not found after create");
     return created;
   }
 
   /**
-   * Sell one of our cylinders: post a terminal SOLD movement (no return) and
-   * mark the cylinder SOLD. The unit leaves our fleet permanently.
+   * Sell one of our cylinders: post a terminal SOLD movement (no return),
+   * record `cylinder_sale` (billable), and mark the cylinder SOLD.
    */
   async createSale(
     input: CreateMovementInput,
-    propertyBasis: OwnershipBasis,
+    cylinder: CylinderForDelivery,
     gasCode: string | null,
     actorUserId: number,
   ): Promise<MovementEvent> {
     const db = resolveDb(this.db);
+    const salePrice = input.sale_price;
+    if (salePrice == null || !(salePrice > 0)) {
+      throw ApiErrors.validationFailed("Sale price is required", [
+        { field: "sale_price", issue: "Required for sale" },
+      ]);
+    }
 
-    const remitoId = input.remito_number
-      ? await resolveDeliveryNote(db, {
-          remito_number: input.remito_number,
-          issued_date: input.delivery_date,
-          client_party_id: input.holder_party_id,
-        })
-      : null;
+    const remitoId = await this.resolveOrAllocateRemito(db, input);
+    const propertyBasis = cylinder.ownership_basis;
 
     const inserted = await db
       .insertInto("movement_event")
@@ -817,6 +835,34 @@ export class MovementsRepository {
       .returning("id")
       .executeTakeFirstOrThrow();
 
+    const movementId = Number(inserted.id);
+
+    if (input.remito_id == null) {
+      await ensureRemitoCylinderLine(db, {
+        remitoId,
+        cylinderId: input.cylinder_id,
+        movementEventId: movementId,
+        movementKind: "SALE",
+        gasCode,
+        propertyBasis,
+      });
+    }
+
+    await db
+      .insertInto("cylinder_sale")
+      .values({
+        cylinder_id: input.cylinder_id,
+        client_party_id: input.holder_party_id,
+        sale_date: input.delivery_date,
+        gas_code: gasCode,
+        capacity_m3: cylinder.capacity_m3,
+        capacity_unit: cylinder.capacity_unit,
+        price: salePrice,
+        note: input.note ?? null,
+        created_by: actorUserId,
+      })
+      .execute();
+
     await db
       .updateTable("cylinder")
       .set({
@@ -826,7 +872,7 @@ export class MovementsRepository {
       .where("id", "=", input.cylinder_id)
       .execute();
 
-    const created = await this.getById(Number(inserted.id));
+    const created = await this.getById(movementId);
     if (!created) throw ApiErrors.notFound("Movement not found after sale");
     return created;
   }
@@ -1027,6 +1073,7 @@ export class MovementsRepository {
     reason: string,
     expectedVersion: number,
     actorUserId: number,
+    options?: { restoreSold?: boolean },
   ): Promise<MovementEvent> {
     const db = resolveDb(this.db);
 
@@ -1057,7 +1104,7 @@ export class MovementsRepository {
       );
     }
 
-    if (wasOpen) {
+    if (wasOpen || options?.restoreSold) {
       await db
         .updateTable("cylinder")
         .set({
@@ -1066,6 +1113,15 @@ export class MovementsRepository {
           updated_by: actorUserId,
         })
         .where("id", "=", cylinderId)
+        .execute();
+    }
+
+    // Sale ledger has no VOID state; drop the unbilled row so the unit can
+    // be sold again and does not keep appearing on billing runs.
+    if (options?.restoreSold) {
+      await db
+        .deleteFrom("cylinder_sale")
+        .where("cylinder_id", "=", cylinderId)
         .execute();
     }
 
@@ -1084,5 +1140,85 @@ export class MovementsRepository {
       .where("return_date", "is", null)
       .executeTakeFirst();
     return row ? Number(row.id) : null;
+  }
+
+  /**
+   * Create the missing `cylinder_sale` for a SALE that was posted without a
+   * price (so billing can pick it up).
+   */
+  async recordSalePrice(
+    movementId: number,
+    movement: MovementEvent,
+    salePrice: number,
+    actorUserId: number,
+  ): Promise<MovementEvent> {
+    const db = resolveDb(this.db);
+    const existing = await db
+      .selectFrom("cylinder_sale")
+      .select("id")
+      .where("cylinder_id", "=", movement.cylinder_id)
+      .where("client_party_id", "=", movement.holder_party_id)
+      .where("sale_date", "=", movement.delivery_date)
+      .executeTakeFirst();
+    if (existing) {
+      throw ApiErrors.conflict(
+        "SALE_PRICE_EXISTS",
+        "This sale already has a recorded price",
+      );
+    }
+
+    const cylinder = await db
+      .selectFrom("cylinder")
+      .select(["capacity_m3", "capacity_unit"])
+      .where("id", "=", movement.cylinder_id)
+      .executeTakeFirst();
+    if (!cylinder) throw ApiErrors.notFound("Cylinder not found");
+
+    await db
+      .insertInto("cylinder_sale")
+      .values({
+        cylinder_id: movement.cylinder_id,
+        client_party_id: movement.holder_party_id,
+        sale_date: movement.delivery_date,
+        gas_code: movement.gas_code,
+        capacity_m3: cylinder.capacity_m3,
+        capacity_unit: cylinder.capacity_unit ?? "M3",
+        price: salePrice,
+        created_by: actorUserId,
+      })
+      .execute();
+
+    const refreshed = await this.getById(movementId);
+    if (!refreshed) throw ApiErrors.notFound("Movement not found after update");
+    return refreshed;
+  }
+
+  /**
+   * Prefer explicit remito_id, else find-or-create by remito_number, else
+   * allocate the next unique series number (A-########).
+   */
+  private async resolveOrAllocateRemito(
+    db: Kysely<Database>,
+    input: CreateMovementInput,
+  ): Promise<number> {
+    if (input.remito_id != null) return input.remito_id;
+    const explicit = input.remito_number?.trim();
+    if (explicit) {
+      const resolved = await resolveDeliveryNote(db, {
+        remito_number: explicit,
+        issued_date: input.delivery_date,
+        client_party_id: input.holder_party_id,
+      });
+      if (resolved == null) {
+        throw ApiErrors.validationFailed("Remito number is required", [
+          { field: "remito_number", issue: "Must not be blank" },
+        ]);
+      }
+      return resolved;
+    }
+    return allocateClosedDeliveryNote(db, {
+      issued_date: input.delivery_date,
+      client_party_id: input.holder_party_id,
+    });
   }
 }

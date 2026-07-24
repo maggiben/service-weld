@@ -2,6 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import {
   billableDaysInPeriod,
   businessTodayIso,
+  invoiceCylinderDays,
   refillChargeAmount,
   resolveBillingUnitPrice,
   resolveRefillUnitPrice,
@@ -13,12 +14,15 @@ import type {
   CreateBillingRunInput,
   Invoice,
   InvoiceArcaAuthorization,
+  PeriodInvoicesQuery,
+  PeriodInvoicesResponse,
 } from "@weld/schemas";
 import { ApiErrors } from "../common/errors/api-error";
 import { KYSELY, type DB } from "../database/database.module";
 import { resolveDb } from "../database/transaction.context";
 import { RatesRepository } from "../rates/rates.repository";
 import { RefillRatesRepository } from "../refill-rates/refill-rates.repository";
+import { SettingsRepository } from "../settings/settings.repository";
 
 interface BillableMovement {
   id: number;
@@ -96,6 +100,7 @@ export class BillingRepository {
     @Inject(KYSELY) private readonly db: DB,
     private readonly ratesRepository: RatesRepository,
     private readonly refillRatesRepository: RefillRatesRepository,
+    private readonly settingsRepository: SettingsRepository,
   ) {}
 
   async createDraftRun(
@@ -106,54 +111,111 @@ export class BillingRepository {
 
     const isHistory = input.mode === "history";
     const today = businessTodayIso();
+    const charges = input.charges ?? "all";
+    const includeRentals = charges === "all" || charges === "rentals";
+    const includeSales = charges === "all" || charges === "sales";
 
     let periodStart: string;
     let periodEnd: string;
 
     if (isHistory) {
       // Ignore any client-supplied dates: from the oldest still-open rental
-      // delivery in scope through today. Each charge line still accrues from
-      // that movement's own delivery_date (not the UI From/To pickers).
-      let oldestQb = db
-        .selectFrom("movement_event")
-        .innerJoin(
-          "client",
-          "client.party_id",
-          "movement_event.holder_party_id",
-        )
-        .select((eb) => eb.fn.min("movement_event.delivery_date").as("oldest"))
-        .where("movement_event.movement_kind", "=", "RENTAL")
-        .where("movement_event.state", "!=", "VOID")
-        .where("movement_event.property_basis", "in", ["OURS", "SUPPLIER"])
-        .where("movement_event.return_date", "is", null)
-        .where("movement_event.delivery_date", "<=", today);
+      // (and/or sale) in scope through today. Each charge line still accrues
+      // from that movement's own delivery_date (not the UI From/To pickers).
+      const oldestDates: string[] = [];
 
-      if (input.client_party_id != null) {
-        oldestQb = oldestQb.where(
-          "movement_event.holder_party_id",
-          "=",
-          input.client_party_id,
+      if (includeRentals) {
+        let oldestQb = db
+          .selectFrom("movement_event")
+          .innerJoin(
+            "client",
+            "client.party_id",
+            "movement_event.holder_party_id",
+          )
+          .select((eb) =>
+            eb.fn.min("movement_event.delivery_date").as("oldest"),
+          )
+          .where("movement_event.movement_kind", "=", "RENTAL")
+          .where("movement_event.state", "!=", "VOID")
+          .where("movement_event.property_basis", "in", ["OURS", "SUPPLIER"])
+          .where("movement_event.return_date", "is", null)
+          .where("movement_event.delivery_date", "<=", today);
+
+        if (input.client_party_id != null) {
+          oldestQb = oldestQb.where(
+            "movement_event.holder_party_id",
+            "=",
+            input.client_party_id,
+          );
+        } else if (input.locality_id != null) {
+          oldestQb = oldestQb.where(
+            "client.locality_id",
+            "=",
+            input.locality_id,
+          );
+        } else if (input.territory_id != null) {
+          oldestQb = oldestQb.where(
+            "client.territory_id",
+            "=",
+            input.territory_id,
+          );
+        }
+
+        const oldestRow = await oldestQb.executeTakeFirst();
+        const oldest = toIsoDate(
+          (oldestRow?.oldest as string | Date | null | undefined) ?? null,
         );
-      } else if (input.locality_id != null) {
-        oldestQb = oldestQb.where("client.locality_id", "=", input.locality_id);
-      } else if (input.territory_id != null) {
-        oldestQb = oldestQb.where(
-          "client.territory_id",
-          "=",
-          input.territory_id,
-        );
+        if (oldest) oldestDates.push(oldest);
       }
 
-      const oldestRow = await oldestQb.executeTakeFirst();
-      const oldest = toIsoDate(
-        (oldestRow?.oldest as string | Date | null | undefined) ?? null,
-      );
-      if (!oldest) {
-        // No open rentals in scope — still create an empty run dated today.
+      if (includeSales) {
+        let oldestSaleQb = db
+          .selectFrom("cylinder_sale")
+          .innerJoin(
+            "client",
+            "client.party_id",
+            "cylinder_sale.client_party_id",
+          )
+          .select((eb) => eb.fn.min("cylinder_sale.sale_date").as("oldest"))
+          .where("cylinder_sale.client_party_id", "is not", null)
+          .where("cylinder_sale.price", "is not", null)
+          .where("cylinder_sale.sale_date", "<=", today);
+
+        if (input.client_party_id != null) {
+          oldestSaleQb = oldestSaleQb.where(
+            "cylinder_sale.client_party_id",
+            "=",
+            input.client_party_id,
+          );
+        } else if (input.locality_id != null) {
+          oldestSaleQb = oldestSaleQb.where(
+            "client.locality_id",
+            "=",
+            input.locality_id,
+          );
+        } else if (input.territory_id != null) {
+          oldestSaleQb = oldestSaleQb.where(
+            "client.territory_id",
+            "=",
+            input.territory_id,
+          );
+        }
+
+        const oldestSaleRow = await oldestSaleQb.executeTakeFirst();
+        const oldestSale = toIsoDate(
+          (oldestSaleRow?.oldest as string | Date | null | undefined) ?? null,
+        );
+        if (oldestSale) oldestDates.push(oldestSale);
+      }
+
+      if (oldestDates.length === 0) {
+        // Nothing billable in scope — still create an empty run dated today.
         periodStart = today;
         periodEnd = today;
       } else {
-        periodStart = oldest;
+        periodStart = oldestDates.reduce((left, right) =>
+          left < right ? left : right,
+        );
         periodEnd = today;
       }
     } else {
@@ -211,45 +273,9 @@ export class BillingRepository {
       }
     }
 
-    // Clients with APPROVED/EXPORTED invoices for this exact period are locked.
-    // Single-client runs fail hard; multi-client runs skip those clients.
-    let lockedQb = db
-      .selectFrom("invoice")
-      .innerJoin("client", "client.party_id", "invoice.client_party_id")
-      .select("invoice.client_party_id")
-      .where("invoice.period_start", "=", periodStart)
-      .where("invoice.period_end", "=", periodEnd)
-      .where("invoice.status", "in", ["APPROVED", "EXPORTED"]);
-
-    if (input.client_party_id != null) {
-      lockedQb = lockedQb.where(
-        "invoice.client_party_id",
-        "=",
-        input.client_party_id,
-      );
-    } else if (input.locality_id != null) {
-      lockedQb = lockedQb.where("client.locality_id", "=", input.locality_id);
-    } else if (input.territory_id != null) {
-      lockedQb = lockedQb.where("client.territory_id", "=", input.territory_id);
-    }
-
-    const lockedRows = await lockedQb.execute();
-    const lockedClientIds = new Set(
-      lockedRows.map((row) => Number(row.client_party_id)),
-    );
-
-    if (
-      input.client_party_id != null &&
-      lockedClientIds.has(input.client_party_id)
-    ) {
-      throw ApiErrors.conflict(
-        "PERIOD_LOCKED",
-        "Period already has approved/exported invoices",
-      );
-    }
-
     // Replace prior drafts for the same period / client / locality / territory scope.
     // History also clears legacy sentinel drafts (1970-01-01) from earlier builds.
+    // Approved/exported invoices stay — remaining unbilled sources can form a new draft.
     let priorDraftsQb = db
       .selectFrom("invoice")
       .innerJoin("client", "client.party_id", "invoice.client_party_id")
@@ -324,73 +350,99 @@ export class BillingRepository {
 
     // Only holders that are actual clients — localities/territories etc. must not
     // become invoice.client_party_id (FK to client).
-    let movementsQb = db
-      .selectFrom("movement_event")
-      .innerJoin("client", "client.party_id", "movement_event.holder_party_id")
-      .innerJoin("party", "party.id", "movement_event.holder_party_id")
-      .innerJoin("cylinder", "cylinder.id", "movement_event.cylinder_id")
-      .leftJoin("locality", "locality.id", "client.locality_id")
-      .select([
-        "movement_event.id",
-        "movement_event.holder_party_id",
-        "party.display_name as holder_name",
-        "client.locality_id as holder_locality_id",
-        "locality.name as holder_locality_name",
-        "client.territory_id as holder_territory_id",
-        "client.daily_rate_default",
-        "movement_event.gas_code",
-        "cylinder.capacity_m3",
-        "cylinder.capacity_unit",
-        "movement_event.delivery_date",
-        "movement_event.return_date",
-        "cylinder.serial_number as cylinder_serial",
-      ])
-      .where("movement_event.movement_kind", "=", "RENTAL")
-      .where("movement_event.state", "!=", "VOID")
-      .where("movement_event.property_basis", "in", ["OURS", "SUPPLIER"]);
-
-    if (isHistory) {
-      // Outstanding stock only: never returned, any delivery date up to today.
-      movementsQb = movementsQb
-        .where("movement_event.return_date", "is", null)
-        .where("movement_event.delivery_date", "<=", periodEnd);
-    } else {
-      // Period mode: movements that overlap the window (closed + open-accrued).
-      // Same rule as the rental report — a cylinder out since 2020 still bills
-      // the days that fall inside [periodStart, periodEnd] (009 AC4 / W20).
-      movementsQb = movementsQb
-        .where("movement_event.delivery_date", "<=", periodEnd)
-        .where((eb) =>
-          eb.or([
-            eb("movement_event.return_date", "is", null),
-            eb("movement_event.return_date", ">=", periodStart),
-          ]),
+    let movements: BillableMovement[] = [];
+    if (includeRentals) {
+      let movementsQb = db
+        .selectFrom("movement_event")
+        .innerJoin(
+          "client",
+          "client.party_id",
+          "movement_event.holder_party_id",
+        )
+        .innerJoin("party", "party.id", "movement_event.holder_party_id")
+        .innerJoin("cylinder", "cylinder.id", "movement_event.cylinder_id")
+        .leftJoin("locality", "locality.id", "client.locality_id")
+        .select([
+          "movement_event.id",
+          "movement_event.holder_party_id",
+          "party.display_name as holder_name",
+          "client.locality_id as holder_locality_id",
+          "locality.name as holder_locality_name",
+          "client.territory_id as holder_territory_id",
+          "client.daily_rate_default",
+          "movement_event.gas_code",
+          "cylinder.capacity_m3",
+          "cylinder.capacity_unit",
+          "movement_event.delivery_date",
+          "movement_event.return_date",
+          "cylinder.serial_number as cylinder_serial",
+        ])
+        .where("movement_event.movement_kind", "=", "RENTAL")
+        .where("movement_event.state", "!=", "VOID")
+        .where("movement_event.property_basis", "in", ["OURS", "SUPPLIER"])
+        .where(({ not, exists, selectFrom }) =>
+          not(
+            exists(
+              selectFrom("charge_line")
+                .innerJoin("invoice", "invoice.id", "charge_line.invoice_id")
+                .select("charge_line.id")
+                .whereRef("charge_line.source_id", "=", "movement_event.id")
+                .where("charge_line.source_table", "=", "movement_event")
+                .where("invoice.status", "in", ["APPROVED", "EXPORTED"]),
+            ),
+          ),
         );
-    }
 
-    if (input.client_party_id != null) {
-      movementsQb = movementsQb.where(
-        "movement_event.holder_party_id",
-        "=",
-        input.client_party_id,
-      );
-    } else if (input.locality_id != null) {
-      movementsQb = movementsQb.where(
-        "client.locality_id",
-        "=",
-        input.locality_id,
-      );
-    } else if (input.territory_id != null) {
-      movementsQb = movementsQb.where(
-        "client.territory_id",
-        "=",
-        input.territory_id,
-      );
-    }
+      if (isHistory) {
+        // Outstanding stock only: never returned, any delivery date up to today.
+        movementsQb = movementsQb
+          .where("movement_event.return_date", "is", null)
+          .where("movement_event.delivery_date", "<=", periodEnd);
+      } else {
+        // Period mode: movements that overlap the window (closed + open-accrued).
+        // Same rule as the rental report — a cylinder out since 2020 still bills
+        // the days that fall inside [periodStart, periodEnd] (009 AC4 / W20).
+        movementsQb = movementsQb
+          .where("movement_event.delivery_date", "<=", periodEnd)
+          .where((eb) =>
+            eb.or([
+              eb("movement_event.return_date", "is", null),
+              eb("movement_event.return_date", ">=", periodStart),
+            ]),
+          );
+      }
 
-    const movements = (await movementsQb.execute()) as BillableMovement[];
-    const rates = await this.ratesRepository.listAllCandidates();
-    const refillRates = await this.refillRatesRepository.listAllCandidates();
+      if (input.client_party_id != null) {
+        movementsQb = movementsQb.where(
+          "movement_event.holder_party_id",
+          "=",
+          input.client_party_id,
+        );
+      } else if (input.locality_id != null) {
+        movementsQb = movementsQb.where(
+          "client.locality_id",
+          "=",
+          input.locality_id,
+        );
+      } else if (input.territory_id != null) {
+        movementsQb = movementsQb.where(
+          "client.territory_id",
+          "=",
+          input.territory_id,
+        );
+      }
+
+      movements = (await movementsQb.execute()) as BillableMovement[];
+    }
+    const rates = includeRentals
+      ? await this.ratesRepository.listAllCandidates()
+      : [];
+    const refillRates = includeRentals
+      ? await this.refillRatesRepository.listAllCandidates()
+      : [];
+    const rentalMinDays = includeRentals
+      ? await this.settingsRepository.getRentalMinDays()
+      : 0;
 
     const byClient = new Map<
       number,
@@ -404,10 +456,10 @@ export class BillingRepository {
     >();
 
     let skippedNoRate = 0;
+    let skippedAlreadyBilled = 0;
 
     for (const movement of movements) {
       const holderId = Number(movement.holder_party_id);
-      if (lockedClientIds.has(holderId)) continue;
 
       const delivery = toIsoDate(movement.delivery_date)!;
       const ret = toIsoDate(movement.return_date);
@@ -419,6 +471,7 @@ export class BillingRepository {
         periodStart,
         periodEnd,
         asOfDate: today,
+        minDays: rentalMinDays,
       });
       if (days <= 0) continue;
 
@@ -487,58 +540,80 @@ export class BillingRepository {
     }
 
     // Gas charges for REFILL / Su Propiedad (009 R2 / AC2): one fill = one line.
-    let refillQb = db
-      .selectFrom("movement_event")
-      .innerJoin("client", "client.party_id", "movement_event.holder_party_id")
-      .innerJoin("party", "party.id", "movement_event.holder_party_id")
-      .innerJoin("cylinder", "cylinder.id", "movement_event.cylinder_id")
-      .leftJoin("locality", "locality.id", "client.locality_id")
-      .select([
-        "movement_event.id",
-        "movement_event.holder_party_id",
-        "party.display_name as holder_name",
-        "client.locality_id as holder_locality_id",
-        "locality.name as holder_locality_name",
-        "client.territory_id as holder_territory_id",
-        "client.daily_rate_default",
-        "movement_event.gas_code",
-        "cylinder.capacity_m3",
-        "cylinder.capacity_unit",
-        "movement_event.delivery_date",
-        "movement_event.return_date",
-        "cylinder.serial_number as cylinder_serial",
-      ])
-      .where("movement_event.movement_kind", "=", "REFILL")
-      .where("movement_event.state", "!=", "VOID")
-      .where("movement_event.property_basis", "=", "CUSTOMER");
+    let refillMovements: BillableMovement[] = [];
+    if (includeRentals) {
+      let refillQb = db
+        .selectFrom("movement_event")
+        .innerJoin(
+          "client",
+          "client.party_id",
+          "movement_event.holder_party_id",
+        )
+        .innerJoin("party", "party.id", "movement_event.holder_party_id")
+        .innerJoin("cylinder", "cylinder.id", "movement_event.cylinder_id")
+        .leftJoin("locality", "locality.id", "client.locality_id")
+        .select([
+          "movement_event.id",
+          "movement_event.holder_party_id",
+          "party.display_name as holder_name",
+          "client.locality_id as holder_locality_id",
+          "locality.name as holder_locality_name",
+          "client.territory_id as holder_territory_id",
+          "client.daily_rate_default",
+          "movement_event.gas_code",
+          "cylinder.capacity_m3",
+          "cylinder.capacity_unit",
+          "movement_event.delivery_date",
+          "movement_event.return_date",
+          "cylinder.serial_number as cylinder_serial",
+        ])
+        .where("movement_event.movement_kind", "=", "REFILL")
+        .where("movement_event.state", "!=", "VOID")
+        .where("movement_event.property_basis", "=", "CUSTOMER")
+        .where(({ not, exists, selectFrom }) =>
+          not(
+            exists(
+              selectFrom("charge_line")
+                .innerJoin("invoice", "invoice.id", "charge_line.invoice_id")
+                .select("charge_line.id")
+                .whereRef("charge_line.source_id", "=", "movement_event.id")
+                .where("charge_line.source_table", "=", "movement_event")
+                .where("invoice.status", "in", ["APPROVED", "EXPORTED"]),
+            ),
+          ),
+        );
 
-    if (isHistory) {
-      refillQb = refillQb
-        .where("movement_event.return_date", "is", null)
-        .where("movement_event.delivery_date", "<=", periodEnd);
-    } else {
-      refillQb = refillQb
-        .where("movement_event.delivery_date", ">=", periodStart)
-        .where("movement_event.delivery_date", "<=", periodEnd);
+      if (isHistory) {
+        refillQb = refillQb
+          .where("movement_event.return_date", "is", null)
+          .where("movement_event.delivery_date", "<=", periodEnd);
+      } else {
+        refillQb = refillQb
+          .where("movement_event.delivery_date", ">=", periodStart)
+          .where("movement_event.delivery_date", "<=", periodEnd);
+      }
+
+      if (input.client_party_id != null) {
+        refillQb = refillQb.where(
+          "movement_event.holder_party_id",
+          "=",
+          input.client_party_id,
+        );
+      } else if (input.locality_id != null) {
+        refillQb = refillQb.where("client.locality_id", "=", input.locality_id);
+      } else if (input.territory_id != null) {
+        refillQb = refillQb.where(
+          "client.territory_id",
+          "=",
+          input.territory_id,
+        );
+      }
+
+      refillMovements = (await refillQb.execute()) as BillableMovement[];
     }
-
-    if (input.client_party_id != null) {
-      refillQb = refillQb.where(
-        "movement_event.holder_party_id",
-        "=",
-        input.client_party_id,
-      );
-    } else if (input.locality_id != null) {
-      refillQb = refillQb.where("client.locality_id", "=", input.locality_id);
-    } else if (input.territory_id != null) {
-      refillQb = refillQb.where("client.territory_id", "=", input.territory_id);
-    }
-
-    const refillMovements = (await refillQb.execute()) as BillableMovement[];
 
     for (const movement of refillMovements) {
       const holderId = Number(movement.holder_party_id);
-      if (lockedClientIds.has(holderId)) continue;
 
       const delivery = toIsoDate(movement.delivery_date)!;
       const capacityM3 =
@@ -589,53 +664,81 @@ export class BillingRepository {
     }
 
     // Cylinder sales with a recorded price (cylinder_sale).
-    let saleQb = db
-      .selectFrom("cylinder_sale")
-      .innerJoin("client", "client.party_id", "cylinder_sale.client_party_id")
-      .innerJoin("party", "party.id", "cylinder_sale.client_party_id")
-      .innerJoin("cylinder", "cylinder.id", "cylinder_sale.cylinder_id")
-      .leftJoin("locality", "locality.id", "client.locality_id")
-      .select([
-        "cylinder_sale.id",
-        "cylinder_sale.client_party_id",
-        "party.display_name as holder_name",
-        "client.locality_id as holder_locality_id",
-        "locality.name as holder_locality_name",
-        "client.territory_id as holder_territory_id",
-        "cylinder_sale.sale_date",
-        "cylinder_sale.gas_code",
-        "cylinder_sale.capacity_m3",
-        "cylinder_sale.capacity_unit",
-        "cylinder_sale.price",
-        "cylinder.serial_number as cylinder_serial",
-      ])
-      .where("cylinder_sale.client_party_id", "is not", null)
-      .where("cylinder_sale.price", "is not", null);
+    // Skip sales already on APPROVED/EXPORTED invoices (one-shot charge).
+    const sales = includeSales
+      ? await (async () => {
+          let saleQb = db
+            .selectFrom("cylinder_sale")
+            .innerJoin(
+              "client",
+              "client.party_id",
+              "cylinder_sale.client_party_id",
+            )
+            .innerJoin("party", "party.id", "cylinder_sale.client_party_id")
+            .innerJoin("cylinder", "cylinder.id", "cylinder_sale.cylinder_id")
+            .leftJoin("locality", "locality.id", "client.locality_id")
+            .select([
+              "cylinder_sale.id",
+              "cylinder_sale.client_party_id",
+              "party.display_name as holder_name",
+              "client.locality_id as holder_locality_id",
+              "locality.name as holder_locality_name",
+              "client.territory_id as holder_territory_id",
+              "cylinder_sale.sale_date",
+              "cylinder_sale.gas_code",
+              "cylinder_sale.capacity_m3",
+              "cylinder_sale.capacity_unit",
+              "cylinder_sale.price",
+              "cylinder.serial_number as cylinder_serial",
+            ])
+            .where("cylinder_sale.client_party_id", "is not", null)
+            .where("cylinder_sale.price", "is not", null)
+            .where(({ not, exists, selectFrom }) =>
+              not(
+                exists(
+                  selectFrom("charge_line")
+                    .innerJoin(
+                      "invoice",
+                      "invoice.id",
+                      "charge_line.invoice_id",
+                    )
+                    .select("charge_line.id")
+                    .whereRef("charge_line.source_id", "=", "cylinder_sale.id")
+                    .where("charge_line.source_table", "=", "cylinder_sale")
+                    .where("invoice.status", "in", ["APPROVED", "EXPORTED"]),
+                ),
+              ),
+            );
 
-    if (isHistory) {
-      saleQb = saleQb.where("cylinder_sale.sale_date", "<=", periodEnd);
-    } else {
-      saleQb = saleQb
-        .where("cylinder_sale.sale_date", ">=", periodStart)
-        .where("cylinder_sale.sale_date", "<=", periodEnd);
-    }
+          if (isHistory) {
+            saleQb = saleQb.where("cylinder_sale.sale_date", "<=", periodEnd);
+          } else {
+            saleQb = saleQb
+              .where("cylinder_sale.sale_date", ">=", periodStart)
+              .where("cylinder_sale.sale_date", "<=", periodEnd);
+          }
 
-    if (input.client_party_id != null) {
-      saleQb = saleQb.where(
-        "cylinder_sale.client_party_id",
-        "=",
-        input.client_party_id,
-      );
-    } else if (input.locality_id != null) {
-      saleQb = saleQb.where("client.locality_id", "=", input.locality_id);
-    } else if (input.territory_id != null) {
-      saleQb = saleQb.where("client.territory_id", "=", input.territory_id);
-    }
+          if (input.client_party_id != null) {
+            saleQb = saleQb.where(
+              "cylinder_sale.client_party_id",
+              "=",
+              input.client_party_id,
+            );
+          } else if (input.locality_id != null) {
+            saleQb = saleQb.where("client.locality_id", "=", input.locality_id);
+          } else if (input.territory_id != null) {
+            saleQb = saleQb.where(
+              "client.territory_id",
+              "=",
+              input.territory_id,
+            );
+          }
 
-    const sales = await saleQb.execute();
+          return saleQb.execute();
+        })()
+      : [];
     for (const sale of sales) {
       const holderId = Number(sale.client_party_id);
-      if (lockedClientIds.has(holderId)) continue;
       const price = Number(sale.price);
       if (!(price > 0)) continue;
 
@@ -673,74 +776,101 @@ export class BillingRepository {
     }
 
     // Accessory rentals (RENTAL charge_basis) using client daily_rate_default.
-    let accessoryQb = db
-      .selectFrom("accessory_rental")
-      .innerJoin("accessory", "accessory.id", "accessory_rental.accessory_id")
-      .innerJoin(
-        "client",
-        "client.party_id",
-        "accessory_rental.client_party_id",
-      )
-      .innerJoin("party", "party.id", "accessory_rental.client_party_id")
-      .leftJoin("locality", "locality.id", "client.locality_id")
-      .select([
-        "accessory_rental.id",
-        "accessory_rental.client_party_id",
-        "party.display_name as holder_name",
-        "client.locality_id as holder_locality_id",
-        "locality.name as holder_locality_name",
-        "client.territory_id as holder_territory_id",
-        "client.daily_rate_default",
-        "accessory_rental.start_date",
-        "accessory_rental.end_date",
-        "accessory_rental.quantity",
-        "accessory_rental.charge_basis",
-        "accessory_rental.state",
-        "accessory.accessory_type",
-        "accessory.identifier",
-      ])
-      .where("accessory_rental.charge_basis", "=", "RENTAL")
-      .where("accessory_rental.state", "in", ["ON_LOAN", "RETURNED"]);
+    const accessories = includeRentals
+      ? await (async () => {
+          let accessoryQb = db
+            .selectFrom("accessory_rental")
+            .innerJoin(
+              "accessory",
+              "accessory.id",
+              "accessory_rental.accessory_id",
+            )
+            .innerJoin(
+              "client",
+              "client.party_id",
+              "accessory_rental.client_party_id",
+            )
+            .innerJoin("party", "party.id", "accessory_rental.client_party_id")
+            .leftJoin("locality", "locality.id", "client.locality_id")
+            .select([
+              "accessory_rental.id",
+              "accessory_rental.client_party_id",
+              "party.display_name as holder_name",
+              "client.locality_id as holder_locality_id",
+              "locality.name as holder_locality_name",
+              "client.territory_id as holder_territory_id",
+              "client.daily_rate_default",
+              "accessory_rental.start_date",
+              "accessory_rental.end_date",
+              "accessory_rental.quantity",
+              "accessory_rental.charge_basis",
+              "accessory_rental.state",
+              "accessory.accessory_type",
+              "accessory.identifier",
+            ])
+            .where("accessory_rental.charge_basis", "=", "RENTAL")
+            .where("accessory_rental.state", "in", ["ON_LOAN", "RETURNED"])
+            .where(({ not, exists, selectFrom }) =>
+              not(
+                exists(
+                  selectFrom("charge_line")
+                    .innerJoin(
+                      "invoice",
+                      "invoice.id",
+                      "charge_line.invoice_id",
+                    )
+                    .select("charge_line.id")
+                    .whereRef(
+                      "charge_line.source_id",
+                      "=",
+                      "accessory_rental.id",
+                    )
+                    .where("charge_line.source_table", "=", "accessory_rental")
+                    .where("invoice.status", "in", ["APPROVED", "EXPORTED"]),
+                ),
+              ),
+            );
 
-    if (isHistory) {
-      accessoryQb = accessoryQb
-        .where("accessory_rental.end_date", "is", null)
-        .where("accessory_rental.start_date", "<=", periodEnd);
-    } else {
-      accessoryQb = accessoryQb
-        .where("accessory_rental.start_date", "<=", periodEnd)
-        .where((eb) =>
-          eb.or([
-            eb("accessory_rental.end_date", "is", null),
-            eb("accessory_rental.end_date", ">=", periodStart),
-          ]),
-        );
-    }
+          if (isHistory) {
+            accessoryQb = accessoryQb
+              .where("accessory_rental.end_date", "is", null)
+              .where("accessory_rental.start_date", "<=", periodEnd);
+          } else {
+            accessoryQb = accessoryQb
+              .where("accessory_rental.start_date", "<=", periodEnd)
+              .where((eb) =>
+                eb.or([
+                  eb("accessory_rental.end_date", "is", null),
+                  eb("accessory_rental.end_date", ">=", periodStart),
+                ]),
+              );
+          }
 
-    if (input.client_party_id != null) {
-      accessoryQb = accessoryQb.where(
-        "accessory_rental.client_party_id",
-        "=",
-        input.client_party_id,
-      );
-    } else if (input.locality_id != null) {
-      accessoryQb = accessoryQb.where(
-        "client.locality_id",
-        "=",
-        input.locality_id,
-      );
-    } else if (input.territory_id != null) {
-      accessoryQb = accessoryQb.where(
-        "client.territory_id",
-        "=",
-        input.territory_id,
-      );
-    }
+          if (input.client_party_id != null) {
+            accessoryQb = accessoryQb.where(
+              "accessory_rental.client_party_id",
+              "=",
+              input.client_party_id,
+            );
+          } else if (input.locality_id != null) {
+            accessoryQb = accessoryQb.where(
+              "client.locality_id",
+              "=",
+              input.locality_id,
+            );
+          } else if (input.territory_id != null) {
+            accessoryQb = accessoryQb.where(
+              "client.territory_id",
+              "=",
+              input.territory_id,
+            );
+          }
 
-    const accessories = await accessoryQb.execute();
+          return accessoryQb.execute();
+        })()
+      : [];
     for (const rental of accessories) {
       const holderId = Number(rental.client_party_id);
-      if (lockedClientIds.has(holderId)) continue;
 
       const start = toIsoDate(rental.start_date as string | Date)!;
       const end = toIsoDate((rental.end_date as string | Date | null) ?? null);
@@ -750,6 +880,7 @@ export class BillingRepository {
         periodStart,
         periodEnd,
         asOfDate: today,
+        minDays: rentalMinDays,
       });
       if (days <= 0) continue;
 
@@ -793,14 +924,123 @@ export class BillingRepository {
       byClient.set(holderId, bucket);
     }
 
+    // SALE movements with no cylinder_sale row cannot be billed (missing price).
+    let skippedSalesNoPrice = 0;
+    const skippedSalesNoPriceSerials: string[] = [];
+    if (includeSales) {
+      let orphanSaleQb = db
+        .selectFrom("movement_event")
+        .innerJoin(
+          "client",
+          "client.party_id",
+          "movement_event.holder_party_id",
+        )
+        .innerJoin("cylinder", "cylinder.id", "movement_event.cylinder_id")
+        .select([
+          "movement_event.id",
+          "cylinder.serial_number as cylinder_serial",
+        ])
+        .where("movement_event.movement_kind", "=", "SALE")
+        .where("movement_event.state", "=", "SOLD")
+        .where(({ not, exists, selectFrom }) =>
+          not(
+            exists(
+              selectFrom("cylinder_sale")
+                .select("cylinder_sale.id")
+                .whereRef(
+                  "cylinder_sale.cylinder_id",
+                  "=",
+                  "movement_event.cylinder_id",
+                )
+                .whereRef(
+                  "cylinder_sale.client_party_id",
+                  "=",
+                  "movement_event.holder_party_id",
+                )
+                .whereRef(
+                  "cylinder_sale.sale_date",
+                  "=",
+                  "movement_event.delivery_date",
+                ),
+            ),
+          ),
+        );
+
+      if (isHistory) {
+        orphanSaleQb = orphanSaleQb.where(
+          "movement_event.delivery_date",
+          "<=",
+          periodEnd,
+        );
+      } else {
+        orphanSaleQb = orphanSaleQb
+          .where("movement_event.delivery_date", ">=", periodStart)
+          .where("movement_event.delivery_date", "<=", periodEnd);
+      }
+
+      if (input.client_party_id != null) {
+        orphanSaleQb = orphanSaleQb.where(
+          "movement_event.holder_party_id",
+          "=",
+          input.client_party_id,
+        );
+      } else if (input.locality_id != null) {
+        orphanSaleQb = orphanSaleQb.where(
+          "client.locality_id",
+          "=",
+          input.locality_id,
+        );
+      } else if (input.territory_id != null) {
+        orphanSaleQb = orphanSaleQb.where(
+          "client.territory_id",
+          "=",
+          input.territory_id,
+        );
+      }
+
+      const orphans = await orphanSaleQb.execute();
+      skippedSalesNoPrice = orphans.length;
+      for (const row of orphans.slice(0, 8)) {
+        skippedSalesNoPriceSerials.push(String(row.cylinder_serial));
+      }
+    }
+
+    // How many sources in scope are already on APPROVED/EXPORTED invoices.
+    let alreadyBilledQb = db
+      .selectFrom("charge_line")
+      .innerJoin("invoice", "invoice.id", "charge_line.invoice_id")
+      .innerJoin("client", "client.party_id", "invoice.client_party_id")
+      .select((eb) => eb.fn.countAll<string>().as("count"))
+      .where("invoice.period_start", "=", periodStart)
+      .where("invoice.period_end", "=", periodEnd)
+      .where("invoice.status", "in", ["APPROVED", "EXPORTED"]);
+    if (input.client_party_id != null) {
+      alreadyBilledQb = alreadyBilledQb.where(
+        "invoice.client_party_id",
+        "=",
+        input.client_party_id,
+      );
+    } else if (input.locality_id != null) {
+      alreadyBilledQb = alreadyBilledQb.where(
+        "client.locality_id",
+        "=",
+        input.locality_id,
+      );
+    } else if (input.territory_id != null) {
+      alreadyBilledQb = alreadyBilledQb.where(
+        "client.territory_id",
+        "=",
+        input.territory_id,
+      );
+    }
+    const alreadyBilledRow = await alreadyBilledQb.executeTakeFirst();
+    skippedAlreadyBilled = Number(alreadyBilledRow?.count ?? 0);
+
     const invoices: Invoice[] = [];
 
     for (const [clientId, bucket] of byClient) {
       const total = bucket.lines.reduce((sum, line) => sum + line.amount, 0);
-      const totalDays = bucket.lines.reduce(
-        (sum, line) => sum + line.quantity,
-        0,
-      );
+      const totalDays = invoiceCylinderDays(bucket.lines);
       const inv = await db
         .insertInto("invoice")
         .values({
@@ -907,6 +1147,152 @@ export class BillingRepository {
       total: Math.round(runTotal * 100) / 100,
       total_days: runTotalDays,
       skipped_no_rate: skippedNoRate > 0 ? skippedNoRate : undefined,
+      skipped_sales_no_price:
+        skippedSalesNoPrice > 0 ? skippedSalesNoPrice : undefined,
+      skipped_sales_no_price_serials:
+        skippedSalesNoPriceSerials.length > 0
+          ? skippedSalesNoPriceSerials
+          : undefined,
+      skipped_already_billed:
+        skippedAlreadyBilled > 0 ? skippedAlreadyBilled : undefined,
+      invoices,
+    };
+  }
+
+  async listPeriodInvoices(
+    query: PeriodInvoicesQuery,
+  ): Promise<PeriodInvoicesResponse> {
+    const db = resolveDb(this.db);
+    const periodStart = query.period_start;
+    const periodEnd = query.period_end;
+
+    if (periodEnd < periodStart) {
+      throw ApiErrors.validationFailed("Invalid period", [
+        { field: "period_end", issue: "Must be on or after period_start" },
+      ]);
+    }
+
+    let invoicesQb = db
+      .selectFrom("invoice")
+      .innerJoin("party", "party.id", "invoice.client_party_id")
+      .innerJoin("client", "client.party_id", "invoice.client_party_id")
+      .leftJoin("locality", "locality.id", "client.locality_id")
+      .select([
+        "invoice.id",
+        "invoice.billing_run_id",
+        "invoice.client_party_id",
+        "party.display_name as client_name",
+        "client.cuit as client_cuit",
+        "client.address_street as client_address",
+        "client.locality_id as client_locality_id",
+        "locality.name as client_locality_name",
+        "client.territory_id as client_territory_id",
+        "invoice.period_start",
+        "invoice.period_end",
+        "invoice.status",
+        "invoice.total",
+        "invoice.created_at",
+        "invoice.version",
+        "invoice.cae",
+        "invoice.cae_due_date",
+        "invoice.cbte_tipo",
+        "invoice.pto_vta",
+        "invoice.cbte_nro",
+        "invoice.cbte_fch",
+        "invoice.doc_tipo",
+        "invoice.doc_nro",
+        "invoice.condicion_iva_receptor",
+        "invoice.imp_neto",
+        "invoice.imp_iva",
+        "invoice.imp_total",
+        "invoice.arca_environment",
+        "invoice.arca_qr_url",
+        "invoice.authorized_at",
+      ])
+      .where("invoice.period_start", "=", periodStart)
+      .where("invoice.period_end", "=", periodEnd)
+      .orderBy("party.display_name", "asc")
+      .orderBy("invoice.id", "asc");
+
+    if (query.client_party_id != null) {
+      invoicesQb = invoicesQb.where(
+        "invoice.client_party_id",
+        "=",
+        query.client_party_id,
+      );
+    } else if (query.locality_id != null) {
+      invoicesQb = invoicesQb.where(
+        "client.locality_id",
+        "=",
+        query.locality_id,
+      );
+    } else if (query.territory_id != null) {
+      invoicesQb = invoicesQb.where(
+        "client.territory_id",
+        "=",
+        query.territory_id,
+      );
+    }
+
+    const invoiceRows = await invoicesQb.execute();
+    const invoices: Invoice[] = [];
+    let locked = false;
+
+    for (const inv of invoiceRows) {
+      if (inv.status === "APPROVED" || inv.status === "EXPORTED") {
+        locked = true;
+      }
+      const lines = await db
+        .selectFrom("charge_line")
+        .selectAll()
+        .where("invoice_id", "=", inv.id)
+        .execute();
+      const chargeLines = lines.map((line) => ({
+        id: Number(line.id),
+        invoice_id: Number(line.invoice_id),
+        source_table: line.source_table,
+        source_id: Number(line.source_id),
+        description: line.description,
+        quantity: Number(line.quantity),
+        unit: line.unit,
+        unit_price: Number(line.unit_price),
+        amount: Number(line.amount),
+      }));
+      const totalDays = invoiceCylinderDays(chargeLines);
+      invoices.push({
+        id: Number(inv.id),
+        billing_run_id:
+          inv.billing_run_id == null ? null : Number(inv.billing_run_id),
+        client_party_id: Number(inv.client_party_id),
+        client_name: inv.client_name as string,
+        client_cuit: (inv.client_cuit as string | null) ?? null,
+        client_address: (inv.client_address as string | null) ?? null,
+        client_locality_id:
+          inv.client_locality_id == null
+            ? null
+            : Number(inv.client_locality_id),
+        client_locality_name:
+          (inv.client_locality_name as string | null) ?? null,
+        client_territory_id:
+          inv.client_territory_id == null
+            ? null
+            : Number(inv.client_territory_id),
+        period_start: toIsoDate(inv.period_start as string | Date)!,
+        period_end: toIsoDate(inv.period_end as string | Date)!,
+        status: inv.status,
+        total: Number(inv.total),
+        total_days: totalDays,
+        created_at: (inv.created_at as Date).toISOString(),
+        version: Number(inv.version),
+        charge_lines: chargeLines,
+        arca: mapArcaFields(inv),
+      });
+    }
+
+    return {
+      period_start: periodStart,
+      period_end: periodEnd,
+      locked,
       invoices,
     };
   }
@@ -978,10 +1364,7 @@ export class BillingRepository {
         unit_price: Number(line.unit_price),
         amount: Number(line.amount),
       }));
-      const totalDays = chargeLines.reduce(
-        (sum, line) => sum + line.quantity,
-        0,
-      );
+      const totalDays = invoiceCylinderDays(chargeLines);
       mapped.push({
         id: Number(inv.id),
         billing_run_id:
@@ -1091,7 +1474,7 @@ export class BillingRepository {
       unit_price: Number(line.unit_price),
       amount: Number(line.amount),
     }));
-    const totalDays = chargeLines.reduce((sum, line) => sum + line.quantity, 0);
+    const totalDays = invoiceCylinderDays(chargeLines);
     return {
       id: Number(inv.id),
       billing_run_id:
@@ -1140,30 +1523,41 @@ export class BillingRepository {
     },
   ): Promise<Invoice> {
     const db = resolveDb(this.db);
-    const updated = await db
-      .updateTable("invoice")
-      .set({
-        cae: data.cae,
-        cae_due_date: data.caeDueDate,
-        cbte_tipo: data.cbteTipo,
-        pto_vta: data.ptoVta,
-        cbte_nro: data.cbteNro,
-        cbte_fch: data.cbteFch,
-        doc_tipo: data.docTipo,
-        doc_nro: data.docNro,
-        condicion_iva_receptor: data.condicionIvaReceptor,
-        imp_neto: String(data.impNeto),
-        imp_iva: String(data.impIva),
-        imp_total: String(data.impTotal),
-        arca_environment: data.environment,
-        arca_qr_url: data.qrUrl,
-        authorized_at: new Date(),
-        authorized_by: data.actorUserId,
-      })
-      .where("id", "=", invoiceId)
-      .where("cae", "is", null)
-      .returning("id")
-      .executeTakeFirst();
+    let updated;
+    try {
+      updated = await db
+        .updateTable("invoice")
+        .set({
+          cae: data.cae,
+          cae_due_date: data.caeDueDate,
+          cbte_tipo: data.cbteTipo,
+          pto_vta: data.ptoVta,
+          cbte_nro: data.cbteNro,
+          cbte_fch: data.cbteFch,
+          doc_tipo: data.docTipo,
+          doc_nro: data.docNro,
+          condicion_iva_receptor: data.condicionIvaReceptor,
+          imp_neto: String(data.impNeto),
+          imp_iva: String(data.impIva),
+          imp_total: String(data.impTotal),
+          arca_environment: data.environment,
+          arca_qr_url: data.qrUrl,
+          authorized_at: new Date(),
+          authorized_by: data.actorUserId,
+        })
+        .where("id", "=", invoiceId)
+        .where("cae", "is", null)
+        .returning("id")
+        .executeTakeFirst();
+    } catch (error) {
+      if (isArcaVoucherUniqueViolation(error)) {
+        throw ApiErrors.conflict(
+          "ARCA_VOUCHER_NUMBER_TAKEN",
+          "That ARCA voucher number is already used by another invoice",
+        );
+      }
+      throw error;
+    }
     if (!updated) {
       throw ApiErrors.conflict(
         "INVOICE_ALREADY_AUTHORIZED",
@@ -1173,6 +1567,29 @@ export class BillingRepository {
     const invoice = await this.getInvoiceById(invoiceId);
     if (!invoice) throw ApiErrors.notFound("Invoice not found after authorize");
     return invoice;
+  }
+
+  /**
+   * Next free ARCA voucher number for a point of sale + voucher type.
+   * Used by simulation mode so repeated authorizations do not collide on
+   * `uq_invoice_arca_voucher`.
+   */
+  async nextArcaVoucherNumber(
+    ptoVta: number,
+    cbteTipo: number,
+  ): Promise<number> {
+    const db = resolveDb(this.db);
+    // Match the partial unique index (only rows that still hold a CAE).
+    const row = await db
+      .selectFrom("invoice")
+      .select((eb) => eb.fn.max("cbte_nro").as("max_nro"))
+      .where("pto_vta", "=", ptoVta)
+      .where("cbte_tipo", "=", cbteTipo)
+      .where("cae", "is not", null)
+      .where("cbte_nro", "is not", null)
+      .executeTakeFirst();
+    const maxNro = row?.max_nro == null ? 0 : Number(row.max_nro);
+    return Number.isFinite(maxNro) ? maxNro + 1 : 1;
   }
 
   /**
@@ -1201,6 +1618,7 @@ export class BillingRepository {
       .updateTable("invoice")
       .set({
         status: "DRAFT",
+        version: Number(invoice.version) + 1,
         cae: null,
         cae_due_date: null,
         cbte_tipo: null,
@@ -1241,6 +1659,63 @@ export class BillingRepository {
     const reset = await this.getInvoiceById(id);
     if (!reset) throw ApiErrors.notFound("Invoice not found after reset");
     return reset;
+  }
+
+  async setDraftChargeLines(
+    invoiceId: number,
+    chargeLineIds: number[],
+  ): Promise<Invoice> {
+    const db = resolveDb(this.db);
+    const invoice = await this.getInvoiceById(invoiceId);
+    if (!invoice) throw ApiErrors.notFound("Invoice not found");
+    if (invoice.status !== "DRAFT") {
+      throw ApiErrors.conflict(
+        "NOT_DRAFT",
+        "Only DRAFT invoices can change charge lines",
+      );
+    }
+
+    const uniqueIds = [...new Set(chargeLineIds)];
+    const existing = invoice.charge_lines ?? [];
+    const existingIds = new Set(existing.map((line) => line.id));
+    const unknown = uniqueIds.filter((id) => !existingIds.has(id));
+    if (unknown.length > 0) {
+      throw ApiErrors.validationFailed("Unknown charge lines for invoice", [
+        {
+          field: "charge_line_ids",
+          issue: `Not on this invoice: ${unknown.join(", ")}`,
+        },
+      ]);
+    }
+
+    const keep = new Set(uniqueIds);
+    const removeIds = existing
+      .map((line) => line.id)
+      .filter((id) => !keep.has(id));
+
+    if (removeIds.length > 0) {
+      await db
+        .deleteFrom("charge_line")
+        .where("invoice_id", "=", invoiceId)
+        .where("id", "in", removeIds)
+        .execute();
+    }
+
+    const keptLines = existing.filter((line) => keep.has(line.id));
+    const total =
+      Math.round(keptLines.reduce((sum, line) => sum + line.amount, 0) * 100) /
+      100;
+
+    await db
+      .updateTable("invoice")
+      .set({ total: String(total) })
+      .where("id", "=", invoiceId)
+      .where("status", "=", "DRAFT")
+      .execute();
+
+    const updated = await this.getInvoiceById(invoiceId);
+    if (!updated) throw ApiErrors.notFound("Invoice not found after update");
+    return updated;
   }
 
   async approveInvoice(id: number): Promise<Invoice> {
@@ -1415,4 +1890,42 @@ export class BillingRepository {
       .executeTakeFirst();
     return Boolean(row);
   }
+
+  async cylinderSaleHasLockedCharges(cylinderId: number): Promise<boolean> {
+    const db = resolveDb(this.db);
+    const row = await db
+      .selectFrom("cylinder_sale")
+      .innerJoin("charge_line", (join) =>
+        join
+          .onRef("charge_line.source_id", "=", "cylinder_sale.id")
+          .on("charge_line.source_table", "=", "cylinder_sale"),
+      )
+      .innerJoin("invoice", "invoice.id", "charge_line.invoice_id")
+      .select("charge_line.id")
+      .where("cylinder_sale.cylinder_id", "=", cylinderId)
+      .where("invoice.status", "in", ["APPROVED", "EXPORTED"])
+      .executeTakeFirst();
+    return Boolean(row);
+  }
+}
+
+function isUniqueViolation(error: unknown, constraint?: string): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const pgError = error as { code?: string; constraint?: string };
+  return (
+    pgError.code === "23505" &&
+    (constraint == null || pgError.constraint === constraint)
+  );
+}
+
+function isArcaVoucherUniqueViolation(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const pgError = error as {
+    code?: string;
+    constraint?: string;
+    detail?: string;
+  };
+  if (pgError.code !== "23505") return false;
+  if (pgError.constraint === "uq_invoice_arca_voucher") return true;
+  return (pgError.detail ?? "").includes("(pto_vta, cbte_tipo, cbte_nro)");
 }

@@ -123,6 +123,19 @@ describe("rentalChargeAmount", () => {
     );
   });
 
+  it("same-day respects rental min days (D-14)", () => {
+    assert.equal(
+      billableDaysInPeriod({
+        deliveryDate: "2024-01-01",
+        returnDate: "2024-01-01",
+        periodStart: "2024-01-01",
+        periodEnd: "2024-01-31",
+        minDays: 1,
+      }),
+      1,
+    );
+  });
+
   it("clips long-open rental to the billing period (not full life)", () => {
     // Cylinder out since 2020-07-08: ledger accrues ~2204 days to 2026-07-21,
     // but a July-2026 period invoice only bills the days inside the window.

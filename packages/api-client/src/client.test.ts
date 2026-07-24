@@ -203,6 +203,7 @@ describe("WeldApiClient", () => {
       observations: "note",
     });
     await api.updateDeliveryNote(1, { version: 1, observations: "x" });
+    await api.deleteDeliveryNote(1);
     const remitoTransition = { version: 1 };
     await api.prepareDeliveryNote(1, remitoTransition);
     await api.assignDeliveryNote(1, remitoTransition);
@@ -335,10 +336,15 @@ describe("WeldApiClient", () => {
       period_start: "2024-01-01",
       period_end: "2024-01-31",
     });
+    await api.listPeriodInvoices({
+      period_start: "2024-01-01",
+      period_end: "2024-01-31",
+    });
     await api.getBillingRun(1);
     await api.approveBillingRun(1);
     await api.exportBillingRun(1);
     await api.getInvoice(1);
+    await api.setInvoiceChargeLines(1, { charge_line_ids: [1, 2] });
     await api.approveInvoice(1);
     await api.authorizeInvoice(1);
     await api.issueInvoice(1);

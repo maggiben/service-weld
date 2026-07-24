@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import {
   canCancelRemito,
+  canSoftDeleteRemito,
+  previewNextRemitoNumber,
   primaryNextAction,
   remitoStatusChipColor,
   targetStatusForAction,
@@ -24,9 +26,35 @@ describe("remitoLogic", () => {
     assert.equal(canCancelRemito("CLOSED"), false);
   });
 
+  it("exposes soft-delete eligibility", () => {
+    assert.equal(canSoftDeleteRemito("DRAFT"), true);
+    assert.equal(canSoftDeleteRemito("CLOSED"), true);
+    assert.equal(canSoftDeleteRemito("CANCELLED"), true);
+    assert.equal(canSoftDeleteRemito("INVOICED"), false);
+    assert.equal(canSoftDeleteRemito("ARCHIVED"), false);
+  });
+
   it("maps action targets and chip colors", () => {
     assert.equal(targetStatusForAction("prepare"), "PREPARED");
     assert.equal(remitoStatusChipColor("CANCELLED"), "error");
     assert.equal(remitoStatusChipColor("CLOSED"), "success");
+  });
+
+  it("previews the next series number with padding", () => {
+    assert.equal(
+      previewNextRemitoNumber([
+        {
+          id: 1,
+          code: "A",
+          emission_point_label: "Central",
+          pad_width: 8,
+          next_number: 42,
+          is_active: true,
+        },
+      ]),
+      "A-00000042",
+    );
+    assert.equal(previewNextRemitoNumber([]), null);
+    assert.equal(previewNextRemitoNumber(undefined), null);
   });
 });

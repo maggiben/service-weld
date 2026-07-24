@@ -7,8 +7,8 @@ import type {
 
 /**
  * PDF line source: prefer Aggregate `remito_line` rows.
- * Legacy remitos (created via movement remito_number find-or-create) often
- * have no lines — fall back to linked movements / accessory rentals.
+ * Older remitos created before movement-path line snapshots may have no
+ * lines — fall back to linked movements / accessory rentals.
  */
 export function linesForRemitoPdf(
   detail: Pick<

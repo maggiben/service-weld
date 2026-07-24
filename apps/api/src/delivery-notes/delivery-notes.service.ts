@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import {
   assertRemitoEditable,
+  assertRemitoSoftDeletable,
   assertRemitoTransition,
   isCustomerFacingRemitoType,
   isReturnLikeRemitoType,
@@ -470,6 +471,18 @@ export class DeliveryNotesService {
       mapDomainError(error);
     }
     await this.repository.softDeleteLine(id, lineId);
+  }
+
+  async remove(id: number): Promise<void> {
+    const current = await this.repository.getById(id);
+    if (!current) throw ApiErrors.notFound("Delivery note not found");
+    try {
+      assertRemitoSoftDeletable(current.status);
+    } catch (error) {
+      mapDomainError(error);
+    }
+
+    await this.repository.softDelete(id);
   }
 
   async addIncident(

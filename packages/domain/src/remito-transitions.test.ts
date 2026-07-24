@@ -3,6 +3,7 @@ import { DomainError } from "./errors";
 import {
   allowedRemitoTransitions,
   assertRemitoEditable,
+  assertRemitoSoftDeletable,
   assertRemitoTransition,
   formatRemitoSeriesNumber,
   isDeliveryLikeRemitoType,
@@ -95,6 +96,22 @@ describe("assertRemitoTransition", () => {
       () => assertRemitoEditable("PREPARED"),
       (err: unknown) =>
         err instanceof DomainError && err.code === "REMITO_NOT_EDITABLE",
+    );
+  });
+
+  it("allows soft-delete except INVOICED and ARCHIVED", () => {
+    assert.doesNotThrow(() => assertRemitoSoftDeletable("DRAFT"));
+    assert.doesNotThrow(() => assertRemitoSoftDeletable("CLOSED"));
+    assert.doesNotThrow(() => assertRemitoSoftDeletable("CANCELLED"));
+    assert.throws(
+      () => assertRemitoSoftDeletable("INVOICED"),
+      (err: unknown) =>
+        err instanceof DomainError && err.code === "REMITO_NOT_DELETABLE",
+    );
+    assert.throws(
+      () => assertRemitoSoftDeletable("ARCHIVED"),
+      (err: unknown) =>
+        err instanceof DomainError && err.code === "REMITO_NOT_DELETABLE",
     );
   });
 });

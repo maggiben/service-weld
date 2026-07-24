@@ -6,6 +6,9 @@ import type {
   BillingExportPayload,
   BillingRunDetail,
   Invoice,
+  PeriodInvoicesQuery,
+  PeriodInvoicesResponse,
+  SetInvoiceChargeLinesInput,
   Client,
   ClientAccountQuery,
   ClientAccountResponse,
@@ -479,6 +482,17 @@ export class WeldApiClient {
     });
   }
 
+  recordSalePrice(
+    id: number,
+    input: { sale_price: number },
+  ): Promise<MovementEvent> {
+    return this.request<MovementEvent>(
+      "POST",
+      `/movements/${id}/record-sale-price`,
+      { body: input },
+    );
+  }
+
   reportCylinderLoss(
     id: number,
     input: ReportCylinderLossInput,
@@ -691,6 +705,10 @@ export class WeldApiClient {
     return this.request<DeliveryNote>("PATCH", `/delivery-notes/${id}`, {
       body: input,
     });
+  }
+
+  deleteDeliveryNote(id: number): Promise<void> {
+    return this.request<void>("DELETE", `/delivery-notes/${id}`);
   }
 
   prepareDeliveryNote(
@@ -1447,6 +1465,15 @@ export class WeldApiClient {
     });
   }
 
+  listPeriodInvoices(
+    query: PeriodInvoicesQuery & Record<string, QueryValue>,
+  ): Promise<PeriodInvoicesResponse> {
+    return this.request<PeriodInvoicesResponse>(
+      "GET",
+      `/billing/period-invoices${toQuery(query as Record<string, QueryValue>)}`,
+    );
+  }
+
   getBillingRun(id: number): Promise<BillingRunDetail> {
     return this.request<BillingRunDetail>("GET", `/billing/runs/${id}`);
   }
@@ -1467,6 +1494,19 @@ export class WeldApiClient {
 
   getInvoice(id: number): Promise<Invoice> {
     return this.request<Invoice>("GET", `/billing/invoices/${id}`);
+  }
+
+  setInvoiceChargeLines(
+    id: number,
+    input: SetInvoiceChargeLinesInput,
+  ): Promise<Invoice> {
+    return this.request<Invoice>(
+      "PATCH",
+      `/billing/invoices/${id}/charge-lines`,
+      {
+        body: input,
+      },
+    );
   }
 
   approveInvoice(id: number): Promise<Invoice> {

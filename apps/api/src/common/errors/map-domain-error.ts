@@ -18,6 +18,7 @@ export function mapDomainError(error: unknown): never {
       error.code === "CANCEL_REASON_REQUIRED" ||
       error.code === "REMITO_ASSIGN_REQUIRES_SCHEDULE" ||
       error.code === "REMITO_NOT_EDITABLE" ||
+      error.code === "REMITO_NOT_DELETABLE" ||
       error.code === "ARCA_CUIT_REQUIRED" ||
       error.code === "ARCA_REGENERATE_REQUIRES_CONFIRM" ||
       error.code === "ARCA_CERTIFICATE_EXPIRED" ||

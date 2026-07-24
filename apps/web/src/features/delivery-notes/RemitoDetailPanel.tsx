@@ -32,6 +32,7 @@ import { api } from "../../api/client";
 import { useSessionStore } from "../../store/sessionStore";
 import {
   canCancelRemito,
+  canSoftDeleteRemito,
   capabilityForRemitoAction,
   primaryNextAction,
   remitoPriorityChipColor,
@@ -62,6 +63,7 @@ export function RemitoDetailPanel(props: {
   const [error, setError] = useState<string | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [assignSchedule, setAssignSchedule] = useState<string | null>(null);
   const [assignDriver, setAssignDriver] = useState<DriverProfile | null>(null);
   const [assignHelper, setAssignHelper] = useState<DriverProfile | null>(null);
@@ -197,6 +199,21 @@ export function RemitoDetailPanel(props: {
     },
   });
 
+  const deleteRemito = useMutation({
+    mutationFn: () => api.deleteDeliveryNote(detailId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["delivery-notes"] });
+      onClose();
+    },
+    onError: (err) => {
+      setError(
+        err instanceof ApiClientError
+          ? err.message
+          : translate("errors.generic"),
+      );
+    },
+  });
+
   const addIncident = useMutation({
     mutationFn: () =>
       api.addDeliveryNoteIncident(detailId, {
@@ -263,6 +280,8 @@ export function RemitoDetailPanel(props: {
     nextAction != null && hasCapability(capabilityForRemitoAction(nextAction));
   const canCancel =
     canCancelRemito(detail.status) && hasCapability("delivery_notes:cancel");
+  const canDelete =
+    canSoftDeleteRemito(detail.status) && hasCapability("delivery_notes:write");
   const canPick = hasCapability("delivery_notes:pick");
   const canIncident = hasCapability("delivery_notes:incident");
   const canPrint = hasCapability("delivery_notes:pdf");
@@ -402,6 +421,16 @@ export function RemitoDetailPanel(props: {
             onClick={() => setCancelOpen(true)}
           >
             {translate("delivery_notes.lifecycle.cancel")}
+          </Button>
+        )}
+        {canDelete && !deleteOpen && (
+          <Button
+            size="small"
+            color="error"
+            variant="outlined"
+            onClick={() => setDeleteOpen(true)}
+          >
+            {translate("delivery_notes.actions.delete")}
           </Button>
         )}
       </Stack>
@@ -590,6 +619,28 @@ export function RemitoDetailPanel(props: {
               {translate("delivery_notes.lifecycle.confirm_cancel")}
             </Button>
             <Button size="small" onClick={() => setCancelOpen(false)}>
+              {translate("actions.cancel")}
+            </Button>
+          </Stack>
+        </Stack>
+      )}
+
+      {deleteOpen && (
+        <Stack spacing={1}>
+          <Alert severity="warning">
+            {translate("delivery_notes.actions.delete_confirm")}
+          </Alert>
+          <Stack direction="row" spacing={1}>
+            <Button
+              size="small"
+              color="error"
+              variant="contained"
+              disabled={deleteRemito.isPending}
+              onClick={() => deleteRemito.mutate()}
+            >
+              {translate("delivery_notes.actions.confirm_delete")}
+            </Button>
+            <Button size="small" onClick={() => setDeleteOpen(false)}>
               {translate("actions.cancel")}
             </Button>
           </Stack>

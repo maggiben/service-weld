@@ -129,6 +129,7 @@ describe("environment helpers", () => {
     const cae = buildSimulatedArcaCae(now);
     assert.equal(cae.caeFchVto, "20260803");
     assert.equal(cae.cbteNro, 1);
+    assert.equal(buildSimulatedArcaCae(now, 42).cbteNro, 42);
     assert.equal(ARCA_SIMULATION_FINGERPRINT, "SIMULATION");
   });
 

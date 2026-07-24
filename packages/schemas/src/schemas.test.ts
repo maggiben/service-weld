@@ -73,7 +73,12 @@ import {
   UploadCertificateResult,
   ValidateCertificateResult,
 } from "./arca";
-import { Money, IsoDate } from "./common";
+import {
+  Money,
+  IsoDate,
+  parseMoneyInput,
+  PositiveNullableMoneyInput,
+} from "./common";
 import { GasCode, IncidentType, PrintCopyKind, RemitoStatus } from "./enums";
 import {
   MigrationDataStatus,
@@ -391,8 +396,37 @@ describe("movement schemas", () => {
         holder_party_id: 20,
         movement_kind: "SALE",
         delivery_date: "2026-07-01",
-      }).movement_kind,
-      "SALE",
+        sale_price: 15000,
+      }).sale_price,
+      15000,
+    );
+    assert.equal(
+      CreateMovementInput.parse({
+        cylinder_id: 10,
+        holder_party_id: 20,
+        movement_kind: "SALE",
+        delivery_date: "2026-07-01",
+        sale_price: "15.000,50",
+      }).sale_price,
+      15000.5,
+    );
+    assert.equal(
+      CreateMovementInput.parse({
+        cylinder_id: 10,
+        holder_party_id: 20,
+        movement_kind: "SALE",
+        delivery_date: "2026-07-01",
+        sale_price: "15000,50",
+      }).sale_price,
+      15000.5,
+    );
+    assert.throws(() =>
+      CreateMovementInput.parse({
+        cylinder_id: 10,
+        holder_party_id: 20,
+        movement_kind: "SALE",
+        delivery_date: "2026-07-01",
+      }),
     );
     assert.equal(VoidMovementInput.parse({ reason: "dup" }).reason, "dup");
     assert.throws(() => VoidMovementInput.parse({ reason: "" }));
@@ -751,6 +785,23 @@ describe("billing schemas", () => {
       "history",
     );
     assert.equal(
+      CreateBillingRunInput.parse({
+        mode: "period",
+        period_start: "2026-01-01",
+        period_end: "2026-01-31",
+      }).charges,
+      undefined,
+    );
+    assert.equal(
+      CreateBillingRunInput.parse({
+        mode: "period",
+        period_start: "2026-01-01",
+        period_end: "2026-01-31",
+        charges: "sales",
+      }).charges,
+      "sales",
+    );
+    assert.equal(
       InvoiceArcaAuthorization.parse({
         cae: "123",
         cae_due_date: "2026-08-01",
@@ -855,6 +906,62 @@ describe("billing schemas", () => {
     );
     assert.equal(Money.parse("12.50"), 12.5);
     assert.equal(IsoDate.parse("2026-07-24"), "2026-07-24");
+  });
+});
+
+describe("parseMoneyInput (es-AR locale)", () => {
+  it("parses Argentine amounts where comma separates centavos", () => {
+    // Plain integer
+    assert.equal(parseMoneyInput("15000"), 15000);
+    assert.equal(parseMoneyInput(15000), 15000);
+
+    // Comma = decimal (centavos)
+    assert.equal(parseMoneyInput("15000,5"), 15000.5);
+    assert.equal(parseMoneyInput("15000,50"), 15000.5);
+    assert.equal(parseMoneyInput("0,01"), 0.01);
+    assert.equal(parseMoneyInput("0,99"), 0.99);
+
+    // Dot = thousands grouping + comma = centavos
+    assert.equal(parseMoneyInput("15.000,50"), 15000.5);
+    assert.equal(parseMoneyInput("1.500,00"), 1500);
+    assert.equal(parseMoneyInput("1.500.000,99"), 1_500_000.99);
+    assert.equal(parseMoneyInput("1.234.567,89"), 1_234_567.89);
+
+    // Thousands-only (no centavos): 1.500 → mil quinientos
+    assert.equal(parseMoneyInput("1.500"), 1500);
+    assert.equal(parseMoneyInput("15.000"), 15000);
+    assert.equal(parseMoneyInput("1.500.000"), 1_500_000);
+  });
+
+  it("accepts en-US-style decimals when there is no comma", () => {
+    assert.equal(parseMoneyInput("12.5"), 12.5);
+    assert.equal(parseMoneyInput("12.50"), 12.5);
+    assert.equal(parseMoneyInput("0.01"), 0.01);
+  });
+
+  it("tolerates currency noise and whitespace", () => {
+    assert.equal(parseMoneyInput(" 15.000,50 "), 15000.5);
+    assert.equal(parseMoneyInput("$15.000,50"), 15000.5);
+    assert.equal(parseMoneyInput("15000,50 ARS"), 15000.5);
+    assert.equal(parseMoneyInput("15 000,50"), 15000.5);
+  });
+
+  it("returns null for empty or invalid input", () => {
+    assert.equal(parseMoneyInput(""), null);
+    assert.equal(parseMoneyInput("   "), null);
+    assert.equal(parseMoneyInput(null), null);
+    assert.equal(parseMoneyInput(undefined), null);
+    assert.equal(parseMoneyInput("abc"), null);
+    assert.equal(parseMoneyInput("15.000,50,00"), null);
+  });
+
+  it("PositiveNullableMoneyInput accepts es-AR sale prices", () => {
+    assert.equal(PositiveNullableMoneyInput.parse("15.000,50"), 15000.5);
+    assert.equal(PositiveNullableMoneyInput.parse("15000,50"), 15000.5);
+    assert.equal(PositiveNullableMoneyInput.parse(null), null);
+    assert.equal(PositiveNullableMoneyInput.parse(""), null);
+    assert.throws(() => PositiveNullableMoneyInput.parse("0"));
+    assert.throws(() => PositiveNullableMoneyInput.parse("-10,50"));
   });
 });
 

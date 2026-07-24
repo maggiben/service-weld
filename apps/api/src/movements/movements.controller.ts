@@ -24,6 +24,7 @@ import {
   CreateMovementDto,
   MovementListQueryDto,
   MovementListResponseDto,
+  RecordSalePriceDto,
   ReturnMovementDto,
   SwapMovementDto,
   VoidMovementDto,
@@ -98,6 +99,20 @@ export class MovementsController {
     @Headers("if-match") ifMatch?: string,
   ): Promise<MovementEvent> {
     return this.movementsService.void(user, id, body, parseIfMatch(ifMatch));
+  }
+
+  @Post(":id/record-sale-price")
+  @RequireCapabilities("movements:write")
+  @ApiOkResponse({
+    description:
+      "Create missing cylinder_sale for a SALE movement posted without a price",
+  })
+  recordSalePrice(
+    @CurrentUser() user: AuthPrincipal,
+    @Param("id", ParseIntPipe) id: number,
+    @Body() body: RecordSalePriceDto,
+  ): Promise<MovementEvent> {
+    return this.movementsService.recordSalePrice(user, id, body);
   }
 }
 

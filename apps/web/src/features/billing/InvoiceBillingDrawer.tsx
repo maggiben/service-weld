@@ -7,24 +7,17 @@ import Divider from "@mui/material/Divider";
 import Drawer from "@mui/material/Drawer";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import { DataGrid, type GridColDef, gridClasses } from "@mui/x-data-grid";
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { ChargeLine, Invoice } from "@weld/schemas";
+import type { Invoice } from "@weld/schemas";
 import { InvoiceBillingActions } from "./InvoiceBillingActions";
+import { InvoiceChargeLinesPanel } from "./InvoiceChargeLinesPanel";
 
 export interface InvoiceBillingDrawerProps {
   open: boolean;
   invoice: Invoice | null;
   onClose: () => void;
   onInvoiceUpdated: (invoice: Invoice) => void;
-}
-
-function formatMoney(value: number): string {
-  return `${Number(value).toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })} ARS`;
 }
 
 export function InvoiceBillingDrawer({
@@ -34,56 +27,33 @@ export function InvoiceBillingDrawer({
   onInvoiceUpdated,
 }: InvoiceBillingDrawerProps) {
   const { t: translate } = useTranslation();
+  const isDraft = invoice?.status === "DRAFT";
+  const [selection, setSelection] = useState<number[]>([]);
 
-  const lineColumns: GridColDef<ChargeLine>[] = useMemo(
-    () => [
-      {
-        field: "description",
-        headerName: translate("billing.lines.description"),
-        flex: 1,
-        minWidth: 200,
-      },
-      {
-        field: "quantity",
-        headerName: translate("billing.lines.days"),
-        width: 80,
-        type: "number",
-      },
-      {
-        field: "unit",
-        headerName: translate("billing.invoice_drawer.unit"),
-        width: 90,
-      },
-      {
-        field: "unit_price",
-        headerName: translate("billing.lines.unit_price"),
-        width: 120,
-        type: "number",
-        valueFormatter: (value: number) => formatMoney(value),
-      },
-      {
-        field: "amount",
-        headerName: translate("billing.lines.amount"),
-        width: 120,
-        type: "number",
-        valueFormatter: (value: number) => formatMoney(value),
-      },
-    ],
-    [translate],
-  );
+  useEffect(() => {
+    if (!open || !invoice) return;
+    if (invoice.status === "DRAFT") {
+      setSelection((invoice.charge_lines ?? []).map((line) => line.id));
+    }
+  }, [
+    open,
+    invoice?.id,
+    invoice?.status,
+    invoice?.charge_lines?.length,
+    invoice?.version,
+  ]);
 
-  const lines = invoice?.charge_lines ?? [];
+  const selectedChargeLineIds = isDraft ? selection : undefined;
 
   return (
     <Drawer
       anchor="right"
       open={open}
       onClose={onClose}
-      // Above the fixed AppBar (shell uses drawer + 1) so the title/labels are not clipped.
       sx={{ zIndex: (theme) => theme.zIndex.modal }}
-      PaperProps={{ sx: { width: { xs: "100%", sm: 720, md: 880 } } }}
+      PaperProps={{ sx: { width: { xs: "100%", sm: 760, md: 920 } } }}
     >
-      <Stack spacing={2} sx={{ p: 2.5, height: "100%" }}>
+      <Stack spacing={2.5} sx={{ p: 3, height: "100%" }}>
         <Stack
           direction="row"
           justifyContent="space-between"
@@ -106,6 +76,7 @@ export function InvoiceBillingDrawer({
           <InvoiceBillingActions
             invoice={invoice}
             onInvoiceUpdated={onInvoiceUpdated}
+            selectedChargeLineIds={selectedChargeLineIds}
           />
         ) : (
           <Alert severity="info">{translate("billing.lines.empty")}</Alert>
@@ -113,37 +84,15 @@ export function InvoiceBillingDrawer({
 
         <Divider />
 
-        <Typography variant="subtitle2">
-          {translate("billing.invoice_drawer.lines_title", {
-            count: lines.length,
-          })}
-        </Typography>
-        <Box sx={{ flex: 1, minHeight: 280 }}>
-          <DataGrid
-            rows={lines}
-            columns={lineColumns}
-            getRowId={(row) => row.id}
-            density="compact"
-            disableRowSelectionOnClick
-            sx={{
-              height: "100%",
-              [`& .${gridClasses.cell}`]: { outline: "none" },
-            }}
-            slots={{
-              noRowsOverlay: () => (
-                <Stack
-                  height="100%"
-                  alignItems="center"
-                  justifyContent="center"
-                >
-                  <Typography color="text.secondary">
-                    {translate("billing.lines.empty")}
-                  </Typography>
-                </Stack>
-              ),
-            }}
-          />
-        </Box>
+        {invoice ? (
+          <Box sx={{ flex: 1, minHeight: 0 }}>
+            <InvoiceChargeLinesPanel
+              invoice={invoice}
+              selection={selection}
+              onSelectionChange={setSelection}
+            />
+          </Box>
+        ) : null}
       </Stack>
     </Drawer>
   );

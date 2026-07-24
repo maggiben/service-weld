@@ -104,6 +104,14 @@ export class DeliveryNotesController {
     return this.deliveryNotesService.update(id, body);
   }
 
+  @Delete(":id")
+  @RequireCapabilities("delivery_notes:write")
+  @HttpCode(204)
+  @ApiNoContentResponse({ description: "Remito soft-deleted" })
+  async remove(@Param("id", ParseIntPipe) id: number): Promise<void> {
+    await this.deliveryNotesService.remove(id);
+  }
+
   @Post(":id/lines")
   @RequireCapabilities("delivery_notes:write")
   @ApiCreatedResponse({ description: "Remito line added" })

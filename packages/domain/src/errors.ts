@@ -159,6 +159,12 @@ export const DomainErrors = {
       `Remito in status ${status} cannot be edited`,
     );
   },
+  remitoNotDeletable(status: string): DomainError {
+    return new DomainError(
+      "REMITO_NOT_DELETABLE",
+      `Remito in status ${status} cannot be deleted`,
+    );
+  },
   cancelReasonRequired(): DomainError {
     return new DomainError(
       "CANCEL_REASON_REQUIRED",

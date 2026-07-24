@@ -28,9 +28,9 @@ import { useTranslation } from "react-i18next";
 import type {
   BillingExportPayload,
   BillingRunDetail,
-  ChargeLine,
   Client,
   Invoice,
+  PeriodInvoicesResponse,
 } from "@weld/schemas";
 import { ApiClientError } from "@weld/api-client";
 import { api } from "../api/client";
@@ -38,12 +38,42 @@ import {
   filterBillingInvoices,
   formatInvoiceDailyRate,
   formatInvoiceDaysBreakdown,
+  invoiceRentedCylinders,
+  invoiceSoldCylinders,
   invoiceTotalDays,
 } from "../features/billing/billingLogic";
-import { InvoiceBillingDrawer } from "../features/billing/InvoiceBillingDrawer";
 import { ClientLedgerDrawer } from "../features/clients/ClientLedgerDrawer";
 import { useLocations } from "../hooks/useLocations";
 import { useSessionStore } from "../store/sessionStore";
+
+function periodInvoicesToRun(
+  result: PeriodInvoicesResponse,
+  clientPartyId: number | null,
+): BillingRunDetail {
+  const total = result.invoices.reduce((sum, inv) => sum + inv.total, 0);
+  const totalDays = result.invoices.reduce(
+    (sum, inv) => sum + invoiceTotalDays(inv),
+    0,
+  );
+  const statuses = new Set(result.invoices.map((inv) => inv.status));
+  const status = statuses.has("EXPORTED")
+    ? "EXPORTED"
+    : statuses.has("APPROVED")
+      ? "APPROVED"
+      : "DRAFT";
+  return {
+    id: 0,
+    period_start: result.period_start,
+    period_end: result.period_end,
+    client_party_id: clientPartyId,
+    status,
+    created_at: new Date().toISOString(),
+    invoice_count: result.invoices.length,
+    total: Math.round(total * 100) / 100,
+    total_days: totalDays,
+    invoices: result.invoices,
+  };
+}
 
 export default function BillingPage() {
   const { t: translate } = useTranslation();
@@ -62,12 +92,14 @@ export default function BillingPage() {
   const [clientQuery, setClientQuery] = useState("");
   const [locationFilter, setLocationFilter] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [run, setRun] = useState<BillingRunDetail | null>(null);
-  const [runMode, setRunMode] = useState<"period" | "history" | null>(null);
+  const [runMode, setRunMode] = useState<
+    "period" | "history" | "existing" | null
+  >(null);
   const [exportPayload, setExportPayload] =
     useState<BillingExportPayload | null>(null);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
-  const [invoiceDrawerOpen, setInvoiceDrawerOpen] = useState(false);
   const [ledgerClient, setLedgerClient] = useState<{
     id: number;
     name?: string;
@@ -106,38 +138,161 @@ export default function BillingPage() {
           : null,
   };
 
+  const applyPeriodInvoices = (result: PeriodInvoicesResponse) => {
+    setRun(periodInvoicesToRun(result, client?.id ?? null));
+    setRunMode("existing");
+    setExportPayload(null);
+    setSelectedInvoice(null);
+    setError(null);
+    setInfo(
+      result.locked
+        ? translate("billing.period_locked_loaded")
+        : translate("billing.period_loaded"),
+    );
+  };
+
   const draftMutation = useMutation({
     mutationFn: (mode: "period" | "history") =>
       api.createBillingRun(
         mode === "history"
           ? {
               mode: "history",
+              charges: "all",
               ...billingScope,
             }
           : {
               period_start: periodStart,
               period_end: periodEnd,
               mode: "period",
+              charges: "all",
               ...billingScope,
             },
       ),
-    onSuccess: (result, mode) => {
+    onSuccess: async (result, mode) => {
+      setExportPayload(null);
+      setSelectedInvoice(null);
+      setError(null);
+
+      const skipNotes: string[] = [];
+      if ((result.skipped_already_billed ?? 0) > 0) {
+        skipNotes.push(
+          translate("billing.skipped_already_billed", {
+            count: result.skipped_already_billed,
+          }),
+        );
+      }
+      if ((result.skipped_sales_no_price ?? 0) > 0) {
+        skipNotes.push(
+          translate("billing.skipped_sales_no_price", {
+            count: result.skipped_sales_no_price,
+            serials: (result.skipped_sales_no_price_serials ?? []).join(", "),
+          }),
+        );
+      }
+      if ((result.skipped_no_rate ?? 0) > 0) {
+        skipNotes.push(
+          translate("billing.skipped_no_rate", {
+            count: result.skipped_no_rate,
+          }),
+        );
+      }
+
+      const scopedEmpty =
+        (result.invoice_count ?? result.invoices.length) === 0 ||
+        (client != null &&
+          !result.invoices.some((inv) => inv.client_party_id === client.id));
+
+      if (scopedEmpty) {
+        try {
+          const existing = await api.listPeriodInvoices({
+            period_start: result.period_start,
+            period_end: result.period_end,
+            ...(billingScope.client_party_id != null
+              ? { client_party_id: billingScope.client_party_id }
+              : {}),
+            ...(billingScope.locality_id != null
+              ? { locality_id: billingScope.locality_id }
+              : {}),
+            ...(billingScope.territory_id != null
+              ? { territory_id: billingScope.territory_id }
+              : {}),
+          });
+          if (existing.invoices.length > 0) {
+            applyPeriodInvoices(existing);
+            setInfo(
+              [
+                translate("billing.no_new_charges_showing_existing"),
+                ...skipNotes,
+              ]
+                .filter(Boolean)
+                .join(" "),
+            );
+            return;
+          }
+        } catch {
+          // Fall through to show the empty draft.
+        }
+      }
+
       setRun(result);
       setRunMode(mode);
       if (mode === "history") {
         setPeriodStart(result.period_start);
         setPeriodEnd(result.period_end);
       }
-      setExportPayload(null);
-      setSelectedInvoice(null);
-      setError(null);
+      setInfo(skipNotes.length > 0 ? skipNotes.join(" ") : null);
+    },
+    onError: async (err) => {
+      if (err instanceof ApiClientError) {
+        if (err.code === "PERIOD_LOCKED") {
+          try {
+            const existing = await api.listPeriodInvoices({
+              period_start: periodStart,
+              period_end: periodEnd,
+              ...(billingScope.client_party_id != null
+                ? { client_party_id: billingScope.client_party_id }
+                : {}),
+              ...(billingScope.locality_id != null
+                ? { locality_id: billingScope.locality_id }
+                : {}),
+              ...(billingScope.territory_id != null
+                ? { territory_id: billingScope.territory_id }
+                : {}),
+            });
+            applyPeriodInvoices(existing);
+            return;
+          } catch {
+            setError(translate("errors.period_locked"));
+            return;
+          }
+        }
+        setError(err.message);
+        return;
+      }
+      setError(translate("errors.generic"));
+    },
+  });
+
+  const loadPeriodMutation = useMutation({
+    mutationFn: () =>
+      api.listPeriodInvoices({
+        period_start: periodStart,
+        period_end: periodEnd,
+        ...(billingScope.client_party_id != null
+          ? { client_party_id: billingScope.client_party_id }
+          : {}),
+        ...(billingScope.locality_id != null
+          ? { locality_id: billingScope.locality_id }
+          : {}),
+        ...(billingScope.territory_id != null
+          ? { territory_id: billingScope.territory_id }
+          : {}),
+      }),
+    onSuccess: (result) => {
+      applyPeriodInvoices(result);
     },
     onError: (err) => {
       if (err instanceof ApiClientError) {
-        if (err.code === "PERIOD_LOCKED") {
-          setError(translate("errors.period_locked"));
-          return;
-        }
         setError(err.message);
         return;
       }
@@ -147,7 +302,7 @@ export default function BillingPage() {
 
   const exportMutation = useMutation({
     mutationFn: () => {
-      if (!run) throw new Error("No run");
+      if (!run || run.id <= 0) throw new Error("No run");
       return api.exportBillingRun(run.id);
     },
     onSuccess: async (payload) => {
@@ -173,6 +328,14 @@ export default function BillingPage() {
     },
   });
 
+  const openInvoiceLedger = (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    setLedgerClient({
+      id: invoice.client_party_id,
+      name: invoice.client_name,
+    });
+  };
+
   const invoiceColumns: GridColDef<Invoice>[] = useMemo(
     () => [
       {
@@ -187,11 +350,7 @@ export default function BillingPage() {
             underline="hover"
             onClick={(event) => {
               event.stopPropagation();
-              setSelectedInvoice(params.row);
-              setLedgerClient({
-                id: params.row.client_party_id,
-                name: params.row.client_name,
-              });
+              openInvoiceLedger(params.row);
             }}
             sx={{ textAlign: "left" }}
           >
@@ -206,17 +365,24 @@ export default function BillingPage() {
         valueGetter: (_v, row) => row.client_locality_name ?? "—",
       },
       {
-        field: "lines",
-        headerName: translate("billing.columns.lines"),
-        width: 100,
+        field: "rented",
+        headerName: translate("billing.columns.rented"),
+        width: 110,
         type: "number",
-        valueGetter: (_v, row) => row.charge_lines?.length ?? 0,
+        valueGetter: (_v, row) => invoiceRentedCylinders(row),
+      },
+      {
+        field: "sold",
+        headerName: translate("billing.columns.sold"),
+        width: 110,
+        type: "number",
+        valueGetter: (_v, row) => invoiceSoldCylinders(row),
       },
       {
         field: "days_breakdown",
         headerName: translate("billing.columns.days_breakdown"),
         flex: 1,
-        minWidth: 200,
+        minWidth: 180,
         sortable: false,
         valueGetter: (_v, row) => formatInvoiceDaysBreakdown(row, translate),
       },
@@ -230,7 +396,7 @@ export default function BillingPage() {
       {
         field: "daily_rate",
         headerName: translate("billing.columns.daily_rate"),
-        width: 140,
+        width: 130,
         sortable: false,
         valueGetter: (_v, row) => formatInvoiceDailyRate(row, translate),
       },
@@ -266,61 +432,13 @@ export default function BillingPage() {
     [translate],
   );
 
-  const lineColumns: GridColDef<ChargeLine>[] = useMemo(
-    () => [
-      {
-        field: "description",
-        headerName: translate("billing.lines.description"),
-        flex: 1,
-        minWidth: 220,
-      },
-      {
-        field: "quantity",
-        headerName: translate("billing.lines.days"),
-        width: 90,
-        type: "number",
-      },
-      {
-        field: "unit_price",
-        headerName: translate("billing.lines.unit_price"),
-        width: 130,
-        type: "number",
-        valueFormatter: (value: number) =>
-          `${Number(value).toLocaleString(undefined, {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })} ARS`,
-      },
-      {
-        field: "calc",
-        headerName: translate("billing.lines.calc"),
-        width: 160,
-        sortable: false,
-        valueGetter: (_v, row) =>
-          translate("billing.lines.calc_value", {
-            days: row.quantity,
-            price: Number(row.unit_price).toLocaleString(undefined, {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            }),
-          }),
-      },
-      {
-        field: "amount",
-        headerName: translate("billing.lines.amount"),
-        width: 130,
-        type: "number",
-        valueFormatter: (value: number) =>
-          `${Number(value).toLocaleString(undefined, {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })} ARS`,
-      },
-    ],
-    [translate],
-  );
+  const busy =
+    draftMutation.isPending ||
+    exportMutation.isPending ||
+    loadPeriodMutation.isPending;
 
-  const busy = draftMutation.isPending || exportMutation.isPending;
+  const viewingExisting =
+    runMode === "existing" || (run != null && run.id <= 0);
 
   const displayedInvoices = useMemo(
     () =>
@@ -331,22 +449,19 @@ export default function BillingPage() {
     [run?.invoices, client?.id, location],
   );
 
-  const selectedLines = selectedInvoice?.charge_lines ?? [];
-
   const handleInvoiceUpdated = async (updated: Invoice) => {
-    setSelectedInvoice(updated);
-    if (!run) {
+    const mergeInvoice = (previous: Invoice | null | undefined): Invoice => ({
+      ...updated,
+      charge_lines: updated.charge_lines ?? previous?.charge_lines,
+    });
+    setSelectedInvoice((current) => mergeInvoice(current));
+    if (!run || viewingExisting) {
       setRun((current) => {
         if (!current) return current;
         return {
           ...current,
           invoices: current.invoices.map((inv) =>
-            inv.id === updated.id
-              ? {
-                  ...updated,
-                  charge_lines: updated.charge_lines ?? inv.charge_lines,
-                }
-              : inv,
+            inv.id === updated.id ? mergeInvoice(inv) : inv,
           ),
         };
       });
@@ -355,21 +470,15 @@ export default function BillingPage() {
     try {
       const refreshed = await api.getBillingRun(run.id);
       setRun(refreshed);
-      setSelectedInvoice(
-        refreshed.invoices.find((inv) => inv.id === updated.id) ?? updated,
-      );
+      const fromRun = refreshed.invoices.find((inv) => inv.id === updated.id);
+      setSelectedInvoice(fromRun ?? mergeInvoice(updated));
     } catch {
       setRun((current) => {
         if (!current) return current;
         return {
           ...current,
           invoices: current.invoices.map((inv) =>
-            inv.id === updated.id
-              ? {
-                  ...updated,
-                  charge_lines: updated.charge_lines ?? inv.charge_lines,
-                }
-              : inv,
+            inv.id === updated.id ? mergeInvoice(inv) : inv,
           ),
         };
       });
@@ -429,6 +538,15 @@ export default function BillingPage() {
               {translate("actions.run_billing_history")}
             </Button>
           )}
+          <Button
+            size="small"
+            variant="text"
+            disabled={busy}
+            onClick={() => loadPeriodMutation.mutate()}
+            sx={{ height: 40 }}
+          >
+            {translate("actions.view_period_invoices")}
+          </Button>
           <FormControl size="small" sx={{ minWidth: 220 }}>
             <InputLabel id="billing-location-label">
               {translate("billing.filters.location")}
@@ -500,6 +618,7 @@ export default function BillingPage() {
             )}
           />
           {canWrite &&
+            !viewingExisting &&
             (run?.status === "APPROVED" || run?.status === "EXPORTED") && (
               <Button
                 size="small"
@@ -525,6 +644,7 @@ export default function BillingPage() {
       </Stack>
 
       {error && <Alert severity="error">{error}</Alert>}
+      {info && !error && <Alert severity="info">{info}</Alert>}
 
       {run && (
         <Alert severity={run.invoice_count ? "success" : "warning"}>
@@ -532,7 +652,9 @@ export default function BillingPage() {
             {translate(
               runMode === "history"
                 ? "billing.run_summary_history"
-                : "billing.run_summary",
+                : runMode === "existing"
+                  ? "billing.run_summary_existing"
+                  : "billing.run_summary",
               {
                 id: run.id,
                 invoices: run.invoice_count,
@@ -589,8 +711,7 @@ export default function BillingPage() {
           loading={busy}
           disableRowSelectionOnClick
           onRowClick={(params: GridRowParams<Invoice>) => {
-            setSelectedInvoice(params.row);
-            setInvoiceDrawerOpen(true);
+            openInvoiceLedger(params.row);
           }}
           sx={{
             [`& .${gridClasses.cell}`]: { outline: "none" },
@@ -608,61 +729,11 @@ export default function BillingPage() {
         />
       </Box>
 
-      {selectedInvoice && !invoiceDrawerOpen && (
-        <Box sx={{ minHeight: 180, maxHeight: 280 }}>
-          <Typography variant="subtitle2" sx={{ mb: 1 }}>
-            {translate("billing.lines.title", {
-              client:
-                selectedInvoice.client_name ?? selectedInvoice.client_party_id,
-              count: selectedLines.length,
-              days:
-                selectedInvoice.total_days ??
-                selectedLines.reduce((sum, line) => sum + line.quantity, 0),
-              total: Number(selectedInvoice.total).toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              }),
-            })}
-          </Typography>
-          <DataGrid
-            rows={selectedLines}
-            columns={lineColumns}
-            getRowId={(row) => row.id}
-            density="compact"
-            hideFooter={selectedLines.length <= 25}
-            disableRowSelectionOnClick
-            sx={{
-              height: "100%",
-              [`& .${gridClasses.cell}`]: { outline: "none" },
-            }}
-            slots={{
-              noRowsOverlay: () => (
-                <Stack
-                  height="100%"
-                  alignItems="center"
-                  justifyContent="center"
-                >
-                  <Typography color="text.secondary">
-                    {translate("billing.lines.empty")}
-                  </Typography>
-                </Stack>
-              ),
-            }}
-          />
-        </Box>
-      )}
-
-      <InvoiceBillingDrawer
-        open={invoiceDrawerOpen && selectedInvoice != null}
-        invoice={selectedInvoice}
-        onClose={() => setInvoiceDrawerOpen(false)}
-        onInvoiceUpdated={handleInvoiceUpdated}
-      />
-
       <ClientLedgerDrawer
         open={ledgerClient != null}
         clientPartyId={ledgerClient?.id ?? null}
         clientName={ledgerClient?.name}
+        initialTab={selectedInvoice != null ? "invoice" : undefined}
         billingInvoice={
           selectedInvoice != null &&
           ledgerClient != null &&
@@ -673,7 +744,10 @@ export default function BillingPage() {
               ) ?? null)
         }
         onBillingInvoiceUpdated={handleInvoiceUpdated}
-        onClose={() => setLedgerClient(null)}
+        onClose={() => {
+          setLedgerClient(null);
+          setSelectedInvoice(null);
+        }}
       />
     </Stack>
   );

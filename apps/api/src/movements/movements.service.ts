@@ -11,6 +11,7 @@ import type {
   CreateMovementInput,
   MovementEvent,
   MovementListQuery,
+  RecordSalePriceInput,
   ReturnMovementInput,
   SwapMovementInput,
   VoidMovementInput,
@@ -94,7 +95,7 @@ export class MovementsService {
       return isSale
         ? await this.repository.createSale(
             input,
-            cylinder.ownership_basis,
+            cylinder,
             gasCode,
             principal.id,
           )
@@ -252,6 +253,20 @@ export class MovementsService {
       );
     }
 
+    const restoreSold =
+      movement.movement_kind === "SALE" && movement.state === "SOLD";
+    if (
+      restoreSold &&
+      (await this.billingLookup.cylinderSaleHasLockedCharges(
+        movement.cylinder_id,
+      ))
+    ) {
+      throw ApiErrors.conflict(
+        "ALREADY_BILLED",
+        "Cylinder sale is on an approved/exported invoice",
+      );
+    }
+
     const expectedVersion = ifMatchVersion ?? movement.version;
 
     return this.repository.voidMovement(
@@ -261,11 +276,42 @@ export class MovementsService {
       input.reason,
       expectedVersion,
       principal.id,
+      { restoreSold },
     );
   }
 
   findOpenIdByCylinder(cylinderId: number): Promise<number | null> {
     return this.repository.findOpenIdByCylinder(cylinderId);
+  }
+
+  async recordSalePrice(
+    principal: AuthPrincipal,
+    id: number,
+    input: RecordSalePriceInput,
+  ): Promise<MovementEvent> {
+    const movement = await this.repository.getById(id);
+    if (!movement) throw ApiErrors.notFound("Movement not found");
+    if (movement.movement_kind !== "SALE" || movement.state !== "SOLD") {
+      throw ApiErrors.validationFailed("Not a sold SALE movement", [
+        { field: "id", issue: "Must be a SOLD sale movement" },
+      ]);
+    }
+    if (
+      await this.billingLookup.cylinderSaleHasLockedCharges(
+        movement.cylinder_id,
+      )
+    ) {
+      throw ApiErrors.conflict(
+        "ALREADY_BILLED",
+        "Cylinder sale is on an approved/exported invoice",
+      );
+    }
+    return this.repository.recordSalePrice(
+      id,
+      movement,
+      input.sale_price,
+      principal.id,
+    );
   }
 }
 

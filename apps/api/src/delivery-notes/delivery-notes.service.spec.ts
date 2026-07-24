@@ -15,6 +15,7 @@ describe("DeliveryNotesService", () => {
     addLine: vi.fn(),
     updateLine: vi.fn(),
     softDeleteLine: vi.fn(),
+    softDelete: vi.fn(),
     linkLineMovement: vi.fn(),
     linkLineAccessoryRental: vi.fn(),
     addIncident: vi.fn(),
@@ -308,5 +309,21 @@ describe("DeliveryNotesService", () => {
     expect(repository.logPrint).toHaveBeenCalledWith(
       expect.objectContaining({ reprintSeq: 2, reason: "Copia perdida" }),
     );
+  });
+
+  it("soft-deletes a closed remito", async () => {
+    repository.getById.mockResolvedValue({ id: 5, status: "CLOSED" });
+    repository.softDelete.mockResolvedValue(undefined);
+
+    await expect(service.remove(5)).resolves.toBeUndefined();
+    expect(repository.softDelete).toHaveBeenCalledWith(5);
+  });
+
+  it("rejects soft-delete when status is not deletable", async () => {
+    repository.getById.mockResolvedValue({ id: 5, status: "INVOICED" });
+    await expect(service.remove(5)).rejects.toMatchObject({
+      code: "REMITO_NOT_DELETABLE",
+    });
+    expect(repository.softDelete).not.toHaveBeenCalled();
   });
 });

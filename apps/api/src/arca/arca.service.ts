@@ -443,6 +443,12 @@ export class ArcaService {
   async createElectronicVoucher(input: {
     voucher: BuiltArcaVoucher;
     actorUserId: number | null;
+    /**
+     * Simulation only: unique local voucher number. Callers must allocate
+     * sequentially so `uq_invoice_arca_voucher` is not violated when many
+     * invoices are authorized under simulation mode.
+     */
+    simulatedCbteNro?: number;
   }): Promise<{
     result: ArcaCreateVoucherResult;
     environment: ArcaEnvironment;
@@ -457,7 +463,10 @@ export class ArcaService {
     const company = await this.getCompanyProfile();
 
     if (await this.isSimulationModeEnabled()) {
-      const simulated = buildSimulatedArcaCae();
+      const simulated = buildSimulatedArcaCae(
+        new Date(),
+        input.simulatedCbteNro ?? 1,
+      );
       const issuerCuitDigits = company.cuit
         ? cuitDigits(company.cuit)
         : "20000000001";

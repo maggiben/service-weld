@@ -81,8 +81,23 @@ export const BillingRun = zod.object({
    * freshly created drafts — not persisted.
    */
   skipped_no_rate: zod.number().int().nonnegative().optional(),
+  /**
+   * SALE movements in scope with no `cylinder_sale` price row (cannot bill).
+   * Only set on freshly created drafts — not persisted.
+   */
+  skipped_sales_no_price: zod.number().int().nonnegative().optional(),
+  /** Serials for `skipped_sales_no_price` (best-effort, capped). */
+  skipped_sales_no_price_serials: zod.array(zod.string()).optional(),
+  /**
+   * Charge sources skipped because they are already on APPROVED/EXPORTED
+   * invoices for the period. Only set on freshly created drafts.
+   */
+  skipped_already_billed: zod.number().int().nonnegative().optional(),
 });
 export type BillingRun = zod.infer<typeof BillingRun>;
+
+export const BillingChargeScope = zod.enum(["all", "rentals", "sales"]);
+export type BillingChargeScope = zod.infer<typeof BillingChargeScope>;
 
 export const CreateBillingRunInput = zod
   .object({
@@ -99,6 +114,13 @@ export const CreateBillingRunInput = zod
      * (picker dates ignored; period_start is resolved from the first open movement).
      */
     mode: zod.enum(["period", "history"]).default("period"),
+    /**
+     * Which commercial charges to include when building the draft:
+     * - `all` (default): rentals + refills + accessories + cylinder sales
+     * - `rentals`: rental days, refill fills, accessory rentals (no cylinder sales)
+     * - `sales`: cylinder sales only
+     */
+    charges: BillingChargeScope.optional(),
     /** Limit to one client. Takes precedence over locality/territory scope. */
     client_party_id: zod.number().int().nullable().optional(),
     /**
@@ -127,6 +149,32 @@ export const CreateBillingRunInput = zod
     }
   });
 export type CreateBillingRunInput = zod.infer<typeof CreateBillingRunInput>;
+
+/** Load existing invoices for a period (e.g. when create is PERIOD_LOCKED). */
+export const PeriodInvoicesQuery = zod.object({
+  period_start: IsoDate,
+  period_end: IsoDate,
+  client_party_id: zod.coerce.number().int().optional(),
+  locality_id: zod.coerce.number().int().optional(),
+  territory_id: zod.coerce.number().int().optional(),
+});
+export type PeriodInvoicesQuery = zod.infer<typeof PeriodInvoicesQuery>;
+
+export const PeriodInvoicesResponse = zod.object({
+  period_start: IsoDate,
+  period_end: IsoDate,
+  locked: zod.boolean(),
+  invoices: zod.array(Invoice),
+});
+export type PeriodInvoicesResponse = zod.infer<typeof PeriodInvoicesResponse>;
+
+/** Keep only these charge lines on a DRAFT invoice; others are deferred. */
+export const SetInvoiceChargeLinesInput = zod.object({
+  charge_line_ids: zod.array(zod.number().int().positive()).min(1),
+});
+export type SetInvoiceChargeLinesInput = zod.infer<
+  typeof SetInvoiceChargeLinesInput
+>;
 
 export const BillingRunDetail = BillingRun.extend({
   invoices: zod.array(Invoice),

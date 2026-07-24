@@ -99,8 +99,21 @@ export function formatRemitoSeriesNumber(
 
 const EDITABLE: ReadonlySet<RemitoStatus> = new Set(["DRAFT"]);
 
+/**
+ * Soft-delete header (R-76). Invoiced/archived stay immutable (R-7);
+ * operational / closed remitos may leave the list without hard-delete.
+ */
+const NOT_SOFT_DELETABLE: ReadonlySet<RemitoStatus> = new Set([
+  "INVOICED",
+  "ARCHIVED",
+]);
+
 export function isRemitoHeaderEditable(status: RemitoStatus): boolean {
   return EDITABLE.has(status);
+}
+
+export function isRemitoSoftDeletable(status: RemitoStatus): boolean {
+  return !NOT_SOFT_DELETABLE.has(status);
 }
 
 /**
@@ -182,5 +195,11 @@ export function assertRemitoTransition(
 export function assertRemitoEditable(status: RemitoStatus): void {
   if (!isRemitoHeaderEditable(status)) {
     throw DomainErrors.remitoNotEditable(status);
+  }
+}
+
+export function assertRemitoSoftDeletable(status: RemitoStatus): void {
+  if (!isRemitoSoftDeletable(status)) {
+    throw DomainErrors.remitoNotDeletable(status);
   }
 }

@@ -173,6 +173,11 @@ export function billableDaysInPeriod(params: {
   periodEnd: string;
   /** Cap for still-open rentals; billing/reports pass business today. */
   asOfDate?: string;
+  /**
+   * Floor from `system_setting.rental_min_days` (D-14). Same-day deliver+return
+   * is 0 calendar days; when minDays > 0 those still bill at least that many.
+   */
+  minDays?: number;
 }): number {
   const start =
     params.deliveryDate > params.periodStart
@@ -182,7 +187,9 @@ export function billableDaysInPeriod(params: {
   const movementEnd = params.returnDate ?? openCap;
   const end = movementEnd < params.periodEnd ? movementEnd : params.periodEnd;
   if (end < start) return 0;
-  return calendarDaysBetween(start, end);
+  const raw = calendarDaysBetween(start, end);
+  const floor = params.minDays ?? 0;
+  return floor > 0 ? Math.max(raw, floor) : raw;
 }
 
 export function rentalChargeAmount(days: number, unitPrice: Money): Money {

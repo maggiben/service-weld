@@ -25,6 +25,7 @@ import { Controller, useForm, useWatch } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import {
   CreateMovementInput,
+  parseMoneyInput,
   type Client,
   type CreateMovementInput as FormValues,
   type Cylinder,
@@ -42,6 +43,7 @@ import {
   cylinderPickerLabel,
   prefillMovementFromCylinder,
 } from "./movementLogic";
+import { previewNextRemitoNumber } from "../delivery-notes/remitoLogic";
 
 interface Props {
   open: boolean;
@@ -75,6 +77,7 @@ export function DeliverDrawer({
     reset,
     setError,
     setValue,
+    getValues,
     formState: { errors, isDirty, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(CreateMovementInput),
@@ -87,6 +90,7 @@ export function DeliverDrawer({
       origin_party_id: null,
       remito_number: null,
       note: null,
+      sale_price: null,
     },
   });
 
@@ -131,6 +135,17 @@ export function DeliverDrawer({
     queryFn: () => api.listClients({ q: clientQuery || undefined, limit: 20 }),
     enabled: open && (movementKind === "RENTAL" || movementKind === "SALE"),
   });
+
+  const seriesQuery = useQuery({
+    queryKey: ["remito-series", "deliver"],
+    queryFn: () => api.listRemitoSeries({ limit: 20 }),
+    enabled: open,
+  });
+
+  const nextRemitoNumber = useMemo(
+    () => previewNextRemitoNumber(seriesQuery.data?.data),
+    [seriesQuery.data],
+  );
 
   const cylinderOptions = useMemo(() => {
     const fromSearch = cylindersSearch.data?.data ?? [];
@@ -190,6 +205,7 @@ export function DeliverDrawer({
     setValue("movement_kind", kind);
     setSelectedCylinder(null);
     setValue("cylinder_id", 0);
+    setValue("sale_price", null);
     setCylinderQuery("");
     setConflictError(null);
     if (kind === "REFILL") {
@@ -210,6 +226,7 @@ export function DeliverDrawer({
       origin_party_id: null,
       remito_number: null,
       note: null,
+      sale_price: null,
     });
     setConflictError(null);
     setCylinderQuery("");
@@ -227,6 +244,7 @@ export function DeliverDrawer({
         queryClient.invalidateQueries({ queryKey: ["refills"] }),
         queryClient.invalidateQueries({ queryKey: ["cylinders"] }),
         queryClient.invalidateQueries({ queryKey: ["delivery-notes"] }),
+        queryClient.invalidateQueries({ queryKey: ["remito-series"] }),
       ]);
       onClose();
     },
@@ -272,7 +290,18 @@ export function DeliverDrawer({
     >
       <Box
         component="form"
-        onSubmit={handleSubmit((value) => create.mutate(value))}
+        onSubmit={handleSubmit((value) => {
+          // Resolver output can drop `sale_price` when schemas are stale; keep
+          // the live field value so the API always receives the price.
+          const livePrice = getValues("sale_price");
+          create.mutate({
+            ...value,
+            sale_price:
+              value.movement_kind === "SALE"
+                ? (livePrice ?? value.sale_price ?? null)
+                : null,
+          });
+        })}
         sx={{ p: 3, height: "100%", display: "flex", flexDirection: "column" }}
       >
         <Typography variant="h6" sx={{ mb: 1 }}>
@@ -522,18 +551,49 @@ export function DeliverDrawer({
           />
 
           <Controller
-            name="remito_number"
+            name="sale_price"
             control={control}
             render={({ field }) => (
               <TextField
-                {...field}
-                value={field.value ?? ""}
-                onChange={(event) => field.onChange(event.target.value || null)}
-                label={translate("movements.form.remito_number")}
+                label={translate("movements.form.sale_price")}
+                type="text"
+                inputMode="decimal"
                 fullWidth
-                helperText={translate("movements.form.remito_hint")}
+                required={movementKind === "SALE"}
+                // Keep registered when switching kinds so the value is not lost.
+                sx={{ display: movementKind === "SALE" ? undefined : "none" }}
+                value={field.value == null ? "" : String(field.value)}
+                onChange={(event) => {
+                  const raw = event.target.value;
+                  if (raw.trim() === "") {
+                    field.onChange(null);
+                    return;
+                  }
+                  field.onChange(parseMoneyInput(raw));
+                }}
+                onBlur={field.onBlur}
+                name={field.name}
+                inputRef={field.ref}
+                error={Boolean(errors.sale_price)}
+                helperText={
+                  errors.sale_price?.message ??
+                  (movementKind === "SALE"
+                    ? translate("movements.form.sale_price_hint")
+                    : undefined)
+                }
               />
             )}
+          />
+
+          <TextField
+            label={translate("movements.form.remito_number")}
+            value={
+              nextRemitoNumber ??
+              translate("movements.form.remito_number_loading")
+            }
+            fullWidth
+            InputProps={{ readOnly: true }}
+            helperText={translate("movements.form.remito_hint")}
           />
 
           <Controller

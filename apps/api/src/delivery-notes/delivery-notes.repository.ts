@@ -1,9 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
-import {
-  paperKindForRemitoType,
-  remitoTypeForPaperKind,
-  formatRemitoSeriesNumber,
-} from "@weld/domain";
+import { paperKindForRemitoType, remitoTypeForPaperKind } from "@weld/domain";
+import { allocateRemitoNumber } from "./allocate-remito-number";
 import type {
   CreateDeliveryNoteInput,
   CreateDriverProfileInput,
@@ -633,40 +630,7 @@ export class DeliveryNotesRepository {
     seriesId?: number;
     seriesCode?: string;
   }): Promise<{ seriesId: number; remitoNumber: string }> {
-    const db = resolveDb(this.db);
-    let qb = db
-      .selectFrom("remito_series")
-      .select(["id", "code", "pad_width", "next_number"])
-      .where("is_active", "=", true);
-
-    if (opts?.seriesId != null) {
-      qb = qb.where("id", "=", opts.seriesId);
-    } else if (opts?.seriesCode) {
-      qb = qb.where("code", "=", opts.seriesCode);
-    } else {
-      qb = qb.where("code", "=", "A");
-    }
-
-    const series = await qb.forUpdate().executeTakeFirst();
-    if (!series) {
-      throw ApiErrors.notFound("Remito series not found");
-    }
-
-    const nextNumber = Number(series.next_number);
-    const padWidth = Number(series.pad_width);
-    const remitoNumber = formatRemitoSeriesNumber(
-      series.code,
-      nextNumber,
-      padWidth,
-    );
-
-    await db
-      .updateTable("remito_series")
-      .set({ next_number: nextNumber + 1 })
-      .where("id", "=", series.id)
-      .execute();
-
-    return { seriesId: Number(series.id), remitoNumber };
+    return allocateRemitoNumber(resolveDb(this.db), opts);
   }
 
   async create(
@@ -1060,6 +1024,20 @@ export class DeliveryNotesRepository {
 
     if (Number(updated.numUpdatedRows ?? 0) === 0) {
       throw ApiErrors.notFound("Remito line not found");
+    }
+  }
+
+  async softDelete(id: number): Promise<void> {
+    const db = resolveDb(this.db);
+    const updated = await db
+      .updateTable("delivery_note")
+      .set({ deleted_at: new Date() })
+      .where("id", "=", id)
+      .where("deleted_at", "is", null)
+      .executeTakeFirst();
+
+    if (Number(updated.numUpdatedRows ?? 0) === 0) {
+      throw ApiErrors.notFound("Delivery note not found");
     }
   }
 

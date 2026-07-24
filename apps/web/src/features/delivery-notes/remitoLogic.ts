@@ -1,4 +1,5 @@
-import type { RemitoStatus, RemitoType } from "@weld/schemas";
+import { formatRemitoSeriesNumber } from "@weld/domain";
+import type { RemitoSeries, RemitoStatus, RemitoType } from "@weld/schemas";
 import type { ChipColor } from "../../lib/chipColors";
 
 export type RemitoLifecycleAction =
@@ -108,6 +109,27 @@ export function canCancelRemito(status: RemitoStatus): boolean {
     status !== "INVOICED" &&
     status !== "ARCHIVED" &&
     status !== "CANCELLED"
+  );
+}
+
+/** Soft-delete eligibility (hidden from list; not for billed/archived). */
+export function canSoftDeleteRemito(status: RemitoStatus): boolean {
+  return status !== "INVOICED" && status !== "ARCHIVED";
+}
+
+/** Preview the next series number for create forms (does not allocate). */
+export function previewNextRemitoNumber(
+  seriesList: RemitoSeries[] | undefined,
+  preferredCode = "A",
+): string | null {
+  if (!seriesList?.length) return null;
+  const series =
+    seriesList.find((row) => row.code === preferredCode) ?? seriesList[0];
+  if (!series) return null;
+  return formatRemitoSeriesNumber(
+    series.code,
+    series.next_number,
+    series.pad_width,
   );
 }
 

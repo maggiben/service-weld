@@ -44,6 +44,7 @@ describe("MovementsService", () => {
   };
   const billingLookup = {
     movementHasLockedCharges: vi.fn(),
+    cylinderSaleHasLockedCharges: vi.fn(),
   };
   const service = new MovementsService(
     repository as never,
@@ -139,8 +140,13 @@ describe("MovementsService", () => {
     });
 
     it("sells an in-stock cylinder via createSale", async () => {
-      const saleInput = { ...input, movement_kind: "SALE" as const };
-      repository.getCylinderForDelivery.mockResolvedValue(cylinder());
+      const saleInput = {
+        ...input,
+        movement_kind: "SALE" as const,
+        sale_price: 12500.5,
+      };
+      const cyl = cylinder({ capacity_m3: 10, capacity_unit: "M3" });
+      repository.getCylinderForDelivery.mockResolvedValue(cyl);
       repository.holderExists.mockResolvedValue(true);
       repository.hasOpenMovement.mockResolvedValue(false);
       repository.createSale.mockResolvedValue(
@@ -151,7 +157,7 @@ describe("MovementsService", () => {
       });
       expect(repository.createSale).toHaveBeenCalledWith(
         saleInput,
-        "OURS",
+        cyl,
         "O2",
         user.id,
       );
@@ -165,7 +171,11 @@ describe("MovementsService", () => {
       repository.holderExists.mockResolvedValue(true);
       repository.hasOpenMovement.mockResolvedValue(false);
       await expect(
-        service.create(user, { ...input, movement_kind: "SALE" as const }),
+        service.create(user, {
+          ...input,
+          movement_kind: "SALE" as const,
+          sale_price: 1000,
+        }),
       ).rejects.toMatchObject({ code: "KIND_BASIS_MISMATCH" });
     });
   });
@@ -281,6 +291,53 @@ describe("MovementsService", () => {
       await expect(
         service.void(user, 9, { reason: "mistake" }),
       ).resolves.toMatchObject({ state: "VOID" });
+      expect(repository.voidMovement).toHaveBeenCalledWith(
+        9,
+        5,
+        true,
+        "mistake",
+        1,
+        user.id,
+        { restoreSold: false },
+      );
+    });
+
+    it("voids a sale when the cylinder_sale is not locked", async () => {
+      repository.getById.mockResolvedValue(
+        movement({ movement_kind: "SALE", state: "SOLD" }),
+      );
+      billingLookup.movementHasLockedCharges.mockResolvedValue(false);
+      billingLookup.cylinderSaleHasLockedCharges.mockResolvedValue(false);
+      repository.voidMovement.mockResolvedValue(
+        movement({ movement_kind: "SALE", state: "VOID" }),
+      );
+      await expect(
+        service.void(user, 9, { reason: "wrong price" }),
+      ).resolves.toMatchObject({ state: "VOID" });
+      expect(billingLookup.cylinderSaleHasLockedCharges).toHaveBeenCalledWith(
+        5,
+      );
+      expect(repository.voidMovement).toHaveBeenCalledWith(
+        9,
+        5,
+        false,
+        "wrong price",
+        1,
+        user.id,
+        { restoreSold: true },
+      );
+    });
+
+    it("rejects voiding a billed sale", async () => {
+      repository.getById.mockResolvedValue(
+        movement({ movement_kind: "SALE", state: "SOLD" }),
+      );
+      billingLookup.movementHasLockedCharges.mockResolvedValue(false);
+      billingLookup.cylinderSaleHasLockedCharges.mockResolvedValue(true);
+      await expect(
+        service.void(user, 9, { reason: "mistake" }),
+      ).rejects.toMatchObject({ code: "ALREADY_BILLED" });
+      expect(repository.voidMovement).not.toHaveBeenCalled();
     });
   });
 });

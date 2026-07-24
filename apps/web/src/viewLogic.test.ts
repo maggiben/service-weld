@@ -46,6 +46,8 @@ import {
   formatInvoiceDaysBreakdown,
   invoiceDaysBreakdownParams,
   invoiceTotalDays,
+  selectedChargeLinesTotal,
+  deferredChargeLinesTotal,
 } from "./features/billing/billingLogic";
 import { formatActorLabel } from "./features/audit/auditLogic";
 import {
@@ -482,12 +484,72 @@ describe("transfer / loan / audit / migration", () => {
 describe("billingLogic", () => {
   it("summarizes day breakdowns", () => {
     assert.equal(
-      invoiceTotalDays({ charge_lines: [{ quantity: 3 }, { quantity: 2 }] }),
+      invoiceTotalDays({
+        charge_lines: [
+          {
+            quantity: 3,
+            unit: "day",
+            source_table: "movement_event",
+          },
+          {
+            quantity: 2,
+            unit: "day",
+            source_table: "movement_event",
+          },
+        ],
+      }),
       5,
     );
     assert.equal(
-      invoiceTotalDays({ total_days: 9, charge_lines: [{ quantity: 1 }] }),
-      9,
+      invoiceTotalDays({
+        total_days: 9,
+        charge_lines: [
+          {
+            quantity: 1,
+            unit: "day",
+            source_table: "movement_event",
+          },
+        ],
+      }),
+      1,
+    );
+    assert.equal(invoiceTotalDays({ total_days: 9 }), 9);
+    assert.equal(
+      invoiceTotalDays({
+        charge_lines: [
+          {
+            quantity: 2,
+            unit: "day",
+            source_table: "movement_event",
+          },
+          {
+            quantity: 1,
+            unit: "unit",
+            source_table: "cylinder_sale",
+          },
+        ],
+      }),
+      2,
+    );
+    assert.equal(
+      selectedChargeLinesTotal(
+        [
+          { id: 1, quantity: 1, amount: 85 },
+          { id: 2, quantity: 1, amount: 21000 },
+        ],
+        [2],
+      ),
+      21000,
+    );
+    assert.equal(
+      deferredChargeLinesTotal(
+        [
+          { id: 1, quantity: 1, amount: 85 },
+          { id: 2, quantity: 1, amount: 21000 },
+        ],
+        [2],
+      ),
+      85,
     );
     assert.deepEqual(invoiceDaysBreakdownParams({ charge_lines: [] }), {
       kind: "empty",
@@ -496,15 +558,49 @@ describe("billingLogic", () => {
     });
     assert.equal(
       invoiceDaysBreakdownParams({
-        charge_lines: [{ quantity: 4 }, { quantity: 4 }],
+        charge_lines: [
+          {
+            quantity: 4,
+            unit: "day",
+            source_table: "movement_event",
+          },
+          {
+            quantity: 4,
+            unit: "day",
+            source_table: "movement_event",
+          },
+        ],
       }).kind,
       "uniform",
     );
     assert.equal(
       invoiceDaysBreakdownParams({
-        charge_lines: [{ quantity: 4 }, { quantity: 2 }],
+        charge_lines: [
+          {
+            quantity: 4,
+            unit: "day",
+            source_table: "movement_event",
+          },
+          {
+            quantity: 2,
+            unit: "day",
+            source_table: "movement_event",
+          },
+        ],
       }).kind,
       "mixed",
+    );
+    assert.equal(
+      invoiceDaysBreakdownParams({
+        charge_lines: [
+          {
+            quantity: 1,
+            unit: "unit",
+            source_table: "cylinder_sale",
+          },
+        ],
+      }).kind,
+      "empty",
     );
     const translate = (key: string, opts?: Record<string, unknown>) =>
       `${key}:${JSON.stringify(opts ?? {})}`;
@@ -514,21 +610,47 @@ describe("billingLogic", () => {
     );
     assert.match(
       formatInvoiceDaysBreakdown(
-        { charge_lines: [{ quantity: 2 }, { quantity: 2 }] },
+        {
+          charge_lines: [
+            {
+              quantity: 2,
+              unit: "day",
+              source_table: "movement_event",
+            },
+            {
+              quantity: 2,
+              unit: "day",
+              source_table: "movement_event",
+            },
+          ],
+        },
         translate,
       ),
       /uniform/,
     );
     assert.match(
       formatInvoiceDaysBreakdown(
-        { charge_lines: [{ quantity: 2 }, { quantity: 3 }] },
+        {
+          charge_lines: [
+            {
+              quantity: 2,
+              unit: "day",
+              source_table: "movement_event",
+            },
+            {
+              quantity: 3,
+              unit: "day",
+              source_table: "movement_event",
+            },
+          ],
+        },
         translate,
       ),
       /mixed/,
     );
   });
 
-  it("formats invoice daily rates", () => {
+  it("formats invoice daily rates from rentals only", () => {
     const translate = (key: string, opts?: Record<string, unknown>) =>
       `${key}:${JSON.stringify(opts ?? {})}`;
     assert.equal(formatInvoiceDailyRate({ charge_lines: [] }, translate), "—");
@@ -536,8 +658,18 @@ describe("billingLogic", () => {
       formatInvoiceDailyRate(
         {
           charge_lines: [
-            { quantity: 2, unit_price: 85 },
-            { quantity: 3, unit_price: 85 },
+            {
+              quantity: 2,
+              unit: "day",
+              unit_price: 85,
+              source_table: "movement_event",
+            },
+            {
+              quantity: 3,
+              unit: "day",
+              unit_price: 85,
+              source_table: "movement_event",
+            },
           ],
         },
         translate,
@@ -548,13 +680,45 @@ describe("billingLogic", () => {
       formatInvoiceDailyRate(
         {
           charge_lines: [
-            { quantity: 2, unit_price: 70 },
-            { quantity: 3, unit_price: 85 },
+            {
+              quantity: 2,
+              unit: "day",
+              unit_price: 70,
+              source_table: "movement_event",
+            },
+            {
+              quantity: 3,
+              unit: "day",
+              unit_price: 85,
+              source_table: "movement_event",
+            },
           ],
         },
         translate,
       ),
       /daily_rate_mixed/,
+    );
+    assert.equal(
+      formatInvoiceDailyRate(
+        {
+          charge_lines: [
+            {
+              quantity: 1,
+              unit: "day",
+              unit_price: 85,
+              source_table: "movement_event",
+            },
+            {
+              quantity: 1,
+              unit: "unit",
+              unit_price: 21000,
+              source_table: "cylinder_sale",
+            },
+          ],
+        },
+        translate,
+      ),
+      translate("billing.columns.daily_rate_value", { price: "85.00" }),
     );
   });
 

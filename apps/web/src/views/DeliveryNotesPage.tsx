@@ -36,6 +36,7 @@ import { RemitoDetailPanel } from "../features/delivery-notes/RemitoDetailPanel"
 import {
   REMITO_STATUSES,
   REMITO_TYPES,
+  previewNextRemitoNumber,
   remitoPriorityChipColor,
   remitoStatusChipColor,
 } from "../features/delivery-notes/remitoLogic";
@@ -197,13 +198,10 @@ export default function DeliveryNotesPage() {
     enabled: drawerOpen,
   });
 
-  const nextRemitoNumber = useMemo(() => {
-    const series =
-      seriesQuery.data?.data.find((row) => row.code === "A") ??
-      seriesQuery.data?.data[0];
-    if (!series) return null;
-    return `${series.code}-${String(series.next_number).padStart(series.pad_width, "0")}`;
-  }, [seriesQuery.data]);
+  const nextRemitoNumber = useMemo(
+    () => previewNextRemitoNumber(seriesQuery.data?.data),
+    [seriesQuery.data],
+  );
 
   const create = useMutation({
     mutationFn: () =>

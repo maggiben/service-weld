@@ -47,6 +47,15 @@ export {
 } from "./rates";
 export type { RateCandidate, RatePeriod } from "./rates";
 export {
+  isDayChargeLine,
+  isSaleChargeLine,
+  isRentalCylinderChargeLine,
+  invoiceCylinderDays,
+  countRentedCylinders,
+  countSoldCylinders,
+} from "./charge-lines";
+export type { ChargeLineLike } from "./charge-lines";
+export {
   resolveRefillPrice,
   resolveRefillUnitPrice,
   refillChargeAmount,
@@ -94,9 +103,11 @@ export {
   isCustomerFacingRemitoType,
   remitoSkipsFleet,
   isRemitoHeaderEditable,
+  isRemitoSoftDeletable,
   allowedRemitoTransitions,
   assertRemitoTransition,
   assertRemitoEditable,
+  assertRemitoSoftDeletable,
 } from "./remito-transitions";
 export type { RemitoTransitionContext } from "./remito-transitions";
 export {

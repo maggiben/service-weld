@@ -14,10 +14,13 @@ import type {
   BillingRunDetail,
   CreateBillingRunInput,
   Invoice,
+  PeriodInvoicesQuery,
+  PeriodInvoicesResponse,
+  SetInvoiceChargeLinesInput,
 } from "@weld/schemas";
 import type { AuthPrincipal } from "../auth/principal";
 import { ArcaService } from "../arca/arca.service";
-import { ApiErrors } from "../common/errors/api-error";
+import { ApiError, ApiErrors } from "../common/errors/api-error";
 import { mapDomainError } from "../common/errors/map-domain-error";
 import { REMITO_ISSUER } from "../delivery-notes/remito-issuer";
 import { BillingRepository } from "./billing.repository";
@@ -39,12 +42,19 @@ export class BillingService {
       input.mode === "history"
         ? {
             mode: "history",
+            charges: input.charges ?? "all",
             client_party_id: input.client_party_id ?? null,
             locality_id: input.locality_id ?? null,
             territory_id: input.territory_id ?? null,
           }
         : input;
     return this.repository.createDraftRun(normalized, principal.id);
+  }
+
+  listPeriodInvoices(
+    query: PeriodInvoicesQuery,
+  ): Promise<PeriodInvoicesResponse> {
+    return this.repository.listPeriodInvoices(query);
   }
 
   async getRun(id: number): Promise<BillingRunDetail> {
@@ -57,6 +67,16 @@ export class BillingService {
     const invoice = await this.repository.getInvoiceById(id);
     if (!invoice) throw ApiErrors.notFound("Invoice not found");
     return invoice;
+  }
+
+  setDraftChargeLines(
+    invoiceId: number,
+    input: SetInvoiceChargeLinesInput,
+  ): Promise<Invoice> {
+    return this.repository.setDraftChargeLines(
+      invoiceId,
+      input.charge_line_ids,
+    );
   }
 
   /**
@@ -131,6 +151,14 @@ export class BillingService {
       issuerCuitDigits: company.cuit?.replaceAll(/\D/g, "") ?? "",
     });
 
+    const simulation = await this.arcaService.isSimulationModeEnabled();
+    const simulatedCbteNro = simulation
+      ? await this.repository.nextArcaVoucherNumber(
+          company.point_of_sale,
+          voucher.CbteTipo,
+        )
+      : undefined;
+
     const {
       result,
       environment,
@@ -139,10 +167,10 @@ export class BillingService {
     } = await this.arcaService.createElectronicVoucher({
       voucher,
       actorUserId: principal.id,
+      simulatedCbteNro,
     });
 
-    const cbteNro = result.cbteNro;
-    if (cbteNro == null) {
+    if (result.cbteNro == null && !simulation) {
       throw mapDomainError(
         DomainErrors.arcaAuthorizationFailed(
           "ARCA authorized the voucher but did not return a number",
@@ -151,37 +179,62 @@ export class BillingService {
     }
 
     const caeDueDate = fromAfipDate(result.caeFchVto);
-    const qrUrl = buildArcaQrUrl(
-      buildArcaQrPayload({
-        voucherDate: today,
-        issuerCuitDigits,
-        pointOfSale: issuer.point_of_sale,
-        cbteTipo: voucher.CbteTipo,
-        cbteNro,
-        impTotal: voucher.ImpTotal,
-        docTipo: voucher.DocTipo,
-        docNro: voucher.DocNro,
-        cae: result.cae,
-      }),
-    );
+    // Simulation: never trust a fixed stub number — allocate (and bump on
+    // collision) so uq_invoice_arca_voucher cannot block a second invoice.
+    const baseCbteNro = simulation
+      ? await this.repository.nextArcaVoucherNumber(
+          issuer.point_of_sale,
+          voucher.CbteTipo,
+        )
+      : result.cbteNro!;
 
-    return this.repository.saveArcaAuthorization(invoiceId, {
-      cae: result.cae,
-      caeDueDate,
-      cbteTipo: voucher.CbteTipo,
-      ptoVta: issuer.point_of_sale,
-      cbteNro,
-      cbteFch: today,
-      docTipo: voucher.DocTipo,
-      docNro: voucher.DocNro,
-      condicionIvaReceptor: voucher.CondicionIVAReceptorId,
-      impNeto: voucher.ImpNeto,
-      impIva: voucher.ImpIVA,
-      impTotal: voucher.ImpTotal,
-      environment,
-      qrUrl,
-      actorUserId: principal.id,
-    });
+    const maxAttempts = simulation ? 10 : 1;
+    let lastError: unknown;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const cbteNro = baseCbteNro + attempt;
+      const qrUrl = buildArcaQrUrl(
+        buildArcaQrPayload({
+          voucherDate: today,
+          issuerCuitDigits,
+          pointOfSale: issuer.point_of_sale,
+          cbteTipo: voucher.CbteTipo,
+          cbteNro,
+          impTotal: voucher.ImpTotal,
+          docTipo: voucher.DocTipo,
+          docNro: voucher.DocNro,
+          cae: result.cae,
+        }),
+      );
+      try {
+        return await this.repository.saveArcaAuthorization(invoiceId, {
+          cae: result.cae,
+          caeDueDate,
+          cbteTipo: voucher.CbteTipo,
+          ptoVta: issuer.point_of_sale,
+          cbteNro,
+          cbteFch: today,
+          docTipo: voucher.DocTipo,
+          docNro: voucher.DocNro,
+          condicionIvaReceptor: voucher.CondicionIVAReceptorId,
+          impNeto: voucher.ImpNeto,
+          impIva: voucher.ImpIVA,
+          impTotal: voucher.ImpTotal,
+          environment,
+          qrUrl,
+          actorUserId: principal.id,
+        });
+      } catch (error) {
+        lastError = error;
+        if (
+          !simulation ||
+          !(error instanceof ApiError) ||
+          error.code !== "ARCA_VOUCHER_NUMBER_TAKEN"
+        ) {
+          throw error;
+        }
+      }
+    }
+    throw lastError;
   }
 
   /**
@@ -267,6 +320,12 @@ export class BillingService {
     const { result } = await this.arcaService.createElectronicVoucher({
       voucher,
       actorUserId: principal.id,
+      simulatedCbteNro: (await this.arcaService.isSimulationModeEnabled())
+        ? await this.repository.nextArcaVoucherNumber(
+            arca.pto_vta,
+            voucher.CbteTipo,
+          )
+        : undefined,
     });
     if (result.cbteNro == null) {
       throw mapDomainError(
